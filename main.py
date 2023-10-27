@@ -5,10 +5,10 @@ from datetime import datetime
 import matplotlib.pyplot as plt
 
 # Specify the path to your JSON file on Google Drive
-# json_folder_path = 'C:/Users/Martin Gruber/OneDrive - gw.uni-passau.de/Studium/7. Semester/Bachelorarbeit/Data/qt30'
-json_folder_path = 'C:/Users/grube/OneDrive - gw.uni-passau.de/Studium/7. Semester/Bachelorarbeit/Data/qt30'
+json_folder_path = 'C:/Users/Martin Gruber/OneDrive - gw.uni-passau.de/Studium/7. Semester/Bachelorarbeit/Data/qt30'
+# json_folder_path = 'C:/Users/grube/OneDrive - gw.uni-passau.de/Studium/7. Semester/Bachelorarbeit/Data/qt30'
 
-option = 2
+option = 4
 givenDate = datetime.strptime("2020-05-28 19:08:43", '%Y-%m-%d %H:%M:%S').date()
 speakers = ["3831", "3881", "3812", "3880", "3912"]
 
@@ -43,7 +43,7 @@ match option:
                             for text_item in texts:
                                 if text_item.get("nodeID") == node_id and text_item.get(
                                         "type") == "L" and locution.get("start") is not None and datetime.strptime(
-                                        locution.get("start"), '%Y-%m-%d %H:%M:%S').date() == date:
+                                    locution.get("start"), '%Y-%m-%d %H:%M:%S').date() == date:
                                     text = text_item.get("text")
                                     break
 
@@ -134,6 +134,57 @@ match option:
         for date in topic_data:
             topic_data[date] = sorted(topic_data[topic], key=lambda x: x[0])
         print(topic_data)
+
+    case 4:
+        json_file_path = 'C:/Users/Martin Gruber/OneDrive - gw.uni-passau.de/Studium/7. Semester/Bachelorarbeit/Data/qt30/nodeset17921.json'
+        with (open(json_file_path, 'r') as json_file):
+            data = json.load(json_file)
+            locutions = data.get("locutions")
+            texts = data.get("nodes")
+            edges = data.get("edges")
+
+            for locution in locutions:
+                person_id = locution.get("personID")
+                node_id = locution.get("nodeID")
+                start_time = locution.get("start")
+                text = None
+                paraphrased = None
+                paraphrasedID = None
+
+                assertingNodeID = None
+                for node in texts:
+                    if node.get("nodeID") == node_id:
+                        if node.get("type") == "L":
+                            text = node.get("text")
+                            break
+                for node in texts:
+                    if node.get("type") == "YA" and node.get("text") == "Asserting":
+                        for edge in edges:
+                            if edge.get("fromID") == node_id:
+                                assertingNodeID = edge.get("toID")
+                                break
+                print(assertingNodeID)
+
+                for node in texts:
+                    if node.get("type") == "I":
+                        for edge in edges:
+                            if edge.get("fromID") == assertingNodeID and edge.get("toID") == node.get("nodeID"):
+                                paraphrased = node.get("text")
+                                paraphrasedID = node.get("nodeID")
+                                break
+                print(paraphrased)
+
+                if person_id and text and paraphrased:
+                    if person_id not in speaker_timelines:
+                        speaker_timelines[start_time] = []
+
+                # if person_id in speakers:
+                speaker_timelines[start_time].append(
+                    (datetime.strptime(locution.get("start"), '%Y-%m-%d %H:%M:%S'), text, paraphrased, paraphrasedID))
+                # else:
+                #    speaker_timelines["0"].append(
+                #        (datetime.strptime(locution.get("start"), '%Y-%m-%d %H:%M:%S'), text, paraphrased))
+
 # Print the timelines for each speaker
 match option:
     case 1:
@@ -153,6 +204,13 @@ match option:
             for timestamp, speaker, text in data:
                 formatted_timestamp = timestamp.strftime('%Y-%m-%d %H:%M:%S')
                 print(f"{formatted_timestamp}: {speaker}: {text}")
+    case 4:
+        for date, data in speaker_timelines.items():
+            print(f"Date: {date}")
+            for timestamp, text, paraphrased, iID in data:
+                print(f"{timestamp}: {text}")
+                print(f"{timestamp}: {paraphrased}: {iID}")
+                print("\n")
 
 # Print the diagram
 
