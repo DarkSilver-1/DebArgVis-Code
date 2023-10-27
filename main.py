@@ -8,8 +8,9 @@ import matplotlib.pyplot as plt
 # json_folder_path = 'C:/Users/Martin Gruber/OneDrive - gw.uni-passau.de/Studium/7. Semester/Bachelorarbeit/Data/qt30'
 json_folder_path = 'C:/Users/grube/OneDrive - gw.uni-passau.de/Studium/7. Semester/Bachelorarbeit/Data/qt30'
 
-option = 1
+option = 2
 givenDate = datetime.strptime("2020-05-28 19:08:43", '%Y-%m-%d %H:%M:%S').date()
+speakers = ["3831", "3881", "3812", "3880", "3912"]
 
 speaker_timelines = {}
 date_speaker_data = {}
@@ -20,6 +21,7 @@ match option:
     # Sort the data by speaker. Every speaker is associated with the things they said and the corresponding timestamp.
     case 1:
         processed_node_ids = set()
+        speaker_timelines["0"] = []
         date = givenDate  # This type of sorting only makes sense for a specific day
         for filename in os.listdir(json_folder_path):
             if filename.endswith('.json'):
@@ -40,20 +42,26 @@ match option:
                             # Find the corresponding text from 'texts' data based on 'nodeID'
                             for text_item in texts:
                                 if text_item.get("nodeID") == node_id and text_item.get(
-                                        "type") == "L" and datetime.strptime(text_item.get("timestamp"),
-                                                                             '%Y-%m-%d %H:%M:%S').date() == date:
+                                        "type") == "L" and locution.get("start") is not None and datetime.strptime(
+                                        locution.get("start"), '%Y-%m-%d %H:%M:%S').date() == date:
                                     text = text_item.get("text")
                                     break
 
                             if person_id and text:
                                 if person_id not in speaker_timelines:
-                                    speaker_timelines[person_id] = []
+                                    if person_id in speakers:
+                                        speaker_timelines[person_id] = []
 
                                 # Check if the node ID has been processed before
-                                if node_id not in processed_node_ids:
-                                    speaker_timelines[person_id].append(
-                                        (datetime.strptime(text_item.get("timestamp"), '%Y-%m-%d %H:%M:%S'), text))
-                                    processed_node_ids.add(node_id)  # Mark the node ID as processed
+                                if node_id not in processed_node_ids and locution.get("start") is not None:
+                                    if person_id in speakers:
+                                        speaker_timelines[person_id].append(
+                                            (datetime.strptime(locution.get("start"), '%Y-%m-%d %H:%M:%S'), text))
+                                        processed_node_ids.add(node_id)  # Mark the node ID as processed
+                                    else:
+                                        speaker_timelines["0"].append(
+                                            (datetime.strptime(locution.get("start"), '%Y-%m-%d %H:%M:%S'), text))
+                                        processed_node_ids.add(node_id)  # Mark the node ID as processed
 
     case 2:
         for filename in os.listdir(json_folder_path):
@@ -68,22 +76,28 @@ match option:
 
                         for node in texts:
                             if node.get("type") == "L":
-                                timestamp = datetime.strptime(node.get("timestamp"), '%Y-%m-%d %H:%M:%S')
-                                date = timestamp.date()
+                                starttime = None
                                 node_id = node.get("nodeID")
                                 text = node.get("text")
                                 speaker = None
 
                                 for locution in locutions:
                                     if locution.get("nodeID") == node_id:
+                                        if locution.get("start") is not None:
+                                            starttime = datetime.strptime(locution.get("start"), '%Y-%m-%d %H:%M:%S')
+                                            date = starttime.date()
+                                        else:
+                                            starttime = datetime.today()
+                                            date = datetime.today().date()
                                         speaker = locution.get("personID")
+                                        if speaker not in speakers:
+                                            speaker = "0"
                                         break
 
                                 if speaker is not None:
                                     if date not in date_speaker_data:
                                         date_speaker_data[date] = []
-
-                                    date_speaker_data[date].append((timestamp, speaker, text))
+                                    date_speaker_data[date].append((starttime, speaker, text))
         for date in date_speaker_data:
             date_speaker_data[date] = sorted(date_speaker_data[date], key=lambda x: x[0])
 
@@ -125,8 +139,8 @@ match option:
     case 1:
         for person_id, timeline in speaker_timelines.items():
             print(f"Speaker {person_id} Timeline:")
-            for timestamp, text in timeline:
-                print(f"{timestamp}: {text}")
+            for start, text in timeline:
+                print(f"{start}: {text}")
     case 2:
         for date, data in date_speaker_data.items():
             print(f"Date: {date}")
@@ -168,7 +182,27 @@ match option:
         plt.show()
 
     case 2:
-        print("well")
+        fig, ax = plt.subplots(figsize=(50, 5))
+        y_coord = 0
 
+        # Iterate through the speaker timelines
+        for day, timeline_data in date_speaker_data.items():
+            timestamps = [item[0] for item in timeline_data]
+            speaker = [item[1] for item in timeline_data]
+            text_labels = [item[2] for item in timeline_data]
+
+            line_style = ""
+            ax.plot(timestamps, [y_coord] * len(timestamps), marker='o', linestyle=line_style, label=day)
+            y_coord += 1
+
+        ax.set_yticks(range(len(date_speaker_data)))
+        ax.set_yticklabels(date_speaker_data.keys())
+        plt.gcf().autofmt_xdate()
+        ax.set_xlabel("Timestamp")
+        ax.set_title("Speaker Timelines")
+
+        plt.tight_layout()
+        plt.legend(loc='upper left', bbox_to_anchor=(1, 1))
+        plt.show()
     case 3:
         print("meh")
