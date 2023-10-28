@@ -255,64 +255,89 @@ match option:
     case 6:
         json_file_path = 'C:/Users/Martin Gruber/OneDrive - gw.uni-passau.de/Studium/7. Semester/Bachelorarbeit/Data/qt30/nodeset18265.json'
         graphNodes = []
-
+        processed_node_ids = set()
+        #for filename in os.listdir(json_folder_path):
+        #    if filename.endswith('.json'):
+        #        json_file_path = os.path.join(json_folder_path, filename)
+        #        if (os.path.getsize(json_file_path) != 0 and os.path.getsize(
+        #                json_file_path) != 68):
         with (open(json_file_path, 'r') as json_file):
-            data = json.load(json_file)
-            locutions = data.get("locutions")
-            nodes = data.get("nodes")
-            edges = data.get("edges")
+                        data = json.load(json_file)
+                        locutions = data.get("locutions")
+                        nodes = data.get("nodes")
+                        edges = data.get("edges")
 
-            node_id = None
+                        node_id = None
 
-            for node in nodes:
-                if node.get("type") == "I":
-                    node_id = node.get("nodeID")
-                    message = node.get("text")
-                    graphEdges = []
-                    text = None
-                    globalNodeID = None
-                    rephrasedNodeID = []
-                    inferenceNodeIDs = []
-                    locutionNodeID = None
-                    rephrasingConnID = []
-                    inferenceConnIDs = []
-                    assertingConnID = None
-                    for edge in edges:
-                        if edge.get("fromID") == node_id:
-                            for betweenNode in nodes:
-                                if betweenNode.get("nodeID") == edge.get("toID"):
-                                    if betweenNode.get("type") == "MA":
-                                        rephrasingConnID.append(betweenNode.get("nodeID"))
-                                    elif betweenNode.get("type") == "RA":
-                                        inferenceConnIDs.append(betweenNode.get("nodeID"))
-                        elif edge.get("toID") == node_id:
-                            for betweenNode in nodes:
-                                if betweenNode.get("nodeID") == edge.get("fromID") and betweenNode.get("type") == "YA" and betweenNode.get("text") in ["Asserting", "Rhetorical Questioning"]:
-                                    assertingConnID = betweenNode.get("nodeID")
+                        for node in nodes:
+                            if node.get("type") == "I":
+                                node_id = node.get("nodeID")
+                                message = node.get("text")
+                                graphEdges = []
+                                text = None
+                                globalNodeID = None
+                                rephrasedNodeID = []
+                                inferenceNodeIDs = []
+                                rephrasingConnID = []
+                                inferenceConnIDs = []
+                                assertingConnID = None
+                                for edge in edges:
+                                    if edge.get("fromID") == node_id:
+                                        for betweenNode in nodes:
+                                            if betweenNode.get("nodeID") == edge.get("toID"):
+                                                if betweenNode.get("type") == "MA":
+                                                    rephrasingConnID.append(betweenNode.get("nodeID"))
+                                                elif betweenNode.get("type") == "RA":
+                                                    inferenceConnIDs.append(betweenNode.get("nodeID"))
+                                    elif edge.get("toID") == node_id:
+                                        for betweenNode in nodes:
+                                            if betweenNode.get("nodeID") == edge.get("fromID") and betweenNode.get(
+                                                    "type") == "YA" and betweenNode.get("text") in ["Asserting",
+                                                                                                    "Rhetorical Questioning"]:
+                                                assertingConnID = betweenNode.get("nodeID")
 
-                    for targetNode in nodes:
-                        if targetNode.get("type") == "I":
-                            for edge in edges:
-                                if edge.get("fromID") in rephrasingConnID and edge.get("toID") == targetNode.get("nodeID"):
-                                    rephrasedNodeID.append(targetNode.get("nodeID"))
-                                if edge.get("fromID") in inferenceConnIDs and edge.get("toID") == targetNode.get("nodeID"):
-                                    inferenceNodeIDs.append(targetNode.get("nodeID"))
-                        elif targetNode.get("type") == "L":
-                            for edge in edges:
-                                if edge.get("toID") == assertingConnID and edge.get("fromID") == targetNode.get("nodeID"):
-                                    locutionNodeID = targetNode.get("nodeID")
-                                    text = targetNode.get("text")
-                                    globalNodeID = targetNode.get("nodeID")
+                                connNodesRe = []
+                                connNodesCompleteRe = []
+                                connNodesIn = []
+                                connNodesCompleteIn = []
+                                for targetNode in nodes:
+                                    if targetNode.get("type") == "I":
+                                        for edge in edges:
+                                            if edge.get("fromID") in rephrasingConnID and edge.get("toID") == targetNode.get(
+                                                    "nodeID"):
+                                                rephrasedNodeID.append(targetNode.get("nodeID"))
+                                                connNodesRe.append((targetNode.get("nodeID"), edge.get("fromID")))
+                                            if edge.get("fromID") in inferenceConnIDs and edge.get("toID") == targetNode.get(
+                                                    "nodeID"):
+                                                inferenceNodeIDs.append(targetNode.get("nodeID"))
+                                                connNodesIn.append((targetNode.get("nodeID"), edge.get("fromID")))
+                                    elif targetNode.get("type") == "L":
+                                        for edge in edges:
+                                            if edge.get("toID") == assertingConnID and edge.get("fromID") == targetNode.get(
+                                                    "nodeID"):
+                                                text = targetNode.get("text")
+                                                globalNodeID = targetNode.get("nodeID")
+                                    elif targetNode.get("type") == "YA":
+                                        for edge in edges:
+                                            if edge.get("toID") in rephrasingConnID and edge.get("fromID") == targetNode.get(
+                                                    "nodeID"):
+                                                for conn in connNodesRe:
+                                                    if conn[1] == edge.get("toID"):
+                                                        connNodesCompleteRe.append((conn[0], targetNode.get("text")))
+                                            if edge.get("toID") in inferenceConnIDs and edge.get("fromID") == targetNode.get(
+                                                    "nodeID"):
+                                                for conn in connNodesIn:
+                                                    if conn[1] == edge.get("toID"):
+                                                        connNodesCompleteIn.append((conn[0], targetNode.get("text")))
 
-                    if globalNodeID:
-                        if rephrasedNodeID:
-                            graphEdges.append((rephrasedNodeID, "REPHRASE"))
-                        if inferenceNodeIDs:
-                            graphEdges.append((inferenceNodeIDs, "INFERENCE"))
-                        if locutionNodeID is not None:
-                            graphEdges.append((locutionNodeID, "TRANSITION"))
-                        graphNodes.append((globalNodeID, graphEdges))
+                                if globalNodeID:
+                                    graphEdges.append((globalNodeID, "TRANSITION"))
+                                    if rephrasedNodeID:
+                                        graphEdges.append((connNodesCompleteRe, "REPHRASE"))
+                                    if inferenceNodeIDs:
+                                        graphEdges.append((connNodesCompleteIn, "INFERENCE"))
 
+                                    graphNodes.append((globalNodeID, graphEdges,))
 
 # Print the timelines for each speaker
 match option:
@@ -349,7 +374,6 @@ match option:
             print(f"{ID}|| {inIDs}")
 
     case 6:
-        print(graphNodes)
         for nodeID, timeline in graphNodes:
             print(f"{nodeID} {timeline}")
             print("")
