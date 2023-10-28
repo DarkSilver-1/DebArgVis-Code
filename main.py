@@ -198,13 +198,13 @@ match option:
 
     case 5:
         processed_node_ids = set()
-        #json_file_path = 'C:/Users/Martin Gruber/OneDrive - gw.uni-passau.de/Studium/7. Semester/Bachelorarbeit/Data/qt30/nodeset17921.json'
-        for filename in os.listdir(json_folder_path):
-            if filename.endswith('.json'):
-                json_file_path = os.path.join(json_folder_path, filename)
-                if (os.path.getsize(json_file_path) != 0 and os.path.getsize(
-                        json_file_path) != 68):
-                    with (open(json_file_path, 'r') as json_file):
+        json_file_path = 'C:/Users/Martin Gruber/OneDrive - gw.uni-passau.de/Studium/7. Semester/Bachelorarbeit/Data/qt30/nodeset18265.json'
+        #for filename in os.listdir(json_folder_path):
+        #    if filename.endswith('.json'):
+        #        json_file_path = os.path.join(json_folder_path, filename)
+        #        if (os.path.getsize(json_file_path) != 0 and os.path.getsize(
+        #                json_file_path) != 68):
+        with (open(json_file_path, 'r') as json_file):
                         data = json.load(json_file)
                         locutions = data.get("locutions")
                         texts = data.get("nodes")
@@ -216,10 +216,9 @@ match option:
                             if node.get("type") == "I":
                                 node_id = node.get("nodeID")
                                 text = node.get("text")
-                                rephrased = None
-                                rephrasedNodeID = None
-                                rephrasingID = None
-                                connectionType = None
+                                rephrased = []
+                                rephrasedNodeID = []
+                                rephrasingID = []
                                 inferenceIDs = []
                                 inferenceNodeIDs = []
                                 inferenceTexts = []
@@ -228,17 +227,16 @@ match option:
                                         for betweenNode in texts:
                                             if betweenNode.get("nodeID") == edge.get("toID"):
                                                 if betweenNode.get("type") == "MA":
-                                                    rephrasingID = betweenNode.get("nodeID")
+                                                    rephrasingID.append(betweenNode.get("nodeID"))
                                                 elif betweenNode.get("type") == "RA":
                                                     inferenceIDs.append(betweenNode.get("nodeID"))
-                                                connectionType = betweenNode.get("text")
                                 for targetNode in texts:
                                     if targetNode.get("type") == "I":
                                         for edge in edges:
-                                            if edge.get("fromID") == rephrasingID and edge.get(
+                                            if edge.get("fromID") in rephrasingID and edge.get(
                                                     "toID") == targetNode.get("nodeID"):
-                                                rephrased = targetNode.get("text")
-                                                rephrasedNodeID = targetNode.get("nodeID")
+                                                rephrased.append(targetNode.get("text"))
+                                                rephrasedNodeID.append(targetNode.get("nodeID"))
                                             if edge.get("fromID") in inferenceIDs and edge.get(
                                                     "toID") == targetNode.get("nodeID"):
                                                 inferenceTexts.append(targetNode.get("text"))
@@ -246,12 +244,12 @@ match option:
                                 if node_id and rephrasedNodeID:
                                     if node_id not in processed_node_ids:
                                         texts_with_rephrase.append(
-                                            (node_id, text, rephrasedNodeID, rephrased, connectionType, filename))
+                                            (node_id, text, rephrasedNodeID, rephrased))
                                         processed_node_ids.add(node_id)
                                 if node_id and inferenceNodeIDs:
                                     if node_id not in processed_node_ids:
                                         texts_with_inference.append(
-                                            (node_id, text, inferenceNodeIDs, inferenceTexts, connectionType))
+                                            (node_id, text, inferenceNodeIDs, inferenceTexts))
                                         processed_node_ids.add(node_id)
 
 # Print the timelines for each speaker
@@ -282,11 +280,11 @@ match option:
                 print("\n")
 
     case 5:
-        for ID, text, reID, reText, cType, filename in texts_with_rephrase:
-            print(f"{ID}:  || {reID}:  -- {cType} + {filename}")
+        for ID, text, reID, reText in texts_with_rephrase:
+            print(f"{ID} {text} || {reID} {reText}")
         print("---------------------------------------------------------")
-        #for ID, text, inIDs, inTexts, cType in texts_with_inference:
-        #    print(f"{ID}:  || {inIDs}:  -- {cType}")
+        for ID, text, inIDs, inTexts in texts_with_inference:
+            print(f"{ID} {text}|| {inIDs} {inTexts}")
 
 # Print the diagram
 match option:
