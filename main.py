@@ -213,6 +213,7 @@ match option:
             node_id = None
 
             for node in texts:
+
                 if node.get("type") == "I":
                     node_id = node.get("nodeID")
                     text = node.get("text")
@@ -253,7 +254,7 @@ match option:
                             processed_node_ids.add(node_id)
 
     case 6:
-        json_file_path = 'C:/Users/Martin Gruber/OneDrive - gw.uni-passau.de/Studium/7. Semester/Bachelorarbeit/Data/qt30/nodeset18265.json'
+        #json_file_path = 'C:/Users/Martin Gruber/OneDrive - gw.uni-passau.de/Studium/7. Semester/Bachelorarbeit/Data/qt30/nodeset18265.json'
         graphNodes = []
         processed_node_ids = set()
         for filename in os.listdir(json_folder_path):
@@ -273,6 +274,8 @@ match option:
                                 message = node.get("text")
                                 graphEdges = []
                                 text = None
+                                start_time = None
+                                speaker = None
                                 globalNodeID = None
                                 rephrasedNodeID = []
                                 inferenceNodeIDs = []
@@ -341,6 +344,14 @@ match option:
                                             if edge.get("fromID") in transitionConnIDs and edge.get("toID") == targetNode.get("nodeID"):
                                                 transitionNodeIDs.append(targetNode.get("nodeID"))
 
+                                for locution in locutions:
+                                    if locution.get("nodeID") == globalNodeID:
+                                        if(locution.get("start")) is None:
+                                            start_time = datetime.strptime("2025-05-28 19:08:43", '%Y-%m-%d %H:%M:%S')
+                                        else:
+                                            start_time = datetime.strptime(locution.get("start"), '%Y-%m-%d %H:%M:%S')
+                                        speaker = locution.get("personID")
+
                                 if globalNodeID:
                                     if rephrasedNodeID:
                                         graphEdges.append((connNodesCompleteRe, "REPHRASE"))
@@ -349,7 +360,7 @@ match option:
                                     if transitionNodeIDs:
                                         graphEdges.append((transitionNodeIDs, "TRANSITION"))
 
-                                    graphNodes.append((globalNodeID, graphEdges))
+                                    graphNodes.append((globalNodeID, graphEdges, speaker))
 
 # Print the timelines for each speaker
 match option:
@@ -386,8 +397,8 @@ match option:
             print(f"{ID}|| {inIDs}")
 
     case 6:
-        for nodeID, timeline in graphNodes:
-            print(f"{nodeID} {timeline}")
+        for nodeID, timeline, speaker in graphNodes:
+            print(f"{nodeID} {timeline} {speaker}")
             print("")
 
 # Print the diagram
