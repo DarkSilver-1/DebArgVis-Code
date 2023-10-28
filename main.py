@@ -2,19 +2,22 @@
 import json
 import os
 from datetime import datetime
+
 import matplotlib.pyplot as plt
 
 # Specify the path to your JSON file on Google Drive
 json_folder_path = 'C:/Users/Martin Gruber/OneDrive - gw.uni-passau.de/Studium/7. Semester/Bachelorarbeit/Data/qt30'
 # json_folder_path = 'C:/Users/grube/OneDrive - gw.uni-passau.de/Studium/7. Semester/Bachelorarbeit/Data/qt30'
 
-option = 4
+option = 5
 givenDate = datetime.strptime("2020-05-28 19:08:43", '%Y-%m-%d %H:%M:%S').date()
 speakers = ["3831", "3881", "3812", "3880", "3912"]
 
 speaker_timelines = {}
 date_speaker_data = {}
 topic_data = {}
+texts_with_rephrase = []
+texts_with_inference = []
 
 match option:
 
@@ -136,54 +139,120 @@ match option:
         print(topic_data)
 
     case 4:
-        json_file_path = 'C:/Users/Martin Gruber/OneDrive - gw.uni-passau.de/Studium/7. Semester/Bachelorarbeit/Data/qt30/nodeset17921.json'
-        with (open(json_file_path, 'r') as json_file):
-            data = json.load(json_file)
-            locutions = data.get("locutions")
-            texts = data.get("nodes")
-            edges = data.get("edges")
+        # json_file_path = 'C:/Users/Martin Gruber/OneDrive - gw.uni-passau.de/Studium/7. Semester/Bachelorarbeit/Data/qt30/nodeset17921.json'
+        processed_node_ids = set()
+        for filename in os.listdir(json_folder_path):
+            if filename.endswith('.json'):
+                json_file_path = os.path.join(json_folder_path, filename)
+                if (os.path.getsize(json_file_path) != 0 and os.path.getsize(
+                        json_file_path) != 68):
+                    with (open(json_file_path, 'r') as json_file):
+                        data = json.load(json_file)
+                        locutions = data.get("locutions")
+                        texts = data.get("nodes")
+                        edges = data.get("edges")
 
-            for locution in locutions:
-                person_id = locution.get("personID")
-                node_id = locution.get("nodeID")
-                start_time = locution.get("start")
-                text = None
-                paraphrased = None
-                paraphrasedID = None
+                        for locution in locutions:
+                            person_id = locution.get("personID")
+                            node_id = locution.get("nodeID")
+                            if locution.get("start") is None:
+                                start_time = datetime.today()
+                            else:
+                                start_time = datetime.strptime(locution.get("start"), '%Y-%m-%d %H:%M:%S')
+                            text = None
+                            paraphrased = None
+                            paraphrasedID = []
 
-                assertingNodeID = None
-                for node in texts:
-                    if node.get("nodeID") == node_id:
-                        if node.get("type") == "L":
-                            text = node.get("text")
-                            break
-                for node in texts:
-                    if node.get("type") == "YA" and node.get("text") == "Asserting":
-                        for edge in edges:
-                            if edge.get("fromID") == node_id:
-                                assertingNodeID = edge.get("toID")
-                                break
-                print(assertingNodeID)
+                            assertingNodeID = None
+                            for node in texts:
+                                if node.get("nodeID") == node_id:
+                                    if node.get("type") == "L":
+                                        text = node.get("text")
+                                        break
 
-                for node in texts:
-                    if node.get("type") == "I":
-                        for edge in edges:
-                            if edge.get("fromID") == assertingNodeID and edge.get("toID") == node.get("nodeID"):
-                                paraphrased = node.get("text")
-                                paraphrasedID = node.get("nodeID")
-                                break
-                print(paraphrased)
+                            for edge in edges:
+                                if edge.get("fromID") == node_id:
+                                    for node in texts:
+                                        if node.get("nodeID") == edge.get("toID") and node.get(
+                                                "type") == "YA" and node.get("text") in ["Asserting",
+                                                                                         "Rhetorical Questioning"]:
+                                            assertingNodeID = edge.get("toID")
+                                            break
 
-                if person_id and text and paraphrased:
-                    if person_id not in speaker_timelines:
-                        speaker_timelines[start_time] = []
+                            for node in texts:
+                                # if node.get("type") == "I":
+                                for edge in edges:
+                                    if edge.get("fromID") == assertingNodeID and edge.get("toID") == node.get(
+                                            "nodeID"):
+                                        paraphrased = node.get("text")
+                                        paraphrasedID.append(node.get("nodeID"))
+                                        break
+                            if person_id and text:
+                                if start_time not in speaker_timelines:
+                                    speaker_timelines[start_time] = []
 
-                # if person_id in speakers:
-                speaker_timelines[start_time].append(
-                    (datetime.strptime(locution.get("start"), '%Y-%m-%d %H:%M:%S'), text, paraphrased, paraphrasedID))
-                # else:
-                #    speaker_timelines["0"].append(
-                #        (datetime.strptime(locution.get("start"), '%Y-%m-%d %H:%M:%S'), text, paraphrased))
+                            if node_id not in processed_node_ids:
+                                speaker_timelines[start_time].append(
+                                    (start_time, text, paraphrased, paraphrasedID))
+                                processed_node_ids.add(node_id)
+
+    case 5:
+        processed_node_ids = set()
+        #json_file_path = 'C:/Users/Martin Gruber/OneDrive - gw.uni-passau.de/Studium/7. Semester/Bachelorarbeit/Data/qt30/nodeset17921.json'
+        for filename in os.listdir(json_folder_path):
+            if filename.endswith('.json'):
+                json_file_path = os.path.join(json_folder_path, filename)
+                if (os.path.getsize(json_file_path) != 0 and os.path.getsize(
+                        json_file_path) != 68):
+                    with (open(json_file_path, 'r') as json_file):
+                        data = json.load(json_file)
+                        locutions = data.get("locutions")
+                        texts = data.get("nodes")
+                        edges = data.get("edges")
+
+                        node_id = None
+
+                        for node in texts:
+                            if node.get("type") == "I":
+                                node_id = node.get("nodeID")
+                                text = node.get("text")
+                                rephrased = None
+                                rephrasedNodeID = None
+                                rephrasingID = None
+                                connectionType = None
+                                inferenceIDs = []
+                                inferenceNodeIDs = []
+                                inferenceTexts = []
+                                for edge in edges:
+                                    if edge.get("fromID") == node_id:
+                                        for betweenNode in texts:
+                                            if betweenNode.get("nodeID") == edge.get("toID"):
+                                                if betweenNode.get("type") == "MA":
+                                                    rephrasingID = betweenNode.get("nodeID")
+                                                elif betweenNode.get("type") == "RA":
+                                                    inferenceIDs.append(betweenNode.get("nodeID"))
+                                                connectionType = betweenNode.get("text")
+                                for targetNode in texts:
+                                    if targetNode.get("type") == "I":
+                                        for edge in edges:
+                                            if edge.get("fromID") == rephrasingID and edge.get(
+                                                    "toID") == targetNode.get("nodeID"):
+                                                rephrased = targetNode.get("text")
+                                                rephrasedNodeID = targetNode.get("nodeID")
+                                            if edge.get("fromID") in inferenceIDs and edge.get(
+                                                    "toID") == targetNode.get("nodeID"):
+                                                inferenceTexts.append(targetNode.get("text"))
+                                                inferenceNodeIDs.append(targetNode.get("nodeID"))
+                                if node_id and rephrasedNodeID:
+                                    if node_id not in processed_node_ids:
+                                        texts_with_rephrase.append(
+                                            (node_id, text, rephrasedNodeID, rephrased, connectionType, filename))
+                                        processed_node_ids.add(node_id)
+                                if node_id and inferenceNodeIDs:
+                                    if node_id not in processed_node_ids:
+                                        texts_with_inference.append(
+                                            (node_id, text, inferenceNodeIDs, inferenceTexts, connectionType))
+                                        processed_node_ids.add(node_id)
 
 # Print the timelines for each speaker
 match option:
@@ -212,8 +281,14 @@ match option:
                 print(f"{timestamp}: {paraphrased}: {iID}")
                 print("\n")
 
-# Print the diagram
+    case 5:
+        for ID, text, reID, reText, cType, filename in texts_with_rephrase:
+            print(f"{ID}:  || {reID}:  -- {cType} + {filename}")
+        print("---------------------------------------------------------")
+        #for ID, text, inIDs, inTexts, cType in texts_with_inference:
+        #    print(f"{ID}:  || {inIDs}:  -- {cType}")
 
+# Print the diagram
 match option:
     case 1:
         fig, ax = plt.subplots(figsize=(50, 5))
@@ -264,3 +339,6 @@ match option:
         plt.show()
     case 3:
         print("meh")
+
+    case 4:
+        print("nah")
