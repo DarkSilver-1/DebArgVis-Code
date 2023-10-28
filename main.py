@@ -256,19 +256,17 @@ match option:
         json_file_path = 'C:/Users/Martin Gruber/OneDrive - gw.uni-passau.de/Studium/7. Semester/Bachelorarbeit/Data/qt30/nodeset18265.json'
         graphNodes = []
         processed_node_ids = set()
-        #for filename in os.listdir(json_folder_path):
-        #    if filename.endswith('.json'):
-        #        json_file_path = os.path.join(json_folder_path, filename)
-        #        if (os.path.getsize(json_file_path) != 0 and os.path.getsize(
-        #                json_file_path) != 68):
-        with (open(json_file_path, 'r') as json_file):
+        for filename in os.listdir(json_folder_path):
+            if filename.endswith('.json'):
+                json_file_path = os.path.join(json_folder_path, filename)
+                if (os.path.getsize(json_file_path) != 0 and os.path.getsize(
+                        json_file_path) != 68):
+                    with (open(json_file_path, 'r') as json_file):
                         data = json.load(json_file)
                         locutions = data.get("locutions")
                         nodes = data.get("nodes")
                         edges = data.get("edges")
-
                         node_id = None
-
                         for node in nodes:
                             if node.get("type") == "I":
                                 node_id = node.get("nodeID")
@@ -330,14 +328,28 @@ match option:
                                                     if conn[1] == edge.get("toID"):
                                                         connNodesCompleteIn.append((conn[0], targetNode.get("text")))
 
+                                transitionNodeIDs = []
+                                transitionConnIDs = []
+                                for edge in edges:
+                                    if edge.get("fromID") == globalNodeID:
+                                        for betweenNode in nodes:
+                                            if betweenNode.get("nodeID") == edge.get("toID") and betweenNode.get("type") == "TA":
+                                                transitionConnIDs.append(betweenNode.get("nodeID"))
+                                for targetNode in nodes:
+                                    if targetNode.get("type") == "L":
+                                        for edge in edges:
+                                            if edge.get("fromID") in transitionConnIDs and edge.get("toID") == targetNode.get("nodeID"):
+                                                transitionNodeIDs.append(targetNode.get("nodeID"))
+
                                 if globalNodeID:
-                                    graphEdges.append((globalNodeID, "TRANSITION"))
                                     if rephrasedNodeID:
                                         graphEdges.append((connNodesCompleteRe, "REPHRASE"))
                                     if inferenceNodeIDs:
                                         graphEdges.append((connNodesCompleteIn, "INFERENCE"))
+                                    if transitionNodeIDs:
+                                        graphEdges.append((transitionNodeIDs, "TRANSITION"))
 
-                                    graphNodes.append((globalNodeID, graphEdges,))
+                                    graphNodes.append((globalNodeID, graphEdges))
 
 # Print the timelines for each speaker
 match option:
