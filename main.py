@@ -25,46 +25,47 @@ match option:
     case 1:
         processed_node_ids = set()
         speaker_timelines["0"] = []
+        json_file_path = 'C:/Users/Martin Gruber/OneDrive - gw.uni-passau.de/Studium/7. Semester/Bachelorarbeit/Data/qt30/nodeset17929.json'
+
         date = givenDate  # This type of sorting only makes sense for a specific day
-        for filename in os.listdir(json_folder_path):
-            if filename.endswith('.json'):
-                json_file_path = os.path.join(json_folder_path, filename)
-                if (os.path.getsize(json_file_path) != 0 and os.path.getsize(
-                        json_file_path) != 68):  # The fcked files all seem to have a size of 68 Bytes
-                    with open(json_file_path, 'r') as json_file:
-                        data = json.load(json_file)
-                        locutions = data.get("locutions")
-                        texts = data.get("nodes")
+        # for filename in os.listdir(json_folder_path):
+        #    if filename.endswith('.json'):
+        #        json_file_path = os.path.join(json_folder_path, filename)
+        #       if (os.path.getsize(json_file_path) != 0 and os.path.getsize(
+        #                json_file_path) != 68):  # The fcked files all seem to have a size of 68 Bytes
+        with open(json_file_path, 'r') as json_file:
+            data = json.load(json_file)
+            locutions = data.get("locutions")
+            texts = data.get("nodes")
 
-                        # Iterate through the 'locutions' data
-                        for locution in locutions:
-                            person_id = locution.get("personID")
-                            node_id = locution.get("nodeID")
-                            text = None
+            # Iterate through the 'locutions' data
+            for locution in locutions:
+                person_id = locution.get("personID")
+                globalConnectionID = locution.get("nodeID")
+                text = None
 
-                            # Find the corresponding text from 'texts' data based on 'nodeID'
-                            for text_item in texts:
-                                if text_item.get("nodeID") == node_id and text_item.get(
-                                        "type") == "L" and locution.get("start") is not None and datetime.strptime(
-                                    locution.get("start"), '%Y-%m-%d %H:%M:%S').date() == date:
-                                    text = text_item.get("text")
-                                    break
+                # Find the corresponding text from 'texts' data based on 'nodeID'
+                for text_item in texts:
+                    if text_item.get("nodeID") == globalConnectionID and text_item.get(
+                            "type") == "L" and locution.get("start") is not None:
+                        text = text_item.get("text")
+                        break
 
-                            if person_id and text:
-                                if person_id not in speaker_timelines:
-                                    if person_id in speakers:
-                                        speaker_timelines[person_id] = []
+                if person_id and text:
+                    if person_id not in speaker_timelines:
+                        # if person_id in speakers:
+                        speaker_timelines[person_id] = []
 
-                                # Check if the node ID has been processed before
-                                if node_id not in processed_node_ids and locution.get("start") is not None:
-                                    if person_id in speakers:
-                                        speaker_timelines[person_id].append(
-                                            (datetime.strptime(locution.get("start"), '%Y-%m-%d %H:%M:%S'), text))
-                                        processed_node_ids.add(node_id)  # Mark the node ID as processed
-                                    else:
-                                        speaker_timelines["0"].append(
-                                            (datetime.strptime(locution.get("start"), '%Y-%m-%d %H:%M:%S'), text))
-                                        processed_node_ids.add(node_id)  # Mark the node ID as processed
+                    # Check if the node ID has been processed before
+                    if globalConnectionID not in processed_node_ids and locution.get("start") is not None:
+                        # if person_id in speakers:
+                        speaker_timelines[person_id].append(
+                            (datetime.strptime(locution.get("start"), '%Y-%m-%d %H:%M:%S'), text))
+                        processed_node_ids.add(globalConnectionID)  # Mark the node ID as processed
+                    # else:
+                    # speaker_timelines["0"].append(
+                    #    (datetime.strptime(locution.get("start"), '%Y-%m-%d %H:%M:%S'), text))
+                    # processed_node_ids.add(node_id)  # Mark the node ID as processed
 
     case 2:
         for filename in os.listdir(json_folder_path):
@@ -80,12 +81,12 @@ match option:
                         for node in texts:
                             if node.get("type") == "L":
                                 starttime = None
-                                node_id = node.get("nodeID")
+                                globalConnectionID = node.get("nodeID")
                                 text = node.get("text")
                                 speaker = None
 
                                 for locution in locutions:
-                                    if locution.get("nodeID") == node_id:
+                                    if locution.get("nodeID") == globalConnectionID:
                                         if locution.get("start") is not None:
                                             starttime = datetime.strptime(locution.get("start"), '%Y-%m-%d %H:%M:%S')
                                             date = starttime.date()
@@ -119,14 +120,14 @@ match option:
                         for node in texts:
                             if node.get("type") == "L":
                                 if datetime.strptime(node.get("timestamp"), '%Y-%m-%d %H:%M:%S').date() == date:
-                                    node_id = node.get("nodeID")
+                                    globalConnectionID = node.get("nodeID")
                                     text = node.get("text")
                                     timestamp = datetime.strptime(node.get("timestamp"), '%Y-%m-%d %H:%M:%S')
                                     topic = node.get("topic")
                                     speaker = None
 
                                     for locution in locutions:
-                                        if locution.get("nodeID") == node_id:
+                                        if locution.get("nodeID") == globalConnectionID:
                                             speaker = locution.get("personID")
                                             break
 
@@ -154,7 +155,7 @@ match option:
 
                         for locution in locutions:
                             person_id = locution.get("personID")
-                            node_id = locution.get("nodeID")
+                            globalConnectionID = locution.get("nodeID")
                             if locution.get("start") is None:
                                 start_time = datetime.today()
                             else:
@@ -165,13 +166,13 @@ match option:
 
                             assertingNodeID = None
                             for node in texts:
-                                if node.get("nodeID") == node_id:
+                                if node.get("nodeID") == globalConnectionID:
                                     if node.get("type") == "L":
                                         text = node.get("text")
                                         break
 
                             for edge in edges:
-                                if edge.get("fromID") == node_id:
+                                if edge.get("fromID") == globalConnectionID:
                                     for node in texts:
                                         if node.get("nodeID") == edge.get("toID") and node.get(
                                                 "type") == "YA" and node.get("text") in ["Asserting",
@@ -191,10 +192,10 @@ match option:
                                 if start_time not in speaker_timelines:
                                     speaker_timelines[start_time] = []
 
-                            if node_id not in processed_node_ids:
+                            if globalConnectionID not in processed_node_ids:
                                 speaker_timelines[start_time].append(
                                     (start_time, text, paraphrased, paraphrasedID))
-                                processed_node_ids.add(node_id)
+                                processed_node_ids.add(globalConnectionID)
 
     case 5:
         processed_node_ids = set()
@@ -210,12 +211,12 @@ match option:
             texts = data.get("nodes")
             edges = data.get("edges")
 
-            node_id = None
+            globalConnectionID = None
 
             for node in texts:
 
                 if node.get("type") == "I":
-                    node_id = node.get("nodeID")
+                    globalConnectionID = node.get("nodeID")
                     text = node.get("text")
                     rephrased = []
                     rephrasedNodeID = []
@@ -224,7 +225,7 @@ match option:
                     inferenceNodeIDs = []
                     inferenceTexts = []
                     for edge in edges:
-                        if edge.get("fromID") == node_id:
+                        if edge.get("fromID") == globalConnectionID:
                             for betweenNode in texts:
                                 if betweenNode.get("nodeID") == edge.get("toID"):
                                     if betweenNode.get("type") == "MA":
@@ -242,32 +243,58 @@ match option:
                                         "toID") == targetNode.get("nodeID"):
                                     inferenceTexts.append(targetNode.get("text"))
                                     inferenceNodeIDs.append(targetNode.get("nodeID"))
-                    if node_id and rephrasedNodeID:
-                        if node_id not in processed_node_ids:
+                    if globalConnectionID and rephrasedNodeID:
+                        if globalConnectionID not in processed_node_ids:
                             texts_with_rephrase.append(
-                                (node_id, text, rephrasedNodeID, rephrased))
-                            processed_node_ids.add(node_id)
-                    if node_id and inferenceNodeIDs:
-                        if node_id not in processed_node_ids:
+                                (globalConnectionID, text, rephrasedNodeID, rephrased))
+                            processed_node_ids.add(globalConnectionID)
+                    if globalConnectionID and inferenceNodeIDs:
+                        if globalConnectionID not in processed_node_ids:
                             texts_with_inference.append(
-                                (node_id, text, inferenceNodeIDs, inferenceTexts))
-                            processed_node_ids.add(node_id)
+                                (globalConnectionID, text, inferenceNodeIDs, inferenceTexts))
+                            processed_node_ids.add(globalConnectionID)
 
     case 6:
-        #json_file_path = 'C:/Users/Martin Gruber/OneDrive - gw.uni-passau.de/Studium/7. Semester/Bachelorarbeit/Data/qt30/nodeset18265.json'
+        # json_file_path = 'C:/Users/Martin Gruber/OneDrive - gw.uni-passau.de/Studium/7. Semester/Bachelorarbeit/Data/qt30/nodeset17932.json'
+        json_file_path = 'C:/Users/Martin Gruber/OneDrive - gw.uni-passau.de/Studium/7. Semester/Bachelorarbeit/Data/qt30/nodeset17929.json'
         graphNodes = []
         processed_node_ids = set()
-        for filename in os.listdir(json_folder_path):
-            if filename.endswith('.json'):
-                json_file_path = os.path.join(json_folder_path, filename)
-                if (os.path.getsize(json_file_path) != 0 and os.path.getsize(
-                        json_file_path) != 68):
-                    with (open(json_file_path, 'r') as json_file):
+        #for filename in os.listdir(json_folder_path):
+        #    if filename.endswith('.json'):
+        #        json_file_path = os.path.join(json_folder_path, filename)
+        #        if (os.path.getsize(json_file_path) != 0 and os.path.getsize(
+        #                json_file_path) != 68):
+        with open(json_file_path, 'r') as json_file:
                         data = json.load(json_file)
                         locutions = data.get("locutions")
                         nodes = data.get("nodes")
                         edges = data.get("edges")
                         node_id = None
+                        nodeIdMapping = {}
+
+                        # creating a mapping between the actual text ("L") and the paraphrased text ("I") for every node
+                        for node in nodes:
+                            if node.get("type") == "I":
+                                node_id = node.get("nodeID")
+                                nodeIdMapping[node_id] = []
+                                betweenId = None
+                                # finding the id of the assertion
+                                for edge in edges:
+                                    if edge.get("toID") == node_id:
+                                        for betweenNode in nodes:
+                                            if betweenNode.get("nodeID") == edge.get("fromID") and betweenNode.get(
+                                                    "type") == "YA" and betweenNode.get("text") in ["Asserting",
+                                                                                                    "Rhetorical Questioning",
+                                                                                                    "Pure Questioning"]:
+                                                betweenId = betweenNode.get("nodeID")
+                                # finding the id of the corresponding node
+                                for targetNode in nodes:
+                                    if targetNode.get("type") == "L":
+                                        for edge in edges:
+                                            if edge.get("fromID") == targetNode.get("nodeID") and edge.get(
+                                                    "toID") == betweenId:
+                                                nodeIdMapping[node_id].append(targetNode.get("nodeID"))
+
                         for node in nodes:
                             if node.get("type") == "I":
                                 node_id = node.get("nodeID")
@@ -276,13 +303,26 @@ match option:
                                 text = None
                                 start_time = None
                                 speaker = None
-                                globalNodeID = None
+                                globalNodeID = nodeIdMapping[node_id][0]
+
                                 rephrasedNodeID = []
                                 inferenceNodeIDs = []
+                                conflictNodeID = []
                                 rephrasingConnID = []
                                 inferenceConnIDs = []
-                                assertingConnID = None
+                                conflictConnID = []
+                                transitionNodeIDs = []
+                                transitionConnIDs = []
+                                connNodesRe = []
+                                connNodesCompleteRe = []
+                                connNodesIn = []
+                                connNodesCompleteIn = []
+                                connNodesConf = []
+                                connNodesCompleteConf = []
+
                                 for edge in edges:
+                                    # find the outgoing connections of this node. There are two types:
+                                    # (1) connections to other "I" nodes and (2) connections to "L" nodes
                                     if edge.get("fromID") == node_id:
                                         for betweenNode in nodes:
                                             if betweenNode.get("nodeID") == edge.get("toID"):
@@ -290,63 +330,55 @@ match option:
                                                     rephrasingConnID.append(betweenNode.get("nodeID"))
                                                 elif betweenNode.get("type") == "RA":
                                                     inferenceConnIDs.append(betweenNode.get("nodeID"))
-                                    elif edge.get("toID") == node_id:
+                                                elif betweenNode.get("type") == "CA":
+                                                    conflictConnID.append(betweenNode.get("nodeID"))
+                                    if edge.get("fromID") == globalNodeID:
                                         for betweenNode in nodes:
-                                            if betweenNode.get("nodeID") == edge.get("fromID") and betweenNode.get(
-                                                    "type") == "YA" and betweenNode.get("text") in ["Asserting",
-                                                                                                    "Rhetorical Questioning"]:
-                                                assertingConnID = betweenNode.get("nodeID")
+                                            if betweenNode.get("nodeID") == edge.get("toID") and betweenNode.get(
+                                                    "type") == "TA":
+                                                transitionConnIDs.append(betweenNode.get("nodeID"))
 
-                                connNodesRe = []
-                                connNodesCompleteRe = []
-                                connNodesIn = []
-                                connNodesCompleteIn = []
                                 for targetNode in nodes:
                                     if targetNode.get("type") == "I":
                                         for edge in edges:
-                                            if edge.get("fromID") in rephrasingConnID and edge.get("toID") == targetNode.get(
-                                                    "nodeID"):
+                                            if edge.get("fromID") in rephrasingConnID and edge.get("toID") == targetNode.get("nodeID"):
                                                 rephrasedNodeID.append(targetNode.get("nodeID"))
                                                 connNodesRe.append((targetNode.get("nodeID"), edge.get("fromID")))
-                                            if edge.get("fromID") in inferenceConnIDs and edge.get("toID") == targetNode.get(
-                                                    "nodeID"):
+                                            if edge.get("fromID") in inferenceConnIDs and edge.get("toID") == targetNode.get("nodeID"):
                                                 inferenceNodeIDs.append(targetNode.get("nodeID"))
                                                 connNodesIn.append((targetNode.get("nodeID"), edge.get("fromID")))
+                                            if edge.get("fromID") in conflictConnID and edge.get("toID") == targetNode.get("nodeID"):
+                                                conflictNodeID.append(targetNode.get("nodeID"))
+                                                connNodesConf.append((targetNode.get("nodeID"), edge.get("fromID")))
+                                    elif targetNode.get("nodeID") == globalNodeID:
+                                        text = targetNode.get("text")
                                     elif targetNode.get("type") == "L":
                                         for edge in edges:
-                                            if edge.get("toID") == assertingConnID and edge.get("fromID") == targetNode.get(
-                                                    "nodeID"):
-                                                text = targetNode.get("text")
-                                                globalNodeID = targetNode.get("nodeID")
+                                            if edge.get("fromID") in transitionConnIDs and edge.get(
+                                                    "toID") == targetNode.get("nodeID"):
+                                                transitionNodeIDs.append(targetNode.get("nodeID"))
                                     elif targetNode.get("type") == "YA":
                                         for edge in edges:
-                                            if edge.get("toID") in rephrasingConnID and edge.get("fromID") == targetNode.get(
-                                                    "nodeID"):
+                                            if edge.get("toID") in rephrasingConnID and edge.get("fromID") == targetNode.get("nodeID"):
                                                 for conn in connNodesRe:
                                                     if conn[1] == edge.get("toID"):
-                                                        connNodesCompleteRe.append((conn[0], targetNode.get("text")))
-                                            if edge.get("toID") in inferenceConnIDs and edge.get("fromID") == targetNode.get(
-                                                    "nodeID"):
+                                                        connNodesCompleteRe.append(
+                                                            (nodeIdMapping[conn[0]], targetNode.get("text")))
+                                            if edge.get("toID") in inferenceConnIDs and edge.get("fromID") == targetNode.get("nodeID"):
                                                 for conn in connNodesIn:
                                                     if conn[1] == edge.get("toID"):
-                                                        connNodesCompleteIn.append((conn[0], targetNode.get("text")))
-
-                                transitionNodeIDs = []
-                                transitionConnIDs = []
-                                for edge in edges:
-                                    if edge.get("fromID") == globalNodeID:
-                                        for betweenNode in nodes:
-                                            if betweenNode.get("nodeID") == edge.get("toID") and betweenNode.get("type") == "TA":
-                                                transitionConnIDs.append(betweenNode.get("nodeID"))
-                                for targetNode in nodes:
-                                    if targetNode.get("type") == "L":
-                                        for edge in edges:
-                                            if edge.get("fromID") in transitionConnIDs and edge.get("toID") == targetNode.get("nodeID"):
-                                                transitionNodeIDs.append(targetNode.get("nodeID"))
+                                                        connNodesCompleteIn.append(
+                                                            (nodeIdMapping[conn[0]], targetNode.get("text")))
+                                            if edge.get("toID") in conflictConnID and edge.get(
+                                                    "fromID") == targetNode.get("nodeID"):
+                                                for conn in connNodesConf:
+                                                    if conn[1] == edge.get("toID"):
+                                                        connNodesCompleteConf.append(
+                                                            (nodeIdMapping[conn[0]], targetNode.get("text")))
 
                                 for locution in locutions:
                                     if locution.get("nodeID") == globalNodeID:
-                                        if(locution.get("start")) is None:
+                                        if (locution.get("start")) is None:
                                             start_time = datetime.strptime("2025-05-28 19:08:43", '%Y-%m-%d %H:%M:%S')
                                         else:
                                             start_time = datetime.strptime(locution.get("start"), '%Y-%m-%d %H:%M:%S')
@@ -357,10 +389,11 @@ match option:
                                         graphEdges.append((connNodesCompleteRe, "REPHRASE"))
                                     if inferenceNodeIDs:
                                         graphEdges.append((connNodesCompleteIn, "INFERENCE"))
+                                    if conflictConnID:
+                                        graphEdges.append((connNodesCompleteConf, "CONFLICT"))
                                     if transitionNodeIDs:
                                         graphEdges.append((transitionNodeIDs, "TRANSITION"))
-
-                                    graphNodes.append((globalNodeID, graphEdges, speaker))
+                                    graphNodes.append((globalNodeID, graphEdges, speaker, text))
 
 # Print the timelines for each speaker
 match option:
@@ -397,9 +430,11 @@ match option:
             print(f"{ID}|| {inIDs}")
 
     case 6:
-        for nodeID, timeline, speaker in graphNodes:
-            print(f"{nodeID} {timeline} {speaker}")
+        for nodeID, timeline, speaker, text in graphNodes:
+            print(f"{nodeID} {timeline} {speaker} {text}")
             print("")
+        for first, second in nodeIdMapping.items():
+            print(f"{first} {second}")
 
 # Print the diagram
 match option:
