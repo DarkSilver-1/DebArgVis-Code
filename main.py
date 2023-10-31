@@ -256,15 +256,15 @@ match option:
 
     case 6:
         # json_file_path = 'C:/Users/Martin Gruber/OneDrive - gw.uni-passau.de/Studium/7. Semester/Bachelorarbeit/Data/qt30/nodeset17932.json'
-        json_file_path = 'C:/Users/Martin Gruber/OneDrive - gw.uni-passau.de/Studium/7. Semester/Bachelorarbeit/Data/qt30/nodeset17929.json'
+        json_file_path = 'C:/Users/Martin Gruber/OneDrive - gw.uni-passau.de/Studium/7. Semester/Bachelorarbeit/Data/qt30/nodeset17925.json'
         graphNodes = []
         processed_node_ids = set()
-        #for filename in os.listdir(json_folder_path):
-        #    if filename.endswith('.json'):
-        #        json_file_path = os.path.join(json_folder_path, filename)
-        #        if (os.path.getsize(json_file_path) != 0 and os.path.getsize(
-        #                json_file_path) != 68):
-        with open(json_file_path, 'r') as json_file:
+        for filename in os.listdir(json_folder_path):
+            if filename.endswith('.json'):
+                json_file_path = os.path.join(json_folder_path, filename)
+                if (os.path.getsize(json_file_path) != 0 and os.path.getsize(
+                        json_file_path) != 68):
+                    with open(json_file_path, 'r') as json_file:
                         data = json.load(json_file)
                         locutions = data.get("locutions")
                         nodes = data.get("nodes")
@@ -299,26 +299,15 @@ match option:
                             if node.get("type") == "I":
                                 node_id = node.get("nodeID")
                                 message = node.get("text")
-                                graphEdges = []
                                 text = None
                                 start_time = None
                                 speaker = None
-                                globalNodeID = nodeIdMapping[node_id][0]
+                                if nodeIdMapping[node_id]:
+                                    globalNodeID = nodeIdMapping[node_id][0]
 
-                                rephrasedNodeID = []
-                                inferenceNodeIDs = []
-                                conflictNodeID = []
-                                rephrasingConnID = []
-                                inferenceConnIDs = []
-                                conflictConnID = []
-                                transitionNodeIDs = []
-                                transitionConnIDs = []
-                                connNodesRe = []
-                                connNodesCompleteRe = []
-                                connNodesIn = []
-                                connNodesCompleteIn = []
-                                connNodesConf = []
-                                connNodesCompleteConf = []
+                                outgoingEdges = {}
+                                connectionIDs = {}
+                                graphEdges = {}
 
                                 for edge in edges:
                                     # find the outgoing connections of this node. There are two types:
@@ -326,55 +315,52 @@ match option:
                                     if edge.get("fromID") == node_id:
                                         for betweenNode in nodes:
                                             if betweenNode.get("nodeID") == edge.get("toID"):
-                                                if betweenNode.get("type") == "MA":
-                                                    rephrasingConnID.append(betweenNode.get("nodeID"))
-                                                elif betweenNode.get("type") == "RA":
-                                                    inferenceConnIDs.append(betweenNode.get("nodeID"))
-                                                elif betweenNode.get("type") == "CA":
-                                                    conflictConnID.append(betweenNode.get("nodeID"))
+                                                if betweenNode.get("type") not in outgoingEdges:
+                                                    outgoingEdges[betweenNode.get("type")] = []
+                                                outgoingEdges[betweenNode.get("type")].append(betweenNode.get("nodeID"))
+
                                     if edge.get("fromID") == globalNodeID:
                                         for betweenNode in nodes:
                                             if betweenNode.get("nodeID") == edge.get("toID") and betweenNode.get(
                                                     "type") == "TA":
-                                                transitionConnIDs.append(betweenNode.get("nodeID"))
-
+                                                if betweenNode.get("type") not in outgoingEdges:
+                                                    outgoingEdges[betweenNode.get("type")] = []
+                                                outgoingEdges[betweenNode.get("type")].append(betweenNode.get("nodeID"))
+                                # find the
                                 for targetNode in nodes:
                                     if targetNode.get("type") == "I":
                                         for edge in edges:
-                                            if edge.get("fromID") in rephrasingConnID and edge.get("toID") == targetNode.get("nodeID"):
-                                                rephrasedNodeID.append(targetNode.get("nodeID"))
-                                                connNodesRe.append((targetNode.get("nodeID"), edge.get("fromID")))
-                                            if edge.get("fromID") in inferenceConnIDs and edge.get("toID") == targetNode.get("nodeID"):
-                                                inferenceNodeIDs.append(targetNode.get("nodeID"))
-                                                connNodesIn.append((targetNode.get("nodeID"), edge.get("fromID")))
-                                            if edge.get("fromID") in conflictConnID and edge.get("toID") == targetNode.get("nodeID"):
-                                                conflictNodeID.append(targetNode.get("nodeID"))
-                                                connNodesConf.append((targetNode.get("nodeID"), edge.get("fromID")))
+                                            for connType in outgoingEdges:
+                                                if edge.get("fromID") in outgoingEdges[connType] and edge.get(
+                                                        "toID") == targetNode.get("nodeID"):
+                                                    if connType not in connectionIDs:
+                                                        connectionIDs[connType] = []
+                                                    connectionIDs[connType].append(
+                                                        (targetNode.get("nodeID"), edge.get("fromID")))
+
                                     elif targetNode.get("nodeID") == globalNodeID:
                                         text = targetNode.get("text")
                                     elif targetNode.get("type") == "L":
                                         for edge in edges:
-                                            if edge.get("fromID") in transitionConnIDs and edge.get(
-                                                    "toID") == targetNode.get("nodeID"):
-                                                transitionNodeIDs.append(targetNode.get("nodeID"))
+
+                                            if "TA" in outgoingEdges and edge.get("fromID") in outgoingEdges[
+                                                "TA"] and edge.get("toID") == targetNode.get("nodeID"):
+                                                if "TA" not in graphEdges:
+                                                    graphEdges["TA"] = []
+                                                graphEdges["TA"].append(targetNode.get("nodeID"))
+
                                     elif targetNode.get("type") == "YA":
                                         for edge in edges:
-                                            if edge.get("toID") in rephrasingConnID and edge.get("fromID") == targetNode.get("nodeID"):
-                                                for conn in connNodesRe:
-                                                    if conn[1] == edge.get("toID"):
-                                                        connNodesCompleteRe.append(
-                                                            (nodeIdMapping[conn[0]], targetNode.get("text")))
-                                            if edge.get("toID") in inferenceConnIDs and edge.get("fromID") == targetNode.get("nodeID"):
-                                                for conn in connNodesIn:
-                                                    if conn[1] == edge.get("toID"):
-                                                        connNodesCompleteIn.append(
-                                                            (nodeIdMapping[conn[0]], targetNode.get("text")))
-                                            if edge.get("toID") in conflictConnID and edge.get(
-                                                    "fromID") == targetNode.get("nodeID"):
-                                                for conn in connNodesConf:
-                                                    if conn[1] == edge.get("toID"):
-                                                        connNodesCompleteConf.append(
-                                                            (nodeIdMapping[conn[0]], targetNode.get("text")))
+
+                                            for connType, conn in connectionIDs.items():
+                                                for c in conn:
+                                                    if edge.get("toID") in c[1] and edge.get(
+                                                            "fromID") == targetNode.get("nodeID"):
+                                                        if c[1] == edge.get("toID"):
+                                                            if connType not in graphEdges:
+                                                                graphEdges[connType] = []
+                                                            graphEdges[connType].append(
+                                                                (nodeIdMapping[c[0]], targetNode.get("text")))
 
                                 for locution in locutions:
                                     if locution.get("nodeID") == globalNodeID:
@@ -385,14 +371,6 @@ match option:
                                         speaker = locution.get("personID")
 
                                 if globalNodeID:
-                                    if rephrasedNodeID:
-                                        graphEdges.append((connNodesCompleteRe, "REPHRASE"))
-                                    if inferenceNodeIDs:
-                                        graphEdges.append((connNodesCompleteIn, "INFERENCE"))
-                                    if conflictConnID:
-                                        graphEdges.append((connNodesCompleteConf, "CONFLICT"))
-                                    if transitionNodeIDs:
-                                        graphEdges.append((transitionNodeIDs, "TRANSITION"))
                                     graphNodes.append((globalNodeID, graphEdges, speaker, text))
 
 # Print the timelines for each speaker
@@ -431,10 +409,8 @@ match option:
 
     case 6:
         for nodeID, timeline, speaker, text in graphNodes:
-            print(f"{nodeID} {timeline} {speaker} {text}")
+            print(f"{nodeID} {timeline} {speaker}")
             print("")
-        for first, second in nodeIdMapping.items():
-            print(f"{first} {second}")
 
 # Print the diagram
 match option:
