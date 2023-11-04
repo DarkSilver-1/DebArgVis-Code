@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Data Display</title>
+    <style>
+        /* Add your CSS styling here */
+    </style>
+</head>
+<body>
+<h1>Data Display</h1>
+<ul id="data-list">
+    <!-- Data will be inserted here -->
+</ul>
+
+<script>
+    // JavaScript code to fetch data from your FastAPI backend and update the HTML
+    fetch('/')
+        .then(response => response.json())
+        .then(data => {
+            console.log("got there");
+            const dataList = document.getElementById('data-list');
+            data.forEach(item => {
+                const listItem = document.createElement('li');
+                listItem.textContent = `Column1: ${item[0]}, Column2: ${item[1]}`;
+                dataList.appendChild(listItem);
+            });
+        })
+        .catch(error => {
+            console.error('Error:', error);
+        });
+</script>
+</body>
+</html>
