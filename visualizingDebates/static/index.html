@@ -3,16 +3,37 @@
 <head>
     <title>Data Display</title>
     <style>
-        /* Add your CSS styling here */
+        .tooltip {
+            position: absolute;
+            display: none;
+            background-color: #333;
+            color: #fff;
+            padding: 5px;
+            border-radius: 5px;
+        }
+        .expanded-tooltip {
+            position: absolute;
+            display: none;
+            background-color: #333;
+            color: #fff;
+            padding: 10px;
+            border-radius: 5px;
+            z-index: 999;
+        }
     </style>
+    <script src="https://d3js.org/d3.v5.min.js"></script>
+
 </head>
 <body>
 <h1>Data Display</h1>
 <ul id="data-list">
     <!-- Data will be inserted here -->
 </ul>
+<svg id="timeline" width="800" height="400"></svg>
 
+<script src="timeline.js"></script>
 <script>
+
     // JavaScript code to fetch data from your FastAPI backend and update the HTML
     fetch('/')
         .then(response => response.json())

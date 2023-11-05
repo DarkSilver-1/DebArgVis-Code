@@ -128,3 +128,6 @@ def extract_file(json_file_path, param1, param2):
 
                 if globalNodeID:
                     graphNodes.append((start_time, globalNodeID, graphEdges, speaker, text))
+
+build_graph(None, None)
+print(graphNodes)
