@@ -65,46 +65,34 @@ function createTimeline(graphNodes) {
         .attr('height', yScale.bandwidth())
         .style('fill', 'steelblue')
         .on("mouseover", function (d) {
+            var currentSpeaker = d[3];
+
+            // Remove all existing text elements
+            svg.selectAll(".text-element").remove();
+
             var textElement = svg.append("text")
                 .attr("x", xScale(d[0]) + 5)
-                .attr("y", yScale(d[3]) - 10)
+                .attr("y", yScale(currentSpeaker) - 10)
                 .style("visibility", "visible")
-                .text(d[4])
                 .style("cursor", "pointer")
+                .attr("class", "text-element")
+                .text(d[4])
                 .on("click", function () {
                     // Handle click event here, e.g., open a link
                 });
-            textElements.push(textElement);
 
             textElement.on("mouseover", function () {
-                textHovered = true;
+                textElement.style("visibility", "visible");
             }).on("mouseout", function () {
-                textHovered = false;
-                setTimeout(function () {
-                    if (!barHovered && !textHovered) {
-                        textElement.style("visibility", "hidden");
-                    }
-                }, 200);
+                textElement.style("visibility", "hidden");
+
             });
 
             d3.select(this)
                 .attr("stroke", "black")
                 .attr("stroke-width", 2);
-
-            barHovered = true;
         })
         .on("mouseout", function () {
-            barHovered = false;
-            setTimeout(function () {
-                if (!barHovered && !textHovered) {
-                    textElements.forEach(function (textElement) {
-                        textElement.style("visibility", "hidden");
-                    });
-                }
-            }, 200);
             d3.select(this).attr("stroke", "none");
-
         });
-
-
 }
