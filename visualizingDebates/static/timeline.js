@@ -1,7 +1,9 @@
 var textElements = []; // Create an array to store references to text elements
 var textHovered = false;
 var barHovered = false;
-
+var textOffsetY = -10; // Adjust as needed to control vertical spacing between lines of text
+var previousSpeaker = null;
+var consolidatedText = "";
 
 var timelineData = [
     {
@@ -9,14 +11,21 @@ var timelineData = [
         endtime: '28.05.2002 17:34:18',
         personId: "1234",
         event: 'Event 1',
-        text: "here is my text 1"
+        text: "Lets start"
     },
     {
         datetime: '28.05.2002 17:34:18',
         endtime: '28.05.2002 17:34:30',
         personId: "1234",
         event: 'Event 4',
-        text: "Here is another text 2"
+        text: "ABC"
+    },
+    {
+        datetime: '28.05.2002 17:34:23',
+        endtime: '28.05.2002 17:34:30',
+        personId: "1234",
+        event: 'Event 4',
+        text: "DEF"
     },
     {
         datetime: '28.05.2002 17:34:30',
@@ -30,7 +39,7 @@ var timelineData = [
         endtime: '28.05.2002 17:35:40',
         personId: "1234",
         event: 'Event 3',
-        text: "not here to stay"
+        text: "XYZ"
     },
 ];
 
@@ -55,11 +64,6 @@ var persons = Array.from(new Set(timelineData.map(function (d) {
     return d.personId;
 })))
 
-var xScale = d3.scaleTime()
-    .domain(d3.extent(timelineData, function (d) {
-        return d.datetime;
-    }))
-    .range([0, width]);
 
 var yScale = d3.scaleBand()
     .domain(persons)
@@ -102,16 +106,30 @@ svg.selectAll('rect')
     .attr('height', yScale.bandwidth())
     .style('fill', 'steelblue')
     .on("mouseover", function (d) {
+        var currentPersonId = d.personId;
+        var eventsByPerson = timelineData.filter(function (event) {
+            return event.personId === currentPersonId;
+        });
+
         var textElement = svg.append("text")
             .attr("x", xScale(d.datetime) + 5) // Adjust as needed
-            .attr("y", yScale(d.personId) - 10) // Adjust as needed
+            .attr("y", yScale(currentPersonId) - 10) // Adjust as needed
             .style("visibility", "visible")
-            .text(d.text)
             .style("cursor", "pointer")
-            .on("click", function () {
-                // Handle click event here, e.g., open a link
-            });
+
         textElements.push(textElement);
+
+        eventsByPerson.forEach(function (event, index) {
+            textElement.append("tspan")
+                .text(event.text)
+                .attr("x", xScale(d.datetime) + 5) // Adjust as needed
+                .attr("dy", index * textOffsetY)
+                .on("click", function () {
+                    // Handle click event here, e.g., open a link
+                    console.log("Event clicked: " + event.text);
+                });
+        })
+
         textElement.on("mouseover", function () {
             textHovered = true;
         }).on("mouseout", function () {
