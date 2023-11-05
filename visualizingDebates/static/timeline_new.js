@@ -5,43 +5,6 @@ function createTimeline(graphNodes) {
     var textHovered = false;
     var textElements = [];
 
-    var timelineData = [
-        {
-            datetime: '28.05.2002 17:34:12',
-            endtime: '28.05.2002 17:34:18',
-            personId: "1234",
-            event: 'Event 1',
-            text: "Lets start"
-        },
-        {
-            datetime: '28.05.2002 17:34:18',
-            endtime: '28.05.2002 17:34:30',
-            personId: "1234",
-            event: 'Event 4',
-            text: "ABC"
-        },
-        {
-            datetime: '28.05.2002 17:34:23',
-            endtime: '28.05.2002 17:34:30',
-            personId: "1234",
-            event: 'Event 4',
-            text: "DEF"
-        },
-        {
-            datetime: '28.05.2002 17:34:30',
-            endtime: '28.05.2002 17:35:15',
-            personId: "2222",
-            event: 'Event 2',
-            text: "I love chicken"
-        },
-        {
-            datetime: '28.05.2002 17:35:15',
-            endtime: '28.05.2002 17:35:40',
-            personId: "1234",
-            event: 'Event 3',
-            text: "XYZ"
-        },
-    ];
 
     var margin = {top: 20, right: 20, bottom: 40, left: 60};
     var width = 800 - margin.left - margin.right;
@@ -54,71 +17,64 @@ function createTimeline(graphNodes) {
         .attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
 
 // Parse the datetime strings into JavaScript Date objects
-    var timeParser = d3.timeParse('%d.%m.%Y %H:%M:%S');
-    timelineData.forEach(function (d) {
-        d.datetime = timeParser(d.datetime);
-        d.endtime = timeParser(d.endtime);
+    var timeParser = d3.utcParse('%Y-%m-%dT%H:%M:%S');
+    graphNodes.forEach(function (d) {
+        d[0] = timeParser(d[0]);
+        d[6] = timeParser(d[6]); // Parse endtime
     });
 
-    var persons = Array.from(new Set(timelineData.map(function (d) {
-        return d.personId;
-    })))
-
+    var speakers = Array.from(new Set(graphNodes.map(function (d) {
+        return d[3];
+    })));
 
     var yScale = d3.scaleBand()
-        .domain(persons)
+        .domain(speakers)
         .range([height, 0])
         .padding(0.1);
 
-// Create the x-axis scale
     var xScale = d3.scaleTime()
-        .domain([d3.min(timelineData, function (d) {
-            return d.datetime;
-        }), d3.max(timelineData, function (d) {
-            return d.endtime;
+        .domain([d3.min(graphNodes, function (d) {
+            return d[0];
+        }), d3.max(graphNodes, function (d) {
+            return d[6]; // Use endtime for x-axis domain
         })])
         .range([0, width]);
 
-// Add the x-axis to the SVG
     var xAxis = d3.axisBottom(xScale);
     svg.append("g")
         .attr("transform", "translate(0," + height + ")")
         .call(xAxis);
 
-// Add y-axis
     var yAxis = d3.axisLeft(yScale);
     svg.append('g')
         .call(yAxis);
 
-
     svg.selectAll('rect')
-        .data(timelineData)
+        .data(graphNodes)
         .enter()
         .append('rect')
         .attr('x', function (d) {
-            return xScale(d.datetime);
+            return xScale(d[0]);
         })
         .attr('y', function (d) {
-            return yScale(d.personId);
+            return yScale(d[3]);
         })
         .attr('width', function (d) {
-            return xScale(d.endtime) - xScale(d.datetime);
+            return xScale(d[6]) - xScale(d[0]); // Calculate width based on endtime
         })
         .attr('height', yScale.bandwidth())
         .style('fill', 'steelblue')
         .on("mouseover", function (d) {
-
             var textElement = svg.append("text")
-                .attr("x", xScale(d.datetime) + 5) // Adjust as needed
-                .attr("y", yScale(d.personId) - 10) // Adjust as needed
+                .attr("x", xScale(d[0]) + 5)
+                .attr("y", yScale(d[3]) - 10)
                 .style("visibility", "visible")
-                .text(d.text)
+                .text(d[4])
                 .style("cursor", "pointer")
                 .on("click", function () {
                     // Handle click event here, e.g., open a link
                 });
-                textElements.push(textElement);
-
+            textElements.push(textElement);
 
             textElement.on("mouseover", function () {
                 textHovered = true;
@@ -128,12 +84,11 @@ function createTimeline(graphNodes) {
                     if (!barHovered && !textHovered) {
                         textElement.style("visibility", "hidden");
                     }
-                }, 200); // Adjust the delay as needed
-
+                }, 200);
             });
 
             d3.select(this)
-                .attr("stroke", "black") // Add a border to the bar
+                .attr("stroke", "black")
                 .attr("stroke-width", 2);
 
             barHovered = true;
@@ -146,9 +101,10 @@ function createTimeline(graphNodes) {
                         textElement.style("visibility", "hidden");
                     });
                 }
-            }, 200); // Adjust the delay as needed
-
+            }, 200);
             d3.select(this).attr("stroke", "none");
+
         });
+
 
 }
