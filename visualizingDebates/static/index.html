@@ -2,27 +2,7 @@
 <html>
 <head>
     <title>Data Display</title>
-    <style>
-        .tooltip {
-            position: absolute;
-            display: none;
-            background-color: #333;
-            color: #fff;
-            padding: 5px;
-            border-radius: 5px;
-        }
-        .expanded-tooltip {
-            position: absolute;
-            display: none;
-            background-color: #333;
-            color: #fff;
-            padding: 10px;
-            border-radius: 5px;
-            z-index: 999;
-        }
-    </style>
     <script src="https://d3js.org/d3.v5.min.js"></script>
-
 </head>
 <body>
 <h1>Data Display</h1>
@@ -30,25 +10,38 @@
     <!-- Data will be inserted here -->
 </ul>
 <svg id="timeline" width="800" height="400"></svg>
-
-<script src="timeline.js"></script>
+<!--<script src="timeline.js"></script>-->
 <script>
-
-    // JavaScript code to fetch data from your FastAPI backend and update the HTML
-    fetch('/')
+    fetch('/data')
         .then(response => response.json())
         .then(data => {
-            console.log("got there");
-            const dataList = document.getElementById('data-list');
-            data.forEach(item => {
-                const listItem = document.createElement('li');
-                listItem.textContent = `Column1: ${item[0]}, Column2: ${item[1]}`;
-                dataList.appendChild(listItem);
-            });
+            console.log("HHHHAHAHAHAHAHHAHAHA")
+            const script = document.createElement('script');
+            script.src = 'timeline.js';
+            script.onload = function () {
+                createTimeline(data);
+            };
+            document.body.appendChild(script);
         })
         .catch(error => {
-            console.error('Error:', error);
+            console.error('Error fetching data:', error);
         });
 </script>
+<!--<script>
+    fetch('/data')
+        .then(response => response.json())
+        .then(data => {
+            console.log("HHHHAHAHAHAHAHHAHAHA")
+            const script = document.createElement('script');
+            script.src = 'timeline.js';
+            script.onload = function () {
+                createTimeline(data.data);
+            };
+            document.body.appendChild(script);
+        })
+        .catch(error => {
+            console.error('Error fetching data:', error);
+        });
+</script>-->
 </body>
 </html>

@@ -7,9 +7,10 @@ import uvicorn
 app = FastAPI()
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-# Access the graph in your FastAPI routes
 
-@app.get("/")
+# Access the graph in your FastAPI routes
+#/static/index.html
+@app.get("/data")
 async def get_data():
     return graph
 
