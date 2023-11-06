@@ -9,7 +9,7 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
 # Access the graph in your FastAPI routes
-#/static/index.html
+# /static/index.html
 @app.get("/data")
 async def get_data():
     return graph

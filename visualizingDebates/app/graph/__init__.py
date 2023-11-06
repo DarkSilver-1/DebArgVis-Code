@@ -9,5 +9,5 @@ graph = build_graph(static_param1, static_param2)
 graph = group_elements(graph)
 graph = determine_end(graph)
 
-for start_time, globalNodeID, graphEdges, speaker, text, texts, endtime in graph:
+for start_time, globalNodeID, graphEdges, speaker, text, texts, end_time in graph:
     print(start_time, speaker, text)

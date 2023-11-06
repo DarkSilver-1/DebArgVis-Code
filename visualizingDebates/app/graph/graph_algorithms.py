@@ -32,10 +32,10 @@ def group_elements(graph_nodes):
 def determine_end(graph_nodes):
     for i in range(len(graph_nodes)):
         if i < len(graph_nodes) - 1:
-            # For elements except the last one, use the starttime of the next element
+            # For elements except the last one, use the start time of the next element
             end_time = graph_nodes[i + 1][0]
         else:
-            # For the last element, add 15 seconds to the starttime
+            # For the last element, add 15 seconds to the start time
             end_time = graph_nodes[i][0] + datetime.timedelta(seconds=15)
 
         # Convert the end_time to your desired format (e.g., datetime object)
