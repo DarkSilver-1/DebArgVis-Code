@@ -5,6 +5,7 @@ function createTimeline(graphNodes) {
     var barHovered = false;
     var textHovered = false;
     var textElements = [];
+    var timeFormat = d3.timeFormat('%H:%M:%S');
 
 
     var margin = {top: 20, right: 20, bottom: 40, left: 60};
@@ -41,7 +42,7 @@ function createTimeline(graphNodes) {
         })])
         .range([0, width]);
 
-    var xAxis = d3.axisBottom(xScale);
+    var xAxis = d3.axisBottom(xScale).tickFormat(timeFormat);;
     svg.append("g")
         .attr("transform", "translate(0," + height + ")")
         .call(xAxis);
@@ -49,6 +50,10 @@ function createTimeline(graphNodes) {
     var yAxis = d3.axisLeft(yScale);
     svg.append('g')
         .call(yAxis);
+
+    var colorScale = d3.scaleOrdinal()
+    .domain(speakers) // Assuming you already have an array of unique speaker names
+    .range(d3.schemeCategory10);
 
     svg.selectAll('rect')
         .data(graphNodes)
@@ -64,7 +69,9 @@ function createTimeline(graphNodes) {
             return xScale(d[6]) - xScale(d[0]); // Calculate width based on endtime
         })
         .attr('height', yScale.bandwidth())
-        .style('fill', 'steelblue')
+        .style('fill', function (d) {
+            return colorScale(d[3]);
+        })
         .on("mouseover", function (d) {
             var currentSpeaker = d[3];
             var textArray = d[5];
@@ -72,7 +79,6 @@ function createTimeline(graphNodes) {
             // Remove all existing text elements and hover boxes
             svg.selectAll('rect').attr('stroke', 'none');
             svg.selectAll(".hover-box").remove();
-
 
             var yPosition = yScale(currentSpeaker) + yScale.bandwidth() + 5; // Place the hover box below the bar
 
