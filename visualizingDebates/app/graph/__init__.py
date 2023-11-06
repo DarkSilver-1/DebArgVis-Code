@@ -10,4 +10,4 @@ graph = group_elements(graph)
 graph = determine_end(graph)
 
 for start_time, globalNodeID, graphEdges, speaker, text, texts, endtime in graph:
-    print(start_time, endtime, speaker)
+    print(start_time, speaker, text)

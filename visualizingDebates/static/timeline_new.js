@@ -9,8 +9,8 @@ function createTimeline(graphNodes) {
 
 
     var margin = {top: 20, right: 20, bottom: 40, left: 60};
-    var width = 800 - margin.left - margin.right;
-    var height = 400 - margin.top - margin.bottom;
+    var width = 1200 - margin.left - margin.right;
+    var height = 600 - margin.top - margin.bottom;
 
     var svg = d3.select('#timeline')
         .attr('width', width + margin.left + margin.right)
@@ -42,7 +42,7 @@ function createTimeline(graphNodes) {
         })])
         .range([0, width]);
 
-    var xAxis = d3.axisBottom(xScale).tickFormat(timeFormat);;
+    var xAxis = d3.axisBottom(xScale).tickFormat(timeFormat);
     svg.append("g")
         .attr("transform", "translate(0," + height + ")")
         .call(xAxis);
@@ -52,8 +52,8 @@ function createTimeline(graphNodes) {
         .call(yAxis);
 
     var colorScale = d3.scaleOrdinal()
-    .domain(speakers) // Assuming you already have an array of unique speaker names
-    .range(d3.schemeCategory10);
+        .domain(speakers) // Assuming you already have an array of unique speaker names
+        .range(d3.schemeCategory10);
 
     svg.selectAll('rect')
         .data(graphNodes)
@@ -87,7 +87,6 @@ function createTimeline(graphNodes) {
 
             textArray.forEach(function (text, index) {
                 var textelement = hoverBox.append("text")
-                    //.attr("x", xPosition)
                     .attr("y", yPosition + 20 + index * 15)
                     .style("visibility", "visible")
                     .style("cursor", "pointer")
@@ -107,7 +106,6 @@ function createTimeline(graphNodes) {
             var bbox = hoverBox.node().getBBox();
 
             hoverBox.insert("rect", "text")
-                //.attr("x", xPosition - bbox.width / 2) // Center the box with the bar
                 .attr("y", yPosition) // Place the hover box below the bar
                 .attr("width", bbox.width + 10)
                 .attr("height", bbox.height + 10)

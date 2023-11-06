@@ -5,20 +5,30 @@ import os
 
 graphNodes = []
 json_folder_path = 'C:/Users/Martin Gruber/OneDrive - gw.uni-passau.de/Studium/7. Semester/Bachelorarbeit/Data/qt30'  # may not sty here
-#json_folder_path = 'C:/Users/grube/OneDrive - gw.uni-passau.de/Studium/7. Semester/Bachelorarbeit/Data/qt30'  # may not sty here
+
+
+# json_folder_path = 'C:/Users/grube/OneDrive - gw.uni-passau.de/Studium/7. Semester/Bachelorarbeit/Data/qt30'  # may not sty here
 
 def build_graph(param1, param2):  # the parameters are about to be channged to e.g. speaker list and path to folder
     json_file_path = 'C:/Users/Martin Gruber/OneDrive - gw.uni-passau.de/Studium/7. Semester/Bachelorarbeit/Data/qt30/nodeset17932.json'
-    #json_file_path = 'C:/Users/grube/OneDrive - gw.uni-passau.de/Studium/7. Semester/Bachelorarbeit/Data/qt30/nodeset17932.json'
-    #json_file_path = 'C:/Users/Martin Gruber/OneDrive - gw.uni-passau.de/Studium/7. Semester/Bachelorarbeit/Data/qt30/nodeset17925.json'
-    #for filename in os.listdir(json_folder_path):
-    #    if filename.endswith('.json'):
-    #        json_file_path = os.path.join(json_folder_path, filename)
-    #        if (os.path.getsize(json_file_path) != 0 and os.path.getsize(
-    #                json_file_path) != 68):
-    extract_file(json_file_path, param1, param2)
+    # json_file_path = 'C:/Users/grube/OneDrive - gw.uni-passau.de/Studium/7. Semester/Bachelorarbeit/Data/qt30/nodeset17932.json'
+    # json_file_path = 'C:/Users/Martin Gruber/OneDrive - gw.uni-passau.de/Studium/7. Semester/Bachelorarbeit/Data/qt30/nodeset17925.json'
+    for filename in os.listdir(json_folder_path):
+        if filename.endswith('.json'):
+            json_file_path = os.path.join(json_folder_path, filename)
+            if (os.path.getsize(json_file_path) != 0 and os.path.getsize(
+                    json_file_path) != 68):
+                extract_file(json_file_path, param1, param2)
     sorted_graph_nodes = sorted(graphNodes, key=lambda x: x[0])
-    return sorted_graph_nodes
+    filtered_sorted_graph_nodes = []
+    for start_time, globalNodeID, graphEdges, speaker, text in sorted_graph_nodes:
+        print(start_time, speaker, text)
+    for start_time, globalNodeID, graphEdges, speaker, text in sorted_graph_nodes: # only for testing!! TODO
+        if start_time.day == 21 and start_time.month == 5 and start_time.year == 2020:
+            filtered_sorted_graph_nodes.append((start_time, globalNodeID, graphEdges, speaker, text))
+
+    return filtered_sorted_graph_nodes
+    # return sorted_graph_nodes
 
 
 def extract_file(json_file_path, param1, param2):
@@ -126,11 +136,10 @@ def extract_file(json_file_path, param1, param2):
                             start_time = datetime.strptime(locution.get("start"), '%Y-%m-%d %H:%M:%S')
                         speaker = locution.get("personID")
                 if start_time == None:
-                    start_time = datetime.strptime("2025-05-28 19:08:43", '%Y-%m-%d %H:%M:%S') #just for now
+                    start_time = datetime.strptime("2025-05-28 19:08:43", '%Y-%m-%d %H:%M:%S')  # just for now
                 if globalNodeID:
                     graphNodes.append((start_time, globalNodeID, graphEdges, speaker, text))
 
-
-#sortedNodes = build_graph(None, None)
-#for start_time, globalNodeID, graphEdges, speaker, text in sortedNodes:
+# sortedNodes = build_graph(None, None)
+# for start_time, globalNodeID, graphEdges, speaker, text in sortedNodes:
 #    print(start_time, speaker)
