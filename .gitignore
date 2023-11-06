@@ -9681,3 +9681,4 @@
 /venv/share/man/man1/ttx.1
 /venv/.gitignore
 /venv/pyvenv.cfg
+/venv/

@@ -1,6 +1,7 @@
 function createTimeline(graphNodes) {
 
     console.log(graphNodes)
+    var highlightedBar = null;
     var barHovered = false;
     var textHovered = false;
     var textElements = [];
@@ -66,33 +67,70 @@ function createTimeline(graphNodes) {
         .style('fill', 'steelblue')
         .on("mouseover", function (d) {
             var currentSpeaker = d[3];
+            var textArray = d[5];
 
-            // Remove all existing text elements
-            svg.selectAll(".text-element").remove();
+            // Remove all existing text elements and hover boxes
+            svg.selectAll('rect').attr('stroke', 'none');
 
-            var textElement = svg.append("text")
-                .attr("x", xScale(d[0]) + 5)
-                .attr("y", yScale(currentSpeaker) - 10)
-                .style("visibility", "visible")
-                .style("cursor", "pointer")
-                .attr("class", "text-element")
-                .text(d[4])
-                .on("click", function () {
-                    // Handle click event here, e.g., open a link
-                });
+            var yPosition = yScale(currentSpeaker) + yScale.bandwidth() + 5; // Place the hover box below the bar
 
-            textElement.on("mouseover", function () {
-                textElement.style("visibility", "visible");
-            }).on("mouseout", function () {
-                textElement.style("visibility", "hidden");
+            var hoverBox = svg.append("g")
+                .attr("class", "hover-box");
 
+            textArray.forEach(function (text, index) {
+                var textelement = hoverBox.append("text")
+                    //.attr("x", xPosition)
+                    .attr("y", yPosition + 20 + index * 15)
+                    .style("visibility", "visible")
+                    .style("cursor", "pointer")
+                    .text(text)
+                    .on("mouseover", function () {
+                        textHovered = true
+                    })
+                    .on("click", function () {
+                        // Handle click event here, e.g., open a link or perform a specific action
+                        console.log("Text clicked: " + text);
+                    });
+                if (text === d[4]) {
+                    textelement.style("font-weight", "bold")
+                }
             });
 
+            var bbox = hoverBox.node().getBBox();
+
+            hoverBox.insert("rect", "text")
+                //.attr("x", xPosition - bbox.width / 2) // Center the box with the bar
+                .attr("y", yPosition) // Place the hover box below the bar
+                .attr("width", bbox.width + 10)
+                .attr("height", bbox.height + 10)
+                .style("fill", "white")
+                .style("stroke", "black")
+                .style("cursor", "pointer")
+                .on("mouseover", function () {
+                    textHovered = true
+                })
+                .on("mouseout", function () {
+                    textHovered = false
+                    setTimeout(function () {
+                        if (!barHovered && !textHovered) {
+                            svg.selectAll(".hover-box").remove();
+                            svg.selectAll('rect').attr('stroke', 'none');
+                        }
+                    }, 300)
+                });
             d3.select(this)
-                .attr("stroke", "black")
+                .attr("stroke", "black") // Add a border to the bar
                 .attr("stroke-width", 2);
+
+            barHovered = true
         })
         .on("mouseout", function () {
-            d3.select(this).attr("stroke", "none");
+            barHovered = false
+            setTimeout(function () {
+                if (!barHovered && !textHovered) {
+                    svg.selectAll(".hover-box").remove();
+                    svg.selectAll('rect').attr('stroke', 'none');
+                }
+            }, 300);
         });
 }
