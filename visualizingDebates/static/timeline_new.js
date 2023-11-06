@@ -71,6 +71,8 @@ function createTimeline(graphNodes) {
 
             // Remove all existing text elements and hover boxes
             svg.selectAll('rect').attr('stroke', 'none');
+            svg.selectAll(".hover-box").remove();
+
 
             var yPosition = yScale(currentSpeaker) + yScale.bandwidth() + 5; // Place the hover box below the bar
 
