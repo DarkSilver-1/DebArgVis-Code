@@ -170,6 +170,10 @@ def collapse_nodes(graph):
 
             # Remove nodes and edges
             graph.remove_node(ya_node)
+            predecessors_list = list(graph.predecessors(i_node))
+            for predecessor in predecessors_list:
+                graph.add_edge(predecessor, l_node, **graph[predecessor][i_node])
+                graph.remove_edge(predecessor, i_node)
             graph.remove_node(i_node)
 
 
