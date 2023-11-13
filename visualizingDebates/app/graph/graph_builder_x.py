@@ -4,7 +4,7 @@ import networkx as nx
 
 json_folder_path = 'C:/Users/Martin Gruber/OneDrive - gw.uni-passau.de/Studium/7. Semester/Bachelorarbeit/Data/qt30'  # may not stay here
 
-graph = nx.DiGraph()
+graph = nx.MultiDiGraph()
 
 
 def build_graph():
@@ -97,6 +97,7 @@ def collapse_edges(graph):
     for node_to_remove in nodes_to_remove:
         graph.remove_node(node_to_remove)
 
+
 def collapse_edgesX(graph):
     l_nodes_to_update = set()
 
@@ -123,7 +124,6 @@ def collapse_edgesX(graph):
         for additional_info_node in additional_info_neighbors:
             l_neighbors = {n for n in graph.neighbors(additional_info_node) if graph.nodes[n]["type"] == "L"}
 
-            print(l_neighbors)
             for l_neighbor in l_neighbors:
                 # Replace the old edge with a new edge containing additional information
                 graph.add_edge(l_node, l_neighbor, text_additional=graph.nodes[additional_info_node]["text"])
@@ -137,8 +137,6 @@ def collapse_edgesX(graph):
         graph.remove_edge(*edge_to_remove)
     for node_to_remove in nodes_to_remove:
         graph.remove_node(node_to_remove)
-
-
 
 
 def collapse_nodes(graph):
@@ -155,35 +153,46 @@ def collapse_nodes(graph):
     # Collapse nodes
     for l_node in nodes_to_collapse:
         # Find "YA" and "I" nodes connected to "L"
-        ya_node = next(graph.neighbors(l_node), None)
-        i_node = next(graph.neighbors(ya_node), None)
+        ya_nodes = list(graph.neighbors(l_node))
+        if ya_nodes:
+            ya_node = ya_nodes[0]
+            i_nodes = list(graph.neighbors(ya_node))
+            if i_nodes:
+                i_node = i_nodes[0]
 
-        if ya_node is not None and i_node is not None:
-            # Create a new node with the attributes of the L node
-            graph.add_node(l_node, text=graph.nodes[l_node]["text"], paraphrasedtext=graph.nodes[i_node]["text"],
-                           type="L")
+                # Create a new node with the attributes of the L node
+                graph.add_node(l_node, text=graph.nodes[l_node]["text"], paraphrasedtext=graph.nodes[i_node]["text"],
+                               type="L")
 
-            # Add edges from "L" and "I" nodes to the new node
-            for neighbor in set(graph.neighbors(l_node)) | set(graph.neighbors(i_node)):
-                if neighbor != ya_node:
-                    graph.add_edge(l_node, neighbor)
+                # Add edges from "L" and "I" nodes to the new node
+                for neighbor in set(graph.neighbors(l_node)) | set(graph.neighbors(i_node)):
+                    if neighbor != ya_node:
+                        graph.add_edge(l_node, neighbor)
 
-            # Remove nodes and edges
-            graph.remove_node(ya_node)
-            predecessors_list = list(graph.predecessors(i_node))
-            for predecessor in predecessors_list:
-                graph.add_edge(predecessor, l_node, **graph[predecessor][i_node])
-                graph.remove_edge(predecessor, i_node)
-            graph.remove_node(i_node)
+                # Remove nodes and edges
+                graph.remove_node(ya_node)
+                predecessors_list = list(graph.predecessors(i_node))
+                for predecessor in predecessors_list:
+                    # Convert keys to strings
+                    edge_attributes = {str(key): value for key, value in graph[predecessor][i_node].items()}
+                    graph.add_edge(predecessor, l_node, **edge_attributes)
+                    graph.remove_edge(predecessor, i_node)
+                graph.remove_node(i_node)
 
 
 extract_file(None)
 remove_isolated(graph)
-#collapse_edges(graph)
+# collapse_edges(graph)
 collapse_nodes(graph)
 collapse_edgesX(graph)
 
-for node_id, attributes in graph.nodes(data=True):
-    print(f"Node {node_id}: {attributes}")
+# for node_id, attributes in graph.nodes(data=True):
+#    print(f"Node {node_id}: {attributes}")
+# TODO: multile edges to the same node from the same node
 
-print(graph.edges(data=True))
+# print(graph.edges(data=True))
+for edge in graph.edges(data=True):
+    source, target, data = edge
+    print(f"Edge: {graph.nodes[source]['paraphrasedtext']} -- {graph.nodes[target]['text']}")
+    print(f"Additional Information: {data.get('text_additional', 'No additional information')}")
+    print("---")
