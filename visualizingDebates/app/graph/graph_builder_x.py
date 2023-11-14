@@ -123,10 +123,15 @@ def collapse_edgesX(graph):
         # Iterate over "TA", "RA", "MA", or "CA" nodes connected to the "L" node
         for additional_info_node in additional_info_neighbors:
             l_neighbors = {n for n in graph.neighbors(additional_info_node) if graph.nodes[n]["type"] == "L"}
+            ya_neighbor = {n for n in graph.predecessors(additional_info_node) if graph.nodes[n]["type"] == "YA"}
 
             for l_neighbor in l_neighbors:
                 # Replace the old edge with a new edge containing additional information
-                graph.add_edge(l_node, l_neighbor, text_additional=graph.nodes[additional_info_node]["text"])
+                if ya_neighbor:
+                    conn_type = graph.nodes[ya_neighbor.pop()]["text"]
+                    graph.add_edge(l_node, l_neighbor, text_additional=graph.nodes[additional_info_node]["text"], connType=conn_type)
+                else:
+                    graph.add_edge(l_node, l_neighbor, text_additional=graph.nodes[additional_info_node]["text"])
 
                 # Add the old edge and node to the removal lists
                 edges_to_remove.append((additional_info_node, l_neighbor))
@@ -188,11 +193,9 @@ collapse_edgesX(graph)
 
 # for node_id, attributes in graph.nodes(data=True):
 #    print(f"Node {node_id}: {attributes}")
-# TODO: multile edges to the same node from the same node
-
 # print(graph.edges(data=True))
 for edge in graph.edges(data=True):
     source, target, data = edge
     print(f"Edge: {graph.nodes[source]['paraphrasedtext']} -- {graph.nodes[target]['text']}")
-    print(f"Additional Information: {data.get('text_additional', 'No additional information')}")
+    print(f"Additional Information: {data.get('text_additional', 'No additional information')}, {data.get('connType')}")
     print("---")
