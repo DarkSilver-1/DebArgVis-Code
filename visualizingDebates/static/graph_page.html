@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Graph Visualization</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+</head>
+<body>
+<svg id="timeline" width="800" height="400"></svg>
+
+<script>
+    fetch('/graph-data')
+        .then(response => response.json())
+        .then(graphData => {
+            const script = document.createElement('script');
+            script.src = 'static/timeline_graph.js';
+            script.onload = function () {
+                createTimeline(graphData)
+            };
+            document.body.appendChild(script);
+        })
+        .catch(error => console.error('Error fetching graph data:', error));
+</script>
+</body>
+</html>

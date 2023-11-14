@@ -7,7 +7,7 @@ graphNodes = []
 #json_folder_path = 'C:/Users/Martin Gruber/OneDrive - gw.uni-passau.de/Studium/7. Semester/Bachelorarbeit/Data/qt30'  # may not sty here
 
 
-json_folder_path = 'C:/Users/grube/OneDrive - gw.uni-passau.de/Studium/7. Semester/Bachelorarbeit/Data/qt30'  # may not sty here
+json_folder_path = 'C:/Users/Martin Gruber/OneDrive - gw.uni-passau.de/Studium/7. Semester/Bachelorarbeit/Data/qt30'  # may not sty here
 
 def build_graph(param1, param2):  # the parameters are about to be channged to e.g. speaker list and path to folder
     json_file_path = 'C:/Users/Martin Gruber/OneDrive - gw.uni-passau.de/Studium/7. Semester/Bachelorarbeit/Data/qt30/nodeset17932.json'
@@ -28,8 +28,6 @@ def build_graph(param1, param2):  # the parameters are about to be channged to e
             filtered_sorted_graph_nodes.append((start_time, globalNodeID, graphEdges, speaker, text))
 
     return filtered_sorted_graph_nodes
-    # return sorted_graph_nodes
-
 
 def extract_file(json_file_path, param1, param2):
     with open(json_file_path, 'r') as json_file:

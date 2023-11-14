@@ -7,13 +7,17 @@ json_folder_path = 'C:/Users/Martin Gruber/OneDrive - gw.uni-passau.de/Studium/7
 graph = nx.MultiDiGraph()
 
 
-def build_graph():
-    for filename in os.listdir(json_folder_path):
-        if filename.endswith('.json'):
-            json_file_path = os.path.join(json_folder_path, filename)
-            if os.path.getsize(json_file_path) != 0 and os.path.getsize(json_file_path) != 68:
-                print(filename)
-                extract_file(json_file_path)
+def build_graph_x():
+    #for filename in os.listdir(json_folder_path):
+    #    if filename.endswith('.json'):
+    #        json_file_path = os.path.join(json_folder_path, filename)
+    #        if os.path.getsize(json_file_path) != 0 and os.path.getsize(json_file_path) != 68:
+    #            print(filename)
+    extract_file(None)
+    remove_isolated(graph)
+    collapse_nodes(graph)
+    collapse_edges(graph)
+    return graph
 
 
 def extract_file(json_file_path):
@@ -137,13 +141,14 @@ def collapse_nodes(graph):
                 graph.remove_node(i_node)
 
 
-extract_file(None)
-remove_isolated(graph)
-collapse_nodes(graph)
-collapse_edges(graph)
+#extract_file(None)
+#remove_isolated(graph)
+#collapse_nodes(graph)
+#collapse_edges(graph)
+#build_graph_x()
 
-for node_id, attributes in graph.nodes(data=True):
-    print(f"Node {node_id}: {attributes}")
+#for node_id, attributes in graph.nodes(data=True):
+#    print(f"Node {node_id}: {attributes}")
 # print(graph.edges(data=True))
 #for edge in graph.edges(data=True):
 #    source, target, data = edge
