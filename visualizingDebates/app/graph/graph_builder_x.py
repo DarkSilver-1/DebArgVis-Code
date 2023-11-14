@@ -123,13 +123,17 @@ def collapse_edgesX(graph):
         # Iterate over "TA", "RA", "MA", or "CA" nodes connected to the "L" node
         for additional_info_node in additional_info_neighbors:
             l_neighbors = {n for n in graph.neighbors(additional_info_node) if graph.nodes[n]["type"] == "L"}
-            ya_neighbor = {n for n in graph.predecessors(additional_info_node) if graph.nodes[n]["type"] == "YA"}
+            ya_neighbors = {n for n in graph.predecessors(additional_info_node) if graph.nodes[n]["type"] == "YA"}
 
             for l_neighbor in l_neighbors:
                 # Replace the old edge with a new edge containing additional information
-                if ya_neighbor:
-                    conn_type = graph.nodes[ya_neighbor.pop()]["text"]
-                    graph.add_edge(l_node, l_neighbor, text_additional=graph.nodes[additional_info_node]["text"], connType=conn_type)
+                if ya_neighbors:
+                    ya_neighbor = ya_neighbors.pop()
+                    conn_type = graph.nodes[ya_neighbor]["text"]
+                    graph.add_edge(l_node, l_neighbor, text_additional=graph.nodes[additional_info_node]["text"],
+                                   connType=conn_type)
+                    edges_to_remove.append((ya_neighbor, additional_info_node))
+                    nodes_to_remove.append(ya_neighbor)
                 else:
                     graph.add_edge(l_node, l_neighbor, text_additional=graph.nodes[additional_info_node]["text"])
 
@@ -191,8 +195,8 @@ remove_isolated(graph)
 collapse_nodes(graph)
 collapse_edgesX(graph)
 
-# for node_id, attributes in graph.nodes(data=True):
-#    print(f"Node {node_id}: {attributes}")
+for node_id, attributes in graph.nodes(data=True):
+    print(f"Node {node_id}: {attributes}")
 # print(graph.edges(data=True))
 for edge in graph.edges(data=True):
     source, target, data = edge
