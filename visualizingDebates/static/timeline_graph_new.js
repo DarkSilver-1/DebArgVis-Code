@@ -1,20 +1,6 @@
-function determineEnd(graphNodes) {
-    for (let i = 0; i < graphNodes.length; i++) {
-        if (i < graphNodes.length - 1) {
-            graphNodes[i].end = graphNodes[i + 1].start;
-        } else {
-            let date = new Date(graphNodes[i].start);
-            date.setTime(date.getTime() + 15000); // 15 seconds in milliseconds
-            graphNodes[i].end = date;
-        }
-    }
-    return graphNodes;
-}
-
 function createTimeline(graphData) {
     let nodes = graphData.nodes;
     let links = graphData.links;
-    determineEnd(nodes);
 
     let barHovered = false;
     let textHovered = false;
@@ -33,8 +19,9 @@ function createTimeline(graphData) {
 
     let timeParser = d3.utcParse('%Y-%m-%d %H:%M:%S');
     nodes.forEach(function (d) {
-        d.start = timeParser(d.start);
-        d.end = timeParser(d.end);
+        d.start_time = timeParser(d.start_time);
+        d.end_time = timeParser(d.end_time);
+        console.log(d.start_time)
     });
 
     let speakers = Array.from(new Set(nodes.map(function (d) {
@@ -49,10 +36,10 @@ function createTimeline(graphData) {
     let xScale = d3.scaleTime()
         .domain([
             d3.min(nodes, function (d) {
-                return d.start;
+                return d.start_time;
             }),
             d3.max(nodes, function (d) {
-                return d.end || d.start;
+                return d.end_time || d.start_time;
             }),
         ])
         .range([0, width]);
@@ -71,7 +58,7 @@ function createTimeline(graphData) {
         .range(d3.schemeCategory10);
 
     // Create a force simulation
-    let simulation = d3.forceSimulation(nodes)
+    d3.forceSimulation(nodes)
         .force('link', d3.forceLink(links).id(d => d.id).distance(20))
         .force('charge', d3.forceManyBody().strength(-50))
         .force('center', d3.forceCenter(width / 2, height / 2));
@@ -87,9 +74,9 @@ function createTimeline(graphData) {
         .data(nodes)
         .enter().append('rect')
         .attr('class', 'node')
-        .attr('x', d => xScale(d.start))
+        .attr('x', d => xScale(d.start_time))
         .attr('y', d => yScale(d.speaker))
-        .attr('width', d => xScale(d.end || d.start) - xScale(d.start))
+        .attr('width', d => xScale(d.end_time || d.start_time) - xScale(d.start_time))
         .attr('height', yScale.bandwidth())
         .style('fill', d => colorScale(d.speaker))
 
@@ -104,15 +91,15 @@ function createTimeline(graphData) {
         .attr('stroke-width', 2)
         .attr('d', d => {
             // Calculate midpoints and control points
-            let xMid = (xScale(d.source.start) + xScale(d.target.start)) / 2;
+            let xMid = (xScale(d.source.start_time) + xScale(d.target.start_time)) / 2;
             let yMid1 = yScale(d.source.speaker) - yScale.bandwidth() / 2;
             let yMid2 = yScale(d.target.speaker) - yScale.bandwidth() / 3;
 
             let pathData = [
-                [xScale(d.source.start) + (xScale(d.source.end || d.source.start) - xScale(d.source.start)) / 2, yScale(d.source.speaker)],
+                [xScale(d.source.start_time) + (xScale(d.source.end_time || d.source.start_time) - xScale(d.source.start_time)) / 2, yScale(d.source.speaker)],
                 [xMid, yMid1],
                 [xMid, yMid2],
-                [xScale(d.target.start) + (xScale(d.target.end || d.target.start) - xScale(d.target.start)) / 2, yScale(d.target.speaker)]
+                [xScale(d.target.start_time) + (xScale(d.target.end_time || d.target.start_time) - xScale(d.target.start_time)) / 2, yScale(d.target.speaker)]
             ];
             return curve(pathData);
         })

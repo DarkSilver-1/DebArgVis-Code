@@ -1,20 +1,5 @@
-function determineEnd(graphNodes) {
-    for (let i = 0; i < graphNodes.length; i++) {
-        if (i < graphNodes.length - 1) {
-            graphNodes[i].end = graphNodes[i + 1].start;
-        } else {
-            let date = new Date(graphNodes[i].start);
-            date.setTime(date.getTime() + 15000); // 15 seconds in milliseconds
-            graphNodes[i].end = date;
-        }
-    }
-    return graphNodes;
-}
-
 function createTimeline(graphData) {
-
     let nodes = graphData.nodes;
-    determineEnd(nodes)
     let barHovered = false;
     let textHovered = false;
     let timeFormat = d3.timeFormat('%H:%M:%S');
@@ -30,10 +15,10 @@ function createTimeline(graphData) {
         .append('g')
         .attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
 
-    let timeParser = d3.utcParse('%Y-%m-%d %H:%M:%S');
+    let timeParser = d3.utcParse('%Y-%m-%dT%H:%M:%S');
     nodes.forEach(function (d) {
-        d.start = timeParser(d.start);
-        d.end = timeParser(d.end);
+        d.start_time = timeParser(d.start_time);
+        d.end_time = timeParser(d.end_time);
     });
 
     let speakers = Array.from(new Set(nodes.map(function (d) {
@@ -48,10 +33,10 @@ function createTimeline(graphData) {
     let xScale = d3.scaleTime()
         .domain([
             d3.min(nodes, function (d) {
-                return d.start;
+                return d.start_time;
             }),
             d3.max(nodes, function (d) {
-                return d.end || d.start;
+                return d.end_time || d.start_time;
             }),
         ])
         .range([0, width]);
@@ -74,13 +59,13 @@ function createTimeline(graphData) {
         .enter()
         .append('rect')
         .attr('x', function (d) {
-            return xScale(d.start);
+            return xScale(d.start_time);
         })
         .attr('y', function (d) {
             return yScale(d.speaker);
         })
         .attr('width', function (d) {
-            return xScale(d.end || d.start) - xScale(d.start);
+            return xScale(d.end_time || d.start_time) - xScale(d.start_time);
         })
         .attr('height', yScale.bandwidth())
         .style('fill', function (d) {

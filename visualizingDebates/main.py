@@ -1,3 +1,4 @@
+import datetime
 import json
 
 import networkx as nx
@@ -5,8 +6,8 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from starlette.responses import HTMLResponse, JSONResponse
 
+from app.graph import graph_data
 from app.graph import graph
-from app.graph import graphData
 import uvicorn
 
 app = FastAPI()
@@ -26,7 +27,6 @@ def get_graph_page():
 
 @app.get("/graph-data")
 def get_graph_data():
-    graph_data = nx.node_link_data(graphData)
     return graph_data
 
 if __name__ == "__main__":

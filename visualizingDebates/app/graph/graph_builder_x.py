@@ -1,5 +1,7 @@
 import os
 import json
+from datetime import datetime
+
 import networkx as nx
 
 json_folder_path = 'C:/Users/Martin Gruber/OneDrive - gw.uni-passau.de/Studium/7. Semester/Bachelorarbeit/Data/qt30'  # may not stay here
@@ -35,7 +37,7 @@ def extract_file(json_file_path):
                 (locution for locution in graph_data["locutions"] if locution["nodeID"] == node_id), None)
 
             if matching_locution:
-                start_time = matching_locution.get("start")
+                start_time = datetime.strptime(matching_locution.get("start"), '%Y-%m-%d %H:%M:%S')
                 speaker = matching_locution.get("personID")
                 graph.add_node(node_id, text=text, type=node_type, start=start_time, speaker=speaker)
             else:

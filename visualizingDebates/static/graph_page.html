@@ -15,7 +15,7 @@
         .then(response => response.json())
         .then(graphData => {
             const script = document.createElement('script');
-            script.src = 'static/timeline_graph_new.js';
+            script.src = 'static/timeline_graph.js';
             script.onload = function () {
                 createTimeline(graphData)
             };
