@@ -1,6 +1,9 @@
 function createTimeline(graphData) {
+    console.log(graphData)
     let nodes = graphData.nodes;
     let links = graphData.links;
+    console.log(nodes)
+    console.log(links)
 
     let barHovered = false;
     let textHovered = false;
@@ -17,7 +20,7 @@ function createTimeline(graphData) {
         .append('g')
         .attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
 
-    let timeParser = d3.utcParse('%Y-%m-%d %H:%M:%S');
+    let timeParser = d3.utcParse('%Y-%m-%dT%H:%M:%S');
     nodes.forEach(function (d) {
         d.start_time = timeParser(d.start_time);
         d.end_time = timeParser(d.end_time);
