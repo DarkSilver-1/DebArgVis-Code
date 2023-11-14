@@ -69,9 +69,6 @@ function createTimeline(graphData) {
     let curve = d3.line()
         .curve(d3.curveBasis);
 
-    // Draw links with curved lines
-
-
     // Draw nodes (rectangles)
     let node = svg.selectAll('.node')
         .data(nodes)

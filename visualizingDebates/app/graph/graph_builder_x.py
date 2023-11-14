@@ -1,5 +1,5 @@
-import os
 import json
+import os
 from datetime import datetime
 
 import networkx as nx
@@ -10,20 +10,22 @@ graph = nx.MultiDiGraph()
 
 
 def build_graph_x():
-    #for filename in os.listdir(json_folder_path):
-    #    if filename.endswith('.json'):
-    #        json_file_path = os.path.join(json_folder_path, filename)
-    #        if os.path.getsize(json_file_path) != 0 and os.path.getsize(json_file_path) != 68:
-    #            print(filename)
-    extract_file(None)
+    json_file_path = 'C:/Users/Martin Gruber/OneDrive - gw.uni-passau.de/Studium/7. Semester/Bachelorarbeit/Data/qt30/nodeset17932.json'
+    json_file_path2 = 'C:/Users/Martin Gruber/OneDrive - gw.uni-passau.de/Studium/7. Semester/Bachelorarbeit/Data/qt30/nodeset17930.json'
+    for filename in os.listdir(json_folder_path):
+        if filename.endswith('.json'):
+            json_file_path = os.path.join(json_folder_path, filename)
+            if os.path.getsize(json_file_path) != 0 and os.path.getsize(json_file_path) != 68:
+                extract_file(json_file_path)
     remove_isolated(graph)
     collapse_nodes(graph)
     collapse_edges(graph)
-    return graph
+    newgraph = filter_date(graph, datetime.strptime("2020-05-21", '%Y-%m-%d').date())
+    return newgraph
 
 
 def extract_file(json_file_path):
-    json_file_path = 'C:/Users/Martin Gruber/OneDrive - gw.uni-passau.de/Studium/7. Semester/Bachelorarbeit/Data/qt30/nodeset17932.json'
+    # json_file_path = 'C:/Users/Martin Gruber/OneDrive - gw.uni-passau.de/Studium/7. Semester/Bachelorarbeit/Data/qt30/nodeset17932.json'
     with open(json_file_path, 'r') as json_file:
         graph_data = json.load(json_file)
 
@@ -37,7 +39,10 @@ def extract_file(json_file_path):
                 (locution for locution in graph_data["locutions"] if locution["nodeID"] == node_id), None)
 
             if matching_locution:
-                start_time = datetime.strptime(matching_locution.get("start"), '%Y-%m-%d %H:%M:%S')
+                if matching_locution.get("start"):
+                    start_time = datetime.strptime(matching_locution.get("start"), '%Y-%m-%d %H:%M:%S')
+                else:
+                    start_time = datetime.strptime("2025-05-28 19:08:43", '%Y-%m-%d %H:%M:%S')  # TODO
                 speaker = matching_locution.get("personID")
                 graph.add_node(node_id, text=text, type=node_type, start=start_time, speaker=speaker)
             else:
@@ -52,6 +57,7 @@ def remove_isolated(graph):
                        data["type"] == "L" and graph.degree(node) == 0]
     for node in nodes_to_remove:
         graph.remove_node(node)
+
 
 def collapse_edges(graph):
     l_nodes_to_update = set()
@@ -98,9 +104,11 @@ def collapse_edges(graph):
 
     # Remove the old edges and nodes
     for edge_to_remove in edges_to_remove:
-        graph.remove_edge(*edge_to_remove)
+        if graph.has_edge(*edge_to_remove):
+            graph.remove_edge(*edge_to_remove)
     for node_to_remove in nodes_to_remove:
-        graph.remove_node(node_to_remove)
+        if graph.has_node(node_to_remove):
+            graph.remove_node(node_to_remove)
 
 
 def collapse_nodes(graph):
@@ -114,6 +122,8 @@ def collapse_nodes(graph):
             if ya_neighbors:
                 nodes_to_collapse.add(node)
 
+    edges_to_remove = []
+    nodes_to_remove = []
     # Collapse nodes
     for l_node in nodes_to_collapse:
         # Find "YA" and "I" nodes connected to "L"
@@ -133,27 +143,54 @@ def collapse_nodes(graph):
                         graph.add_edge(l_node, neighbor)
 
                 # Remove nodes and edges
-                graph.remove_node(ya_node)
+                # graph.remove_node(ya_node)
+                nodes_to_remove.append(ya_node)
+
                 predecessors_list = list(graph.predecessors(i_node))
                 for predecessor in predecessors_list:
                     # Convert keys to strings
                     edge_attributes = {str(key): value for key, value in graph[predecessor][i_node].items()}
                     graph.add_edge(predecessor, l_node, **edge_attributes)
-                    graph.remove_edge(predecessor, i_node)
-                graph.remove_node(i_node)
+                    # graph.remove_edge(predecessor, i_node)
+                    edges_to_remove.append((predecessor, i_node))
+                # graph.remove_node(i_node)
+                nodes_to_remove.append(i_node)
+
+    for edge_to_remove in edges_to_remove:
+        if graph.has_edge(*edge_to_remove):
+            graph.remove_edge(*edge_to_remove)
+    for node_to_remove in nodes_to_remove:
+        if graph.has_node(node_to_remove):
+            graph.remove_node(node_to_remove)
 
 
-#extract_file(None)
-#remove_isolated(graph)
-#collapse_nodes(graph)
-#collapse_edges(graph)
-#build_graph_x()
+def filter_date(graph, target_date):
+    subgraph = nx.MultiDiGraph()
+
+    for node, data in graph.nodes(data=True):
+        if "start" in data and data["start"].date() == target_date and data.get("type") == "L":
+            subgraph.add_node(node, **data)
+
+    for from_node, to_node, data in graph.edges(data=True):
+        if from_node in subgraph.nodes and to_node in subgraph:
+            subgraph.add_edge(from_node, to_node, **data)
+
+    return subgraph
+
+
+# extract_file(None)
+# remove_isolated(graph)
+# collapse_nodes(graph)
+# collapse_edges(graph)
+build_graph_x()
+#graph = filter_date(graph, datetime.strptime("2020-05-07", '%Y-%m-%d').date())
+#print(graph)
 
 #for node_id, attributes in graph.nodes(data=True):
 #    print(f"Node {node_id}: {attributes}")
-# print(graph.edges(data=True))
 #for edge in graph.edges(data=True):
 #    source, target, data = edge
-#    print(f"Edge: {graph.nodes[source]['paraphrasedtext']} -- {graph.nodes[target]['text']}")
+
+    #print(f"Edge: {graph.nodes[source]['paraphrasedtext']} -- {graph.nodes[target]['text']}")
 #    print(f"Additional Information: {data.get('text_additional', 'No additional information')}, {data.get('connType')}")
 #    print("---")

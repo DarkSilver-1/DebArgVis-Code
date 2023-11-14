@@ -4,6 +4,9 @@ import networkx as nx
 
 def order_graph(graph_data):
     graph_data = nx.node_link_data(graph_data)
+    for g in graph_data["nodes"]:
+        print(g)
+
     graph_data["nodes"] = sorted(graph_data["nodes"], key=lambda x: x["start"])
     for i in range(len(graph_data["nodes"])):
         if i < len(graph_data["nodes"]) - 1:
