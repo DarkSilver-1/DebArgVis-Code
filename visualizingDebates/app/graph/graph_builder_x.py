@@ -6,17 +6,14 @@ import networkx as nx
 
 json_folder_path = 'C:/Users/Martin Gruber/OneDrive - gw.uni-passau.de/Studium/7. Semester/Bachelorarbeit/Data/qt30'  # may not stay here
 
-graph = nx.MultiDiGraph()
-
-
 def build_graph_x():
-    json_file_path = 'C:/Users/Martin Gruber/OneDrive - gw.uni-passau.de/Studium/7. Semester/Bachelorarbeit/Data/qt30/nodeset17932.json'
-    json_file_path2 = 'C:/Users/Martin Gruber/OneDrive - gw.uni-passau.de/Studium/7. Semester/Bachelorarbeit/Data/qt30/nodeset17930.json'
-    for filename in os.listdir(json_folder_path):
-        if filename.endswith('.json'):
-            json_file_path = os.path.join(json_folder_path, filename)
-            if os.path.getsize(json_file_path) != 0 and os.path.getsize(json_file_path) != 68:
-                extract_file(json_file_path)
+    graph = nx.MultiDiGraph()
+    json_file_path = 'C:/Users/Martin Gruber/OneDrive - gw.uni-passau.de/Studium/7. Semester/Bachelorarbeit/Data/qt30/nodeset17930.json'
+    #for filename in os.listdir(json_folder_path):
+    #    if filename.endswith('.json'):
+    #        json_file_path = os.path.join(json_folder_path, filename)
+    #        if os.path.getsize(json_file_path) != 0 and os.path.getsize(json_file_path) != 68:
+    extract_file(graph, json_file_path)
     remove_isolated(graph)
     collapse_nodes(graph)
     collapse_edges(graph)
@@ -24,7 +21,7 @@ def build_graph_x():
     return newgraph
 
 
-def extract_file(json_file_path):
+def extract_file(graph, json_file_path):
     # json_file_path = 'C:/Users/Martin Gruber/OneDrive - gw.uni-passau.de/Studium/7. Semester/Bachelorarbeit/Data/qt30/nodeset17932.json'
     with open(json_file_path, 'r') as json_file:
         graph_data = json.load(json_file)
@@ -127,9 +124,10 @@ def collapse_nodes(graph):
     # Collapse nodes
     for l_node in nodes_to_collapse:
         # Find "YA" and "I" nodes connected to "L"
-        ya_nodes = list(graph.neighbors(l_node))
+        neighbors = set(graph.neighbors(l_node))
+        ya_nodes = {n for n in neighbors if graph.nodes[n]["type"] == "YA"}
         if ya_nodes:
-            ya_node = ya_nodes[0]
+            ya_node = ya_nodes.pop()
             i_nodes = list(graph.neighbors(ya_node))
             if i_nodes:
                 i_node = i_nodes[0]
@@ -174,23 +172,4 @@ def filter_date(graph, target_date):
     for from_node, to_node, data in graph.edges(data=True):
         if from_node in subgraph.nodes and to_node in subgraph:
             subgraph.add_edge(from_node, to_node, **data)
-
     return subgraph
-
-
-# extract_file(None)
-# remove_isolated(graph)
-# collapse_nodes(graph)
-# collapse_edges(graph)
-build_graph_x()
-#graph = filter_date(graph, datetime.strptime("2020-05-07", '%Y-%m-%d').date())
-#print(graph)
-
-#for node_id, attributes in graph.nodes(data=True):
-#    print(f"Node {node_id}: {attributes}")
-#for edge in graph.edges(data=True):
-#    source, target, data = edge
-
-    #print(f"Edge: {graph.nodes[source]['paraphrasedtext']} -- {graph.nodes[target]['text']}")
-#    print(f"Additional Information: {data.get('text_additional', 'No additional information')}, {data.get('connType')}")
-#    print("---")

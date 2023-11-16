@@ -16,6 +16,18 @@ graph = group_elements(graph)
 graph = determine_end(graph)
 
 graph_data = order_graph(build_graph_x())
+print("----------------ÖÖ--------------------")
+for data in graph_data["nodes"]:
+    print(data["start"], data["speaker"], data["text"])
+print("----------------ÖÖ--------------------")
 
+print("--------------------------------------")
 for start_time, globalNodeID, graphEdges, speaker, text, texts, end_time in graph:
     print(start_time, speaker, text)
+print("--------------------------------------")
+
+#print("--------------------------------------")
+#for data in graph_data["nodes"]:
+#    print(data["start"], data["speaker"], data["text"])
+#print("--------------------------------------")
+

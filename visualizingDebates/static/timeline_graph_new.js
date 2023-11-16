@@ -274,6 +274,6 @@ function createTimeline(graphData) {
         .attr('xoverflow', 'visible')
         .append('svg:path')
         .attr('d', 'M0,-5L10,0L0,5')
-        .attr('fill', 'wite');
+        .attr('fill', 'white');
 }
 
