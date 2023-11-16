@@ -248,18 +248,6 @@ def collapse_nodes2(graph):
                     new_graph.add_node(l_node, **graph.nodes[l_node], paraphrasedtext=graph.nodes[i_node]["text"])
                     for edge in graph.out_edges(i_node):
                         s, t = edge
-                        #for e in graph.out_edges(t):
-                        #    source, target = e
-                        #    edges_to_add.append((l_node, target))
-                        #    edges_to_remove.append(edge)
-                        #    edges_to_remove.append(e)
-                        #    if graph.nodes[target]["type"] != "I":
-                        #        edges_to_add.append((l_node, node_id_mapping[target]))
-                        #    else:
-                        #        for ed in graph.out_edges(t):
-                         #           source, target = ed
-                        #            edges_to_add.append((l_node, node_id_mapping[target]))
-                        #            new_graph.nodes[l_node]["quote"] = graph.nodes[target]["text"]
                         if graph.nodes[t]["type"] != "YA":
                             edges_to_add.append((l_node, t))
                             for e in graph.out_edges(t):
