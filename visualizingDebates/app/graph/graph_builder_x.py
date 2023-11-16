@@ -48,20 +48,16 @@ def extract_file(graph, json_file_path):
 
         for edge in graph_data["edges"]:
             graph.add_edge(edge["fromID"], edge["toID"])
-    print(graph)
 
 def remove_isolated(graph):
     nodes_to_remove = [node for node, data in graph.nodes(data=True) if
                        data["type"] == "L" and graph.degree(node) == 0]
     for node in nodes_to_remove:
         graph.remove_node(node)
-    print(graph)
 
 
 def collapse_edges(graph):
     l_nodes_to_update = set()
-    print("Before collapse", graph)
-
     # Identify "L" nodes connected to other "L" nodes via "TA", "RA", "MA", or "CA" nodes
     for node, attributes in graph.nodes(data=True):
         if attributes["type"] == "L":
@@ -109,10 +105,6 @@ def collapse_edges(graph):
     for node_to_remove in nodes_to_remove:
         if graph.has_node(node_to_remove):
             graph.remove_node(node_to_remove)
-
-    print("after collapse", graph)
-    for data in nx.node_link_data(graph)["links"]:
-        print(data)
 
 
 def collapse_nodes(graph):
@@ -225,8 +217,6 @@ def collapse_nodes2(graph):
             if i_nodes:
                 i_node = i_nodes.pop()
                 node_id_mapping[i_node] = l_node
-    print(node_id_mapping)
-
 
     edges_to_remove = []
     nodes_to_remove = []
@@ -243,20 +233,26 @@ def collapse_nodes2(graph):
                 i_node = i_nodes[0]
 
                 new_graph.add_node(l_node, **graph.nodes[l_node], paraphrasedtext=graph.nodes[i_node]["text"])
+
                 for edge in graph.out_edges(i_node):
                     s, t = edge
-                    if graph.nodes[t]["type"] != "YA":
+                    if graph.nodes[i_node]["type"] != "L":
                         edges_to_add.append((l_node, t))
                         edges_to_remove.append(edge)
                         for e in graph.out_edges(t):
-                            print(e)
                             source, target = e
                             edges_to_add.append((t, node_id_mapping[target]))
+                    else:
+                        #new_graph.remove_node(i_node)
+                        for e in graph.out_edges(t):
+                            source, target = e
+                            if graph.nodes[target]["type"] == "I":
+                                print(graph.nodes[target]["text"])
+                                new_graph.nodes[l_node]["quote"] = graph.nodes[target]["text"]
+
 
                 nodes_to_remove.append(ya_node)
                 nodes_to_remove.append(i_node)
-
-    print("Intermediate:", new_graph)
 
     for node in graph.nodes():
         if node not in nodes_to_remove:
@@ -274,10 +270,10 @@ def collapse_nodes2(graph):
             new_graph.add_edge(source, target, **edge_attributes)
 
     for data in nx.node_link_data(new_graph)["nodes"]:
-        print(data)
-    print("Intermediate2:", new_graph)
-    for data in nx.node_link_data(new_graph)["links"]:
-        print(data)
+        print(f"{data['text']} --- {data.get('paraphrasedtext', 'nope')} --- {data.get('quote', 'No quote')}")
+    #print("Intermediate2:", new_graph)
+    #for data in nx.node_link_data(new_graph)["links"]:
+    #    print(data)
 
 
     #for node in graph.nodes():
