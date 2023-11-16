@@ -248,49 +248,54 @@ def collapse_nodes2(graph):
                     new_graph.add_node(l_node, **graph.nodes[l_node], paraphrasedtext=graph.nodes[i_node]["text"])
                     for edge in graph.out_edges(i_node):
                         s, t = edge
-                        edges_to_add.append((l_node, t))
-                        if graph.nodes[i_node]["type"] != "L":
-                            edges_to_remove.append(edge)
+                        #for e in graph.out_edges(t):
+                        #    source, target = e
+                        #    edges_to_add.append((l_node, target))
+                        #    edges_to_remove.append(edge)
+                        #    edges_to_remove.append(e)
+                        #    if graph.nodes[target]["type"] != "I":
+                        #        edges_to_add.append((l_node, node_id_mapping[target]))
+                        #    else:
+                        #        for ed in graph.out_edges(t):
+                         #           source, target = ed
+                        #            edges_to_add.append((l_node, node_id_mapping[target]))
+                        #            new_graph.nodes[l_node]["quote"] = graph.nodes[target]["text"]
+                        if graph.nodes[t]["type"] != "YA":
+                            edges_to_add.append((l_node, t))
                             for e in graph.out_edges(t):
                                 source, target = e
                                 edges_to_add.append((t, node_id_mapping[target]))
                         else:
-                            #new_graph.remove_node(i_node)
                             for e in graph.out_edges(t):
                                 source, target = e
+                                new_graph.nodes[l_node]["quote"] = graph.nodes[target]["text"]
                                 if graph.nodes[target]["type"] == "I":
-                                    edges_to_add.append((t, node_id_mapping[target]))
-                                    new_graph.nodes[l_node]["quote"] = graph.nodes[target]["text"]
+                                    for en in graph.out_edges(target):
+                                        so, ta = en
+                                        edges_to_add.append((l_node, ta))
+                                        print(graph.nodes[ta]["text"])
+                                        for end in graph.out_edges(ta):
+                                            sou, tar = end
+                                            edges_to_add.append((ta, node_id_mapping[tar]))
+
                 nodes_to_remove.append(ya_node)
                 nodes_to_remove.append(i_node)
-
 
     for node in graph.nodes():
         if node not in nodes_to_remove:
             new_graph.add_node(node, **graph.nodes[node])
-
-    for data in nx.node_link_data(new_graph)["nodes"]:
-        print(data)
-    print("dsfs")
     for edge in edges_to_add:
         s, t = edge
-        if s in new_graph.nodes and t in new_graph.nodes:
-            #if s in new_graph.nodes and t in new_graph.nodes:
-         new_graph.add_edge(s, t)
-
-    for data in nx.node_link_data(new_graph)["nodes"]:
-        print(data)
+        new_graph.add_edge(s, t)
     for edge in graph.edges():
-        #if edge not in edges_to_remove:
         source, target = edge
         if source in new_graph.nodes and target in new_graph.nodes:
             edge_attributes = {str(key): value for key, value in graph[source][target].items()}
             new_graph.add_edge(source, target, **edge_attributes)
 
-        # print(f"{data['text']} --- {data.get('paraphrasedtext', 'nope')} --- {data.get('quote', 'No quote')}")
 
-    #for data in nx.node_link_data(new_graph)["nodes"]:
-    #    print(f"{data['text']} --- {data.get('paraphrasedtext', 'nope')} --- {data.get('quote', 'No quote')}")
+    for data in nx.node_link_data(new_graph)["nodes"]:
+        print(f"{data['text']} --- {data.get('id', 'nope')}")
     #print("Intermediate2:", new_graph)
     print()
 
