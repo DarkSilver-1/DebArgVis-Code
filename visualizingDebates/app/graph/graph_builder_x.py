@@ -132,8 +132,30 @@ def collapse_nodes(graph):
             if i_nodes:
                 i_node = i_nodes[0]
 
-                # Create a new node with the attributes of the L node
-                graph.add_node(l_node, paraphrasedtext=graph.nodes[i_node]["text"])
+                # If there is a quote, an L-type node is connected via asserting to another L type node and this second
+                # node is connected to an I-type node. If this is the case it is necessary to find the actual I-type
+                # node as it has many edges we want to keep
+                if graph.nodes[i_node]["type"] == "L":
+                    l_l_neighbors = set(graph.neighbors(i_node))
+                    l_ya_nodes = {n for n in l_l_neighbors if graph.nodes[n]["type"] == "YA"}
+                    # Find the connecting node between second L-type node and I-type node
+                    if l_ya_nodes:
+                        l_ya_node = l_ya_nodes.pop()
+                        l_i_nodes = list(graph.neighbors(l_ya_node))
+                        # Find the corresponding I-type node and add it to the graph
+                        if l_i_nodes:
+                            l_i_node = l_i_nodes[0]
+                            graph.add_node(l_node, paraphrasedtext=graph.nodes[i_node]["text"], quote=graph.nodes[l_i_node]['text'])
+                            # Create edges between this node and the first L node in order to be able to find the
+                            # outgoing edges of the I-type node directly
+                            for neighbor in set(graph.neighbors(i_node)):
+                                if neighbor != l_ya_node:
+                                    graph.add_edge(l_node, neighbor)
+                            nodes_to_remove.append(l_ya_node)
+
+                else:
+                    # Create a new node with the attributes of the L node
+                    graph.add_node(l_node, paraphrasedtext=graph.nodes[i_node]["text"])
 
                 # Add edges from "L" and "I" nodes to the new node
                 for neighbor in set(graph.neighbors(l_node)) | set(graph.neighbors(i_node)):
@@ -141,7 +163,6 @@ def collapse_nodes(graph):
                         graph.add_edge(l_node, neighbor)
 
                 # Remove nodes and edges
-                # graph.remove_node(ya_node)
                 nodes_to_remove.append(ya_node)
 
                 predecessors_list = list(graph.predecessors(i_node))
