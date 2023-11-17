@@ -1,21 +1,24 @@
 import json
+import os
 from datetime import datetime
 
 import networkx as nx
 
 json_folder_path = 'C:/Users/Martin Gruber/OneDrive - gw.uni-passau.de/Studium/7. Semester/Bachelorarbeit/Data/qt30'  # may not stay here
 
-
 def build_graph_x():
-    json_file_path = 'C:/Users/Martin Gruber/OneDrive - gw.uni-passau.de/Studium/7. Semester/Bachelorarbeit/Data/qt30/nodeset17957.json'
+
     graph = nx.MultiDiGraph()
-    # for filename in os.listdir(json_folder_path):
-    #    if filename.endswith('.json'):
-    #        json_file_path = os.path.join(json_folder_path, filename)
-    #        if os.path.getsize(json_file_path) != 0 and os.path.getsize(json_file_path) != 68:
-    extract_file(graph, json_file_path)
+    json_file_path = 'C:/Users/Martin Gruber/OneDrive - gw.uni-passau.de/Studium/7. Semester/Bachelorarbeit/Data/qt30/nodeset17934.json'
+
+    for filename in os.listdir(json_folder_path):
+        if filename.endswith('.json'):
+            json_file_path = os.path.join(json_folder_path, filename)
+            if os.path.getsize(json_file_path) != 0 and os.path.getsize(json_file_path) != 68:
+                extract_file(graph, json_file_path)
+
     remove_isolated(graph)
-    graph = collapse_nodes2(graph)
+    graph = collapse_nodes(graph)
     collapse_edges(graph)
     new_graph = filter_date(graph, datetime.strptime("2020-05-21", '%Y-%m-%d').date())
     return new_graph
@@ -61,7 +64,7 @@ def collapse_edges(graph):
     for node, attributes in graph.nodes(data=True):
         if attributes["type"] == "L":
             neighbors = set(graph.neighbors(node))
-            additional_info_neighbors = {n for n in neighbors if graph.nodes[n]["type"] in {"TA", "RA", "MA", "CA"}}
+            additional_info_neighbors = {n for n in neighbors if graph.nodes[n]["type"] in {"TA", "CA", "MA", "RA"}}
             l_neighbors = {n for additional_info_node in additional_info_neighbors for n in
                            graph.neighbors(additional_info_node)}
             if l_neighbors:
@@ -74,7 +77,7 @@ def collapse_edges(graph):
     # Update "L" to "L" edges
     for l_node in l_nodes_to_update:
         neighbors = set(graph.neighbors(l_node))
-        additional_info_neighbors = {n for n in neighbors if graph.nodes[n]["type"] in {"TA", "RA", "MA", "CA"}}
+        additional_info_neighbors = {n for n in neighbors if graph.nodes[n]["type"] in {"TA", "CA", "MA", "RA"}}
 
         # Iterate over "TA", "RA", "MA", or "CA" nodes connected to the "L" node
         for additional_info_node in additional_info_neighbors:
@@ -119,7 +122,7 @@ def filter_date(graph, target_date):
     return subgraph
 
 
-def collapse_nodes2(graph):
+def collapse_nodes(graph):
     node_id_mapping = {}
 
     new_graph = nx.MultiDiGraph()
@@ -174,7 +177,13 @@ def collapse_nodes2(graph):
                             edges_to_add.append((l_node, t))
                             for e in graph.out_edges(t):
                                 source, target = e
-                                edges_to_add.append((t, node_id_mapping[target]))
+                                if graph.nodes[target]["type"] == "L":
+                                    print("ERROR: forbidden connection of nodes")
+                                else:
+                                    if target not in node_id_mapping:
+                                        print("ERROR: Not mapped nodes")
+                                    else:
+                                        edges_to_add.append((t, node_id_mapping[target]))
                         elif graph.nodes[s]["type"] == "L":
                             for e in graph.out_edges(t):
                                 source, target = e
@@ -191,9 +200,8 @@ def collapse_nodes2(graph):
 
                 nodes_to_remove.append(ya_node)
                 nodes_to_remove.append(i_node)
-
     for node in graph.nodes():
-        if node not in nodes_to_remove:
+        if node not in nodes_to_remove and graph.nodes[node]["type"] not in ["I", "L"]:
             new_graph.add_node(node, **graph.nodes[node])
     for edge in edges_to_add:
         s, t = edge
@@ -203,8 +211,6 @@ def collapse_nodes2(graph):
         if source in new_graph.nodes and target in new_graph.nodes:
             edge_attributes = {str(key): value for key, value in graph[source][target].items()}
             new_graph.add_edge(source, target, **edge_attributes)
-    #for d in nx.node_link_data(new_graph)["nodes"]:
-    #    print(d)
     return new_graph
 
 
