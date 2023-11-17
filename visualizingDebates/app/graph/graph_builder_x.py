@@ -1,5 +1,4 @@
 import json
-import os
 from datetime import datetime
 
 import networkx as nx
@@ -8,15 +7,15 @@ json_folder_path = 'C:/Users/Martin Gruber/OneDrive - gw.uni-passau.de/Studium/7
 
 
 def build_graph_x():
-    json_file_path = 'C:/Users/Martin Gruber/OneDrive - gw.uni-passau.de/Studium/7. Semester/Bachelorarbeit/Data/qt30/nodeset17934.json'
+    json_file_path = 'C:/Users/Martin Gruber/OneDrive - gw.uni-passau.de/Studium/7. Semester/Bachelorarbeit/Data/qt30/nodeset17957.json'
     graph = nx.MultiDiGraph()
-    #for filename in os.listdir(json_folder_path):
+    # for filename in os.listdir(json_folder_path):
     #    if filename.endswith('.json'):
     #        json_file_path = os.path.join(json_folder_path, filename)
     #        if os.path.getsize(json_file_path) != 0 and os.path.getsize(json_file_path) != 68:
     extract_file(graph, json_file_path)
     remove_isolated(graph)
-    graph = collapse_nodes(graph)
+    graph = collapse_nodes2(graph)
     collapse_edges(graph)
     new_graph = filter_date(graph, datetime.strptime("2020-05-21", '%Y-%m-%d').date())
     return new_graph
@@ -120,12 +119,11 @@ def filter_date(graph, target_date):
     return subgraph
 
 
-def collapse_nodes(graph):
-    print("Input:", graph)
+def collapse_nodes2(graph):
+    node_id_mapping = {}
+
     new_graph = nx.MultiDiGraph()
     nodes_to_collapse = set()
-    nodes_to_remove = []
-    edges_to_add = []
 
     # Identify nodes to collapse
     for node, attributes in graph.nodes(data=True):
@@ -134,15 +132,79 @@ def collapse_nodes(graph):
             ya_neighbors = {n for n in neighbors if graph.nodes[n]["type"] == "YA"}
             if ya_neighbors:
                 nodes_to_collapse.add(node)
-    # create a node id mapping of L nodes and their corresponding I nodes
-    node_id_mapping = create_node_mapping(graph, nodes_to_collapse)
 
-    # Merge the nodes that are in the mapping and set their outgoing edge source to the merged node
     for l_node in nodes_to_collapse:
-        collapse_node(graph, new_graph, node_id_mapping, edges_to_add, nodes_to_remove, l_node)
+        neighbors = set(graph.neighbors(l_node))
+        ya_nodes = {n for n in neighbors if graph.nodes[n]["type"] == "YA"}
 
-    # Fill the graph with the nodes and edges that are not part of the mapping but necessary for connections
-    populate_graph(edges_to_add, graph, new_graph, nodes_to_remove)
+        if ya_nodes:
+            ya_node = ya_nodes.pop()
+            i_nodes = {n for n in graph.neighbors(ya_node) if graph.nodes[n]["type"] == "I"}
+            if i_nodes:
+                i_node = i_nodes.pop()
+                predecessors = set(graph.predecessors(l_node))
+                predecessor_ya_node = next((p for p in predecessors if graph.nodes[p]["type"] == "YA"), None)
+                if predecessor_ya_node:
+                    predecessors = set(graph.predecessors(predecessor_ya_node))
+                    predecessor_l_node = next((p for p in predecessors if graph.nodes[p]["type"] == "L"), None)
+                    if i_node not in node_id_mapping and predecessor_l_node:
+                        node_id_mapping[i_node] = predecessor_l_node
+                else:
+                    node_id_mapping[i_node] = l_node
+
+    nodes_to_remove = []
+    edges_to_add = []
+
+    for l_node in nodes_to_collapse:
+        # Find "YA" and "I" nodes connected to "L"
+        neighbors = set(graph.neighbors(l_node))
+        ya_nodes = {n for n in neighbors if graph.nodes[n]["type"] == "YA"}
+        if ya_nodes:
+            ya_node = ya_nodes.pop()
+            i_nodes = list(graph.neighbors(ya_node))
+            if i_nodes:
+                i_node = i_nodes[0]
+                incoming_from_ya = any(
+                    graph.nodes[predecessor]["type"] == "YA" for predecessor in graph.predecessors(l_node))
+                if not incoming_from_ya:
+                    new_graph.add_node(l_node, **graph.nodes[l_node], paraphrasedtext=graph.nodes[i_node]["text"])
+                    for edge in graph.out_edges(i_node):
+                        s, t = edge
+                        if graph.nodes[t]["type"] != "YA":
+                            edges_to_add.append((l_node, t))
+                            for e in graph.out_edges(t):
+                                source, target = e
+                                edges_to_add.append((t, node_id_mapping[target]))
+                        elif graph.nodes[s]["type"] == "L":
+                            for e in graph.out_edges(t):
+                                source, target = e
+                                new_graph.nodes[l_node]["quote"] = graph.nodes[target]["text"]
+                                if graph.nodes[target]["type"] == "I":
+                                    for en in graph.out_edges(target):
+                                        so, ta = en
+                                        edges_to_add.append((l_node, ta))
+                                        for end in graph.out_edges(ta):
+                                            sou, tar = end
+                                            edges_to_add.append((ta, node_id_mapping[tar]))
+                        else:
+                            print("ERROR: Double connected Assertion")
+
+                nodes_to_remove.append(ya_node)
+                nodes_to_remove.append(i_node)
+
+    for node in graph.nodes():
+        if node not in nodes_to_remove:
+            new_graph.add_node(node, **graph.nodes[node])
+    for edge in edges_to_add:
+        s, t = edge
+        new_graph.add_edge(s, t)
+    for edge in graph.edges():
+        source, target = edge
+        if source in new_graph.nodes and target in new_graph.nodes:
+            edge_attributes = {str(key): value for key, value in graph[source][target].items()}
+            new_graph.add_edge(source, target, **edge_attributes)
+    #for d in nx.node_link_data(new_graph)["nodes"]:
+    #    print(d)
     return new_graph
 
 
@@ -185,7 +247,8 @@ def adapt_edge_source(edges_to_add, graph, i_node, l_node, new_graph, node_id_ma
             edges_to_add.append((l_node, t))
             for e in graph.out_edges(t):
                 source, target = e
-                edges_to_add.append((t, node_id_mapping[target]))
+                print(graph.nodes[target]["text"])
+                # edges_to_add.append((t, node_id_mapping[target]))
         else:
             for e in graph.out_edges(t):
                 source, target = e
@@ -221,4 +284,3 @@ def create_node_mapping(graph, nodes_to_collapse):
         else:
             print("Error")
     return node_id_mapping
-
