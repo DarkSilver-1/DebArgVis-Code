@@ -13,6 +13,7 @@ graph = build_graph(static_param1, static_param2)
 graph = group_elements(graph)
 graph = determine_end(graph)
 
+logging.info("Creating the graph")
 graph_data = order_graph(build_graph_x())
 
 
