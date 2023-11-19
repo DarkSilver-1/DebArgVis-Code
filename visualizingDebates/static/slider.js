@@ -1,3 +1,4 @@
+const scaleFactor = 2.5;
 function createSlidingTimeline(graphData) {
 
     console.log(graphData)
@@ -473,72 +474,18 @@ function createSlidingTimeline(graphData) {
         const nodesInWindow = nodes3.filter(function (d) {
             const barX = xScale3(d.start_time);
             const barWidth = xScale3(d.end_time || d.start_time) - barX;
-
             return barX <= mouseX + 50 && barX + barWidth >= mouseX - 50;
         });
-        const windowStartValue = d3.min(nodesInWindow, function (d) {
-            return d.start_time;
-        });
-
-        const windowEndValue = d3.max(nodesInWindow, function (d) {
-            return d.end_time;
-        });
-        const scaleFactor = 2.5;
         const lastScaledNodeX = xScale3(d3.max(nodesInWindow, d => d.end_time));
-        const lastScaledNodeXStart = xScale3(d3.max(nodesInWindow, d => d.start_time));
         const firstScaledNodeX = xScale3(d3.min(nodesInWindow, d => d.start_time));
-        const unscaledWindowLength = lastScaledNodeX - firstScaledNodeX
-        /* ((lastScaledNodeX - firstScaledNodeX) * scaleFactor) is the length of the scaled part.
-           Adding it to firstScaledNodeX gives one the new position of the ending of the scaled last bar in
-           the window. Now we need the difference to the old value to know, how much longer it actually
-           got. We can then use this and add it to the former position of the bar to find out its new x value
-        */
-        const scaledAreaLength = ((lastScaledNodeX - firstScaledNodeX) * scaleFactor)//((firstScaledNodeX + (lastScaledNodeX - firstScaledNodeX) * scaleFactor) - lastScaledNodeX)
-        const endX = xScale3(d3.max(nodes3, d => d.end_time))
-        const unscaledSpace = endX - ((lastScaledNodeX - firstScaledNodeX) * scaleFactor)//endX - scaledAreaLength
-        const offset = (lastScaledNodeX - firstScaledNodeX)
-        const unscalednotscaledSpace = endX - offset
-        const antiScaleFactor = (unscaledSpace) / unscalednotscaledSpace
+        const diagramLength = xScale3(d3.max(nodes3, d => d.end_time))
+        const scaledAreaLength = ((lastScaledNodeX - firstScaledNodeX) * scaleFactor)
+        const unscaledAreaLength = diagramLength - (lastScaledNodeX - firstScaledNodeX)
+        const antiScaledAreaLength = diagramLength - scaledAreaLength
+        const antiScaleFactor = (antiScaledAreaLength) / unscaledAreaLength
         const beforeAreaLength = firstScaledNodeX * antiScaleFactor
-        const adaptedX = firstScaledNodeX - (firstScaledNodeX - beforeAreaLength)
-
-        const helpmepls = firstScaledNodeX*antiScaleFactor + (lastScaledNodeX - firstScaledNodeX) * scaleFactor
-
-        console.log(scaledAreaLength)
-        console.log(antiScaleFactor)
-        svg3.selectAll('.vertical-line').remove();
-
-
-        svg3.append('line')
-            .attr('class', 'vertical-line')
-            .attr('x1', firstScaledNodeX*antiScaleFactor)
-            .attr('y1', 0)
-            .attr('x2', firstScaledNodeX*antiScaleFactor)
-            .attr('y2', height3)
-            .attr('stroke', 'red')
-            .attr('stroke-width', 2)
-            .attr('opacity', 0.5);
-
-        svg3.append('line')
-            .attr('class', 'vertical-line')
-            .attr('x1', helpmepls)
-            .attr('y1', 0)
-            .attr('x2', firstScaledNodeX*antiScaleFactor + (lastScaledNodeX - firstScaledNodeX) * scaleFactor)
-            .attr('y2', height3)
-            .attr('stroke', 'blue')
-            .attr('stroke-width', 2)
-            .attr('opacity', 0.5);
-
-        svg3.append('line')
-            .attr('class', 'vertical-line')
-            .attr('x1', endX)
-            .attr('y1', 0)
-            .attr('x2', endX)
-            .attr('y2', height3)
-            .attr('stroke', 'green')
-            .attr('stroke-width', 2)
-            .attr('opacity', 0.5);
-
+        const adaptedXBeforeWindow = firstScaledNodeX - (firstScaledNodeX - beforeAreaLength)
+        const adaptedXAfterWindow = firstScaledNodeX*antiScaleFactor + scaledAreaLength
 
         node3.attr('x', d => {
             const barX = xScale3(d.start_time);
@@ -546,15 +493,12 @@ function createSlidingTimeline(graphData) {
 
             // Check if the bar is within the mouse window
             if (barX <= mouseX + 50 && barX + barWidth >= mouseX - 50) {
-                const scaledX = xScale3(windowStartValue);
-                return adaptedX + (xScale3(d.start_time) - scaledX) * scaleFactor;
+                return adaptedXBeforeWindow + (xScale3(d.start_time) - firstScaledNodeX) * scaleFactor;
             } else {
-                // Check if the bar is to the left of the mouse window
                 if (barX < mouseX - 50) {
-                    // Set the start value to the end value of the previous bar
                     return barX * antiScaleFactor;
                 } else {
-                    return helpmepls + (barX- lastScaledNodeX)*antiScaleFactor
+                    return adaptedXAfterWindow + (barX- lastScaledNodeX)*antiScaleFactor
                 }
             }
         }).attr('width', d => {
@@ -573,9 +517,9 @@ function createSlidingTimeline(graphData) {
 
             // Check if the bar is within the mouse window
             if (barX <= mouseX + 50 && barX + barWidth >= mouseX - 50) {
-                return 1.0; // Full color within the window
+                return 1.0;
             } else {
-                return 0.2; // Adjust the opacity for bars outside the window
+                return 0.2;
             }
         });
     });
