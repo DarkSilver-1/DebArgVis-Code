@@ -1,4 +1,22 @@
 const scaleFactor = 2.5;
+const windowSize = 40;
+
+function determineXValue(xScale3, d, mouseX, adaptedXBeforeWindow, firstScaledNodeX, antiScaleFactor, adaptedXAfterWindow, lastScaledNodeX) {
+    const barX = xScale3(d.start_time);
+    const barWidth = xScale3(d.end_time || d.start_time) - barX;
+
+    // Check if the bar is within the mouse window
+    if (barX <= mouseX + 50 && barX + barWidth >= mouseX - 50) {
+        return adaptedXBeforeWindow + (xScale3(d.start_time) - firstScaledNodeX) * scaleFactor;
+    } else {
+        if (barX < mouseX - 50) {
+            return barX * antiScaleFactor;
+        } else {
+            return adaptedXAfterWindow + (barX - lastScaledNodeX) * antiScaleFactor
+        }
+    }
+}
+
 function createSlidingTimeline(graphData) {
 
     console.log(graphData)
@@ -461,6 +479,44 @@ function createSlidingTimeline(graphData) {
         .attr('stroke', 'black') // Add a stroke for the border
         .attr('stroke-width', 2);
 
+    const nodesToShowText = [];
+    let lastNodeX = 0; // Declare lastNodeX here
+
+// Precompute whether each node should display text
+    nodes3.forEach(function (d, i) {
+        const barX = xScale3(d.start_time);
+
+        if (barX >= lastNodeX + 50 || xScale3(d.end_time) - barX > 50 ) {
+            nodesToShowText[i] = true;
+            lastNodeX = barX;
+        } else {
+            nodesToShowText[i] = false;
+        }
+    });
+
+    svg3.selectAll('.bar-text')
+        .data(nodes3)
+        .enter()
+        .append('text')
+        .attr('class', 'bar-text')
+        .attr('x', d => xScale3(d.start_time))
+        .attr('y', (d, i) => nodesToShowText[i] ? 255 : -1000)
+        .text(d => d3.timeFormat('%H:%M:%S')(d.start_time))
+        .attr('text-anchor', 'middle')
+        .attr('font-size', '10px');
+    svg3.selectAll('.line-connector')
+        .data(nodes3)
+        .enter()
+        .append('line')
+        .attr('class', 'line-connector')
+        .attr('x1', d => xScale3(d.start_time))
+        .attr('y1', (d, i) => nodesToShowText[i] ? yScale3(d.speaker)+yScale3.bandwidth() : -1000)
+        .attr('x2', d => xScale3(d.start_time))
+        .attr('y2', (d, i) => nodesToShowText[i] ? 245 : -1000)
+        .attr('stroke', 'black')
+        .attr('stroke-dasharray', '5,5');
+
+
 // Handle mousemove event
     svg3.on('mousemove', function (event) {
         // Get the current mouse position
@@ -468,8 +524,9 @@ function createSlidingTimeline(graphData) {
 
         // Update the position and width of the mouse rectangle
         mouseRectangle3
-            .attr('x', mouseX - 50) // Adjust the x position for the center
-            .attr('opacity', 0.5); // Adjust the opacity as needed
+            .attr('x', mouseX - 50)
+            .attr('opacity', 0.5);
+
 
         const nodesInWindow = nodes3.filter(function (d) {
             const barX = xScale3(d.start_time);
@@ -485,22 +542,28 @@ function createSlidingTimeline(graphData) {
         const antiScaleFactor = (antiScaledAreaLength) / unscaledAreaLength
         const beforeAreaLength = firstScaledNodeX * antiScaleFactor
         const adaptedXBeforeWindow = firstScaledNodeX - (firstScaledNodeX - beforeAreaLength)
-        const adaptedXAfterWindow = firstScaledNodeX*antiScaleFactor + scaledAreaLength
+        const adaptedXAfterWindow = firstScaledNodeX * antiScaleFactor + scaledAreaLength
+
+        svg3.selectAll('.bar-text').attr('x', d => {
+            return determineXValue(xScale3, d, mouseX, adaptedXBeforeWindow, firstScaledNodeX, antiScaleFactor, adaptedXAfterWindow, lastScaledNodeX);
+
+        }).attr('y', (d, i) => {
+            return nodesToShowText[i] ? 255 : -1000;
+        })
+        svg3.selectAll('.line-connector')
+            .attr('x1', d => {
+                return determineXValue(xScale3, d, mouseX, adaptedXBeforeWindow, firstScaledNodeX, antiScaleFactor, adaptedXAfterWindow, lastScaledNodeX);
+            })
+            .attr('x2', d => {
+                return determineXValue(xScale3, d, mouseX, adaptedXBeforeWindow, firstScaledNodeX, antiScaleFactor, adaptedXAfterWindow, lastScaledNodeX);
+
+            })
+            .attr('y1', (d, i) => nodesToShowText[i] ? yScale3(d.speaker)+yScale3.bandwidth() : -1000)
+            .attr('y2', (d, i) => nodesToShowText[i] ? 245 : -1000);
 
         node3.attr('x', d => {
-            const barX = xScale3(d.start_time);
-            const barWidth = xScale3(d.end_time || d.start_time) - barX;
+            return determineXValue(xScale3, d, mouseX, adaptedXBeforeWindow, firstScaledNodeX, antiScaleFactor, adaptedXAfterWindow, lastScaledNodeX);
 
-            // Check if the bar is within the mouse window
-            if (barX <= mouseX + 50 && barX + barWidth >= mouseX - 50) {
-                return adaptedXBeforeWindow + (xScale3(d.start_time) - firstScaledNodeX) * scaleFactor;
-            } else {
-                if (barX < mouseX - 50) {
-                    return barX * antiScaleFactor;
-                } else {
-                    return adaptedXAfterWindow + (barX- lastScaledNodeX)*antiScaleFactor
-                }
-            }
         }).attr('width', d => {
             const barWidth = xScale3(d.end_time || d.start_time) - xScale3(d.start_time);
 
@@ -532,4 +595,5 @@ function createSlidingTimeline(graphData) {
         svg3.selectAll('.vertical-line').remove();
 
     });
+
 }
