@@ -25,5 +25,15 @@ def get_graph_data():
     return graph_data
 
 
+@app.get("/slider")
+def get_graph_slider():
+    return graph_data
+
+
+@app.get("/slider")
+def get_graph_slider():
+    return HTMLResponse(content=open("static/slider.html").read(), status_code=200)
+
+
 if __name__ == "__main__":
     uvicorn.run(app)

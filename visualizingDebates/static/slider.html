@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta content="IE=edge" http-equiv="X-UA-Compatible">
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <title>Graph Visualization</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+</head>
+<body>
+<h1>Timeline</h1>
+<p>   </p>
+<!--<svg height="400" id="timeline" width="800"></svg>-->
+<svg height="400" id="time" width="800"></svg>
+<!--<svg height="500" id="slider" width="800"></svg>-->
+
+
+<script>
+    fetch('/slider')
+        .then(response => response.json())
+        .then(graphData => {
+            const script = document.createElement('script');
+            script.src = 'slider.js';
+            script.onload = function () {
+                createSlidingTimeline(graphData)
+            };
+            document.body.appendChild(script);
+        })
+        .catch(error => console.error('Error fetching graph data:', error));
+</script>
+</body>
+</html>
+
+
