@@ -496,12 +496,15 @@ function createSlidingTimeline(graphData) {
         const scaledAreaLength = ((lastScaledNodeX - firstScaledNodeX) * scaleFactor)//((firstScaledNodeX + (lastScaledNodeX - firstScaledNodeX) * scaleFactor) - lastScaledNodeX)
         const endX = xScale3(d3.max(nodes3, d => d.end_time))
         const unscaledSpace = endX - ((lastScaledNodeX - firstScaledNodeX) * scaleFactor)//endX - scaledAreaLength
-        const antiScaleFactor = (unscaledSpace) / endX
+        const offset = (lastScaledNodeX - firstScaledNodeX)
+        const unscalednotscaledSpace = endX - offset
+        const antiScaleFactor = (unscaledSpace) / unscalednotscaledSpace
         const beforeAreaLength = firstScaledNodeX * antiScaleFactor
         const adaptedX = firstScaledNodeX - (firstScaledNodeX - beforeAreaLength)
+
         const helpmepls = firstScaledNodeX*antiScaleFactor + (lastScaledNodeX - firstScaledNodeX) * scaleFactor
 
-        console.log(unscaledSpace)
+        console.log(scaledAreaLength)
         console.log(antiScaleFactor)
         svg3.selectAll('.vertical-line').remove();
 
