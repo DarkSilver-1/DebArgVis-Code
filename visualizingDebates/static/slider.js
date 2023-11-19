@@ -452,11 +452,11 @@ function createSlidingTimeline(graphData) {
 
     let mouseRectangle3 = svg3.append('rect')
         .attr('class', 'mouse-rectangle')
-        .attr('width', 200) // Initial width, double the desired range
+        .attr('width', 100) // Initial width, double the desired range
         .attr('height', height3)
         .attr('fill', 'transparent')
         .attr('opacity', 1)
-        .attr('x', -100) // Initial x position, half of the desired range
+        .attr('x', -50) // Initial x position, half of the desired range
         .attr('stroke', 'black') // Add a stroke for the border
         .attr('stroke-width', 2);
 
@@ -467,14 +467,14 @@ function createSlidingTimeline(graphData) {
 
         // Update the position and width of the mouse rectangle
         mouseRectangle3
-            .attr('x', mouseX - 100) // Adjust the x position for the center
+            .attr('x', mouseX - 50) // Adjust the x position for the center
             .attr('opacity', 0.5); // Adjust the opacity as needed
 
         const nodesInWindow = nodes3.filter(function (d) {
             const barX = xScale3(d.start_time);
             const barWidth = xScale3(d.end_time || d.start_time) - barX;
 
-            return barX <= mouseX + 100 && barX + barWidth >= mouseX - 100;
+            return barX <= mouseX + 50 && barX + barWidth >= mouseX - 50;
         });
         const windowStartValue = d3.min(nodesInWindow, function (d) {
             return d.start_time;
@@ -485,23 +485,24 @@ function createSlidingTimeline(graphData) {
         });
         const scaleFactor = 2.5;
         const lastScaledNodeX = xScale3(d3.max(nodesInWindow, d => d.end_time));
+        const lastScaledNodeXStart = xScale3(d3.max(nodesInWindow, d => d.start_time));
         const firstScaledNodeX = xScale3(d3.min(nodesInWindow, d => d.start_time));
         const unscaledWindowLength = lastScaledNodeX - firstScaledNodeX
-        /* (lastScaledNodeX - firstScaledNodeX) * scaleFactor) is the length of the scaled part.
+        /* ((lastScaledNodeX - firstScaledNodeX) * scaleFactor) is the length of the scaled part.
            Adding it to firstScaledNodeX gives one the new position of the ending of the scaled last bar in
            the window. Now we need the difference to the old value to know, how much longer it actually
            got. We can then use this and add it to the former position of the bar to find out its new x value
         */
-        const scaledAreaLength = ((firstScaledNodeX + (lastScaledNodeX - firstScaledNodeX) * scaleFactor) - lastScaledNodeX)
+        const scaledAreaLength = ((lastScaledNodeX - firstScaledNodeX) * scaleFactor)//((firstScaledNodeX + (lastScaledNodeX - firstScaledNodeX) * scaleFactor) - lastScaledNodeX)
         const endX = xScale3(d3.max(nodes3, d => d.end_time))
-        const unscaledSpace = endX - scaledAreaLength
+        const unscaledSpace = endX - ((lastScaledNodeX - firstScaledNodeX) * scaleFactor)//endX - scaledAreaLength
         const antiScaleFactor = (unscaledSpace) / endX
         const beforeAreaLength = firstScaledNodeX * antiScaleFactor
         const adaptedX = firstScaledNodeX - (firstScaledNodeX - beforeAreaLength)
-        const offset = (firstScaledNodeX - beforeAreaLength)
         const helpmepls = firstScaledNodeX*antiScaleFactor + (lastScaledNodeX - firstScaledNodeX) * scaleFactor
-        //const firstBeforeWindowX = xScale3(d3.max(nodes3.filter(d => xScale3(d.start_time) < firstScaledNodeX), d => d.end_time));
 
+        console.log(unscaledSpace)
+        console.log(antiScaleFactor)
         svg3.selectAll('.vertical-line').remove();
 
 
@@ -535,41 +536,29 @@ function createSlidingTimeline(graphData) {
             .attr('stroke-width', 2)
             .attr('opacity', 0.5);
 
-        /*svg3.append('line')
-            .attr('class', 'vertical-line')
-            .attr('x1', (windowStartValue))
-            .attr('y1', 0)
-            .attr('x2', (windowEndValue))
-            .attr('y2', height3)
-            .attr('stroke', 'violet')
-            .attr('stroke-width', 2)
-            .attr('opacity', 0.5);
-        console.log(antiScaleFactor)*/
 
         node3.attr('x', d => {
             const barX = xScale3(d.start_time);
             const barWidth = xScale3(d.end_time || d.start_time) - barX;
 
             // Check if the bar is within the mouse window
-            if (barX <= mouseX + 100 && barX + barWidth >= mouseX - 100) {
+            if (barX <= mouseX + 50 && barX + barWidth >= mouseX - 50) {
                 const scaledX = xScale3(windowStartValue);
                 return adaptedX + (xScale3(d.start_time) - scaledX) * scaleFactor;
             } else {
                 // Check if the bar is to the left of the mouse window
-                if (barX < mouseX - 100) {
+                if (barX < mouseX - 50) {
                     // Set the start value to the end value of the previous bar
                     return barX * antiScaleFactor;
                 } else {
-                    //
-                    return (helpmepls) + (barX- lastScaledNodeX)*antiScaleFactor
-                    //return (firstScaledNodeX*antiScaleFactor + (lastScaledNodeX - firstScaledNodeX) * scaleFactor) + (barX -windowEndValue)*antiScaleFactor
+                    return helpmepls + (barX- lastScaledNodeX)*antiScaleFactor
                 }
             }
         }).attr('width', d => {
             const barWidth = xScale3(d.end_time || d.start_time) - xScale3(d.start_time);
 
             // Check if the bar is within the mouse window
-            if (xScale3(d.start_time) <= mouseX + 100 && xScale3(d.start_time) + barWidth >= mouseX - 100) {
+            if (xScale3(d.start_time) <= mouseX + 50 && xScale3(d.start_time) + barWidth >= mouseX - 50) {
                 return barWidth * scaleFactor;
             } else {
                 return barWidth * antiScaleFactor;
@@ -580,7 +569,7 @@ function createSlidingTimeline(graphData) {
             const barWidth = xScale3(d.end_time || d.start_time) - barX;
 
             // Check if the bar is within the mouse window
-            if (barX <= mouseX + 100 && barX + barWidth >= mouseX - 100) {
+            if (barX <= mouseX + 50 && barX + barWidth >= mouseX - 50) {
                 return 1.0; // Full color within the window
             } else {
                 return 0.2; // Adjust the opacity for bars outside the window
