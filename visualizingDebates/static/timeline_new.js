@@ -1,4 +1,5 @@
 function createTimeline(graphNodes) {
+    console.log(graphNodes)
 
     let barHovered = false;
     let textHovered = false;

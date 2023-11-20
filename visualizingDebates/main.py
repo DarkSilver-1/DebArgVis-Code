@@ -10,9 +10,14 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
 # /static/index.html
-@app.get("../data")
-async def get_data():
+@app.get("/data")
+def get_data():
     return graph
+
+
+@app.get("/data")
+def get_graph_slider():
+    return HTMLResponse(content=open("static/index.html").read(), status_code=200)
 
 
 @app.get("/")

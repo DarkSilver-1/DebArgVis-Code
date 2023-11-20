@@ -17,6 +17,21 @@ function determineXValue(xScale3, d, mouseX, adaptedXBeforeWindow, firstScaledNo
     }
 }
 
+function getLinkColor(textAdditional) {
+    switch (textAdditional) {
+        case 'Default Transition':
+            return 'white';
+        case 'Default Inference':
+            return 'violet';
+        case 'Default Rephrase':
+            return 'green';
+        case 'Default Conflict':
+            return 'red';
+        default:
+            return 'black';
+    }
+}
+
 function createSlidingTimeline(graphData) {
 
     console.log(graphData)
@@ -578,33 +593,59 @@ function createSlidingTimeline(graphData) {
     node3.on('mouseover', (event, d) => {
         let currentSpeaker = d.speaker;
         let textArray = [];
-        textArray.push(d.text);
+        textArray = d.grouped_texts;
 
         // Remove all existing text elements and hover boxes
         svg3.selectAll('.node').attr('stroke', 'none');
         svg3.selectAll('.hover-box').remove();
         link3.attr('stroke', 'black').attr('marker-end', 'url(#arrowhead)');
-        link3.attr('stroke-dasharray', null)
-
+        link3.attr('stroke-dasharray', null);
 
         let yPosition = yScale3(currentSpeaker) + yScale3.bandwidth() + 5; // Place the hover box below the bar
-
-        let hoverBox = svg3.append('g')
-            .attr('class', 'hover-box');
+        let hoverBox = svg3.append('g').attr('class', 'hover-box');
 
         textArray.forEach(function (text, index) {
             let textelement = hoverBox.append('text')
+                .attr('id', `hovered-text-${index}`)  // Add unique id to each text element
                 .attr('y', yPosition + 20 + index * 15)
                 .style('visibility', 'visible')
                 .style('cursor', 'pointer')
                 .text(text)
                 .on('mouseover', function () {
                     textHovered3 = true;
+                    const associatedLinks = links.filter(link => link.source.text === text);
+                    textArray.forEach((t, i) => {
+                        link3.attr('stroke', 'black').attr('marker-end', 'url(#arrowhead)');
+                        link3.attr('stroke-dasharray', null);
+                        svg3.selectAll('.node').attr('stroke', 'none');
+                        const isConnected = associatedLinks.some(link => link.target.text === t);
+                        const linkColor = associatedLinks.find(link => link.target.text === t)?.text_additional;
+                        const color = isConnected ? getLinkColor(linkColor) : 'black';
+
+                        svg3.select(`#hovered-text-${i}`)
+                            .style('fill', color);
+                    });
+                    link3.filter(l => l.source.text === text)
+                        .attr('stroke', d => getLinkColor(d.text_additional))
+                        .attr('stroke-dasharray', d => (d.text_additional === 'Default Transition') ? '5,5' : null)
+                        .attr('marker-end', d => {
+                            switch (d.text_additional) {
+                                case 'Default Transition':
+                                    return 'url(#arrowhead-white)';
+                                case 'Default Inference':
+                                    return 'url(#arrowhead-violet)';
+                                case 'Default Rephrase':
+                                    return 'url(#arrowhead-green)';
+                                case 'Default Conflict':
+                                    return 'url(#arrowhead-red)';
+                                default:
+                                    return 'url(#arrowhead)';
+                            }
+                        });
+                    const hoveredNode = svg3.selectAll('.node').filter(node => node.text === text);
+                    hoveredNode.attr('stroke', 'black')  // You can customize the stroke color
+                        .attr('stroke-width', 2);
                 })
-                .on('click', function () {
-                    // Handle click event here, e.g., open a link or perform a specific action
-                    console.log('Text clicked: ' + text);
-                });
             if (text === d.text) {
                 textelement.style('font-weight', 'bold');
             }

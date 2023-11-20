@@ -13,12 +13,12 @@ def build_graph(param1, param2):  # the parameters are about to be channged to e
     json_file_path = 'C:/Users/Martin Gruber/OneDrive - gw.uni-passau.de/Studium/7. Semester/Bachelorarbeit/Data/qt30/nodeset17938.json'
     # json_file_path = 'C:/Users/grube/OneDrive - gw.uni-passau.de/Studium/7. Semester/Bachelorarbeit/Data/qt30/nodeset17932.json'
     # json_file_path = 'C:/Users/Martin Gruber/OneDrive - gw.uni-passau.de/Studium/7. Semester/Bachelorarbeit/Data/qt30/nodeset17925.json'
-    #for filename in os.listdir(json_folder_path):
-    #    if filename.endswith('.json'):
-    #        json_file_path = os.path.join(json_folder_path, filename)
-    #        if (os.path.getsize(json_file_path) != 0 and os.path.getsize(
-    #                json_file_path) != 68):
-    extract_file(json_file_path, param1, param2)
+    for filename in os.listdir(json_folder_path):
+        if filename.endswith('.json'):
+            json_file_path = os.path.join(json_folder_path, filename)
+            if (os.path.getsize(json_file_path) != 0 and os.path.getsize(
+                    json_file_path) != 68):
+                extract_file(json_file_path, param1, param2)
     sorted_graph_nodes = sorted(graphNodes, key=lambda x: x[0])
     filtered_sorted_graph_nodes = []
     printed = 0
