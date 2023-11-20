@@ -54,14 +54,11 @@ function createSlidingTimeline(graphData) {
         .padding(0.1);
 
     let xScale = d3.scaleTime()
-        .domain([
-            d3.min(nodes, function (d) {
-                return d.start_time;
-            }),
-            d3.max(nodes, function (d) {
-                return d.end_time || d.start_time;
-            }),
-        ])
+        .domain([d3.min(nodes, function (d) {
+            return d.start_time;
+        }), d3.max(nodes, function (d) {
+            return d.end_time || d.start_time;
+        }),])
         .range([0, width]);
 
     let xAxis = d3.axisBottom(xScale).tickFormat(timeFormat);
@@ -112,12 +109,7 @@ function createSlidingTimeline(graphData) {
             let yMid1 = yScale(d.source.speaker) - yScale.bandwidth() / 2;
             let yMid2 = yScale(d.target.speaker) - yScale.bandwidth() / 3;
 
-            let pathData = [
-                [xScale(d.source.start_time) + (xScale(d.source.end_time || d.source.start_time) - xScale(d.source.start_time)) / 2, yScale(d.source.speaker)],
-                [xMid, yMid1],
-                [xMid, yMid2],
-                [xScale(d.target.start_time) + (xScale(d.target.end_time || d.target.start_time) - xScale(d.target.start_time)) / 2, yScale(d.target.speaker)]
-            ];
+            let pathData = [[xScale(d.source.start_time) + (xScale(d.source.end_time || d.source.start_time) - xScale(d.source.start_time)) / 2, yScale(d.source.speaker)], [xMid, yMid1], [xMid, yMid2], [xScale(d.target.start_time) + (xScale(d.target.end_time || d.target.start_time) - xScale(d.target.start_time)) / 2, yScale(d.target.speaker)]];
             return curve(pathData);
         })
 
@@ -317,14 +309,11 @@ function createSlidingTimeline(graphData) {
         .padding(0.1);
 
     let xScale2 = d3.scaleTime()
-        .domain([
-            d3.min(nodes2, function (d) {
-                return d.start_time;
-            }),
-            d3.max(nodes2, function (d) {
-                return d.end_time || d.start_time;
-            }),
-        ])
+        .domain([d3.min(nodes2, function (d) {
+            return d.start_time;
+        }), d3.max(nodes2, function (d) {
+            return d.end_time || d.start_time;
+        }),])
         .range([0, width2]);
 
     let xAxis2 = d3.axisBottom(xScale2).tickFormat(timeFormat2);
@@ -360,14 +349,13 @@ function createSlidingTimeline(graphData) {
         .attr('stroke', 'black')
         .attr('stroke-width', 2);
 
-// Handle mousemove event
     svg2.on('mousemove', function (event) {
         // Get the current mouse position
         const mouseX = d3.pointer(event)[0];
-        // Update the position and width of the mouse rectangle
+
         mouseRectangle
-            .attr('x', mouseX - halfWindowSize) // Adjust the x position for the center
-            .attr('opacity', 0.5); // Adjust the opacity as needed
+            .attr('x', mouseX - halfWindowSize)
+            .attr('opacity', 0.5);
 
         const nodesInWindow = nodes2.filter(function (d) {
             const barX = xScale2(d.start_time);
@@ -375,34 +363,18 @@ function createSlidingTimeline(graphData) {
 
             return barX <= mouseX + halfWindowSize && barX + barWidth >= mouseX - halfWindowSize;
         });
-        const windowStartValue = d3.min(nodesInWindow, function (d) {
-            return d.start_time;
-        });
 
-        const windowEndValue = d3.max(nodesInWindow, function (d) {
-            return d.end_time;
-        });
-
-        // Update the opacity of the bars based on their positions relative to the mouse
         node2.attr('opacity', function (d) {
             const barX = xScale2(d.start_time);
             const barWidth = xScale2(d.end_time || d.start_time) - barX;
 
-            // Check if the bar is within the mouse window
             if (barX <= mouseX + halfWindowSize && barX + barWidth >= mouseX - halfWindowSize) {
-                return 1.0; // Full color within the window
+                return 1.0;
             } else {
-                return 0.2; // Adjust the opacity for bars outside the window
+                return 0.2;
             }
         });
-        //xScale3.domain([windowStartValue, windowEndValue]);
-        //node3.attr('x', d => xScale3(d.start_time))
-        //    .attr('width', d => xScale3(d.end_time || d.start_time) - xScale3(d.start_time));
-        /*const nodesInWindow = nodes3.filter(function (d) {
-            const barX = xScale3(d.start_time);
-            const barWidth = xScale3(d.end_time || d.start_time) - barX;
-            return barX <= mouseX + halfWindowSize && barX + barWidth >= mouseX - halfWindowSize;
-        });*/
+
         const lastScaledNodeX = xScale3(d3.max(nodesInWindow, d => d.end_time));
         const firstScaledNodeX = xScale3(d3.min(nodesInWindow, d => d.start_time));
         const diagramLength = xScale3(d3.max(nodes3, d => d.end_time))
@@ -418,7 +390,7 @@ function createSlidingTimeline(graphData) {
             return determineXValue(xScale3, d, mouseX, adaptedXBeforeWindow, firstScaledNodeX, antiScaleFactor, adaptedXAfterWindow, lastScaledNodeX);
 
         }).attr('y', (d, i) => {
-            return nodesToShowText[i] ? 255 : -1000;
+            return nodesToShowText[i] ? height3 + 20 : -1000;
         })
         svg3.selectAll('.line-connector')
             .attr('x1', d => {
@@ -429,7 +401,7 @@ function createSlidingTimeline(graphData) {
 
             })
             .attr('y1', (d, i) => nodesToShowText[i] ? yScale3(d.speaker) + yScale3.bandwidth() : -1000)
-            .attr('y2', (d, i) => nodesToShowText[i] ? 245 : -1000);
+            .attr('y2', (d, i) => nodesToShowText[i] ? height3 + 10 : -1000);
 
         node3
             .attr('x', d => {
@@ -457,18 +429,11 @@ function createSlidingTimeline(graphData) {
         });
         link3
             .attr('d', d => {
-                let xMid1 = (determineXValue(xScale3, d.source, mouseX, adaptedXBeforeWindow, firstScaledNodeX, antiScaleFactor, adaptedXAfterWindow, lastScaledNodeX) +
-                    determineXValue(xScale3, d.source, mouseX, adaptedXBeforeWindow, firstScaledNodeX, antiScaleFactor, adaptedXAfterWindow, lastScaledNodeX)) / 2;
-                let xMid2 = (determineXValue(xScale3, d.target, mouseX, adaptedXBeforeWindow, firstScaledNodeX, antiScaleFactor, adaptedXAfterWindow, lastScaledNodeX) +
-                    determineXValue(xScale3, d.target, mouseX, adaptedXBeforeWindow, firstScaledNodeX, antiScaleFactor, adaptedXAfterWindow, lastScaledNodeX)) / 2;
+                let xMid1 = (determineXValue(xScale3, d.source, mouseX, adaptedXBeforeWindow, firstScaledNodeX, antiScaleFactor, adaptedXAfterWindow, lastScaledNodeX))
+                let xMid2 = (determineXValue(xScale3, d.target, mouseX, adaptedXBeforeWindow, firstScaledNodeX, antiScaleFactor, adaptedXAfterWindow, lastScaledNodeX))
                 let yMid1 = yScale3(d.source.speaker) - yScale3.bandwidth() / 2;
                 let yMid2 = yScale3(d.target.speaker) - yScale3.bandwidth() / 3;
-                let pathData = [
-                    [xMid1, yScale3(d.source.speaker)],
-                    [xMid1, yMid1],
-                    [xMid2, yMid2],
-                    [xMid2, yScale3(d.target.speaker)]
-                ];
+                let pathData = [[xMid1, yScale3(d.source.speaker)], [xMid1, yMid1], [xMid2, yMid2], [xMid2, yScale3(d.target.speaker)]];
                 return curve3(pathData);
             })
             .attr('visibility', d => {
@@ -517,17 +482,15 @@ function createSlidingTimeline(graphData) {
         .padding(0.1);
 
     let xScale3 = d3.scaleTime()
-        .domain([
-            d3.min(nodes3, function (d) {
-                return d.start_time;
-            }),
-            d3.max(nodes3, function (d) {
-                return d.end_time || d.start_time;
-            }),
-        ])
+        .domain([d3.min(nodes3, function (d) {
+            return d.start_time;
+        }), d3.max(nodes3, function (d) {
+            return d.end_time || d.start_time;
+        }),])
         .range([0, width3]);
 
-    let xAxis3 = d3.axisBottom(xScale3).tickFormat(timeFormat3);
+    //let xAxis3 = d3.axisBottom(xScale3).tickFormat(timeFormat3);
+    let xAxis3 = d3.axisBottom(xScale3).ticks(0);
     svg3.append('g')
         .attr('transform', 'translate(0,' + height3 + ')')
         .call(xAxis3);
@@ -572,12 +535,7 @@ function createSlidingTimeline(graphData) {
             let yMid1 = yScale3(d.source.speaker) - yScale3.bandwidth() / 2;
             let yMid2 = yScale3(d.target.speaker) - yScale3.bandwidth() / 3;
 
-            let pathData = [
-                [xScale3(d.source.start_time) + (xScale3(d.source.end_time || d.source.start_time) - xScale3(d.source.start_time)) / 2, yScale3(d.source.speaker)],
-                [xMid, yMid1],
-                [xMid, yMid2],
-                [xScale3(d.target.start_time) + (xScale3(d.target.end_time || d.target.start_time) - xScale3(d.target.start_time)) / 2, yScale3(d.target.speaker)]
-            ];
+            let pathData = [[xScale3(d.source.start_time) + (xScale3(d.source.end_time || d.source.start_time) - xScale3(d.source.start_time)) / 2, yScale3(d.source.speaker)], [xMid, yMid1], [xMid, yMid2], [xScale3(d.target.start_time) + (xScale3(d.target.end_time || d.target.start_time) - xScale3(d.target.start_time)) / 2, yScale3(d.target.speaker)]];
             return curve3(pathData);
         })
 
@@ -710,7 +668,7 @@ function createSlidingTimeline(graphData) {
         .append('text')
         .attr('class', 'bar-text')
         .attr('x', d => xScale3(d.start_time))
-        .attr('y', (d, i) => nodesToShowText[i] ? 255 : -1000)
+        .attr('y', (d, i) => nodesToShowText[i] ? height3 + 20 : -1000)
         .text(d => d3.timeFormat('%H:%M:%S')(d.start_time))
         .attr('text-anchor', 'middle')
         .attr('font-size', '10px');
@@ -722,7 +680,7 @@ function createSlidingTimeline(graphData) {
         .attr('x1', d => xScale3(d.start_time))
         .attr('y1', (d, i) => nodesToShowText[i] ? yScale3(d.speaker) + yScale3.bandwidth() : -1000)
         .attr('x2', d => xScale3(d.start_time))
-        .attr('y2', (d, i) => nodesToShowText[i] ? 245 : -1000)
+        .attr('y2', (d, i) => nodesToShowText[i] ? height3 + 10: -1000)
         .attr('stroke', 'black')
         .attr('stroke-dasharray', '5,5');
 
