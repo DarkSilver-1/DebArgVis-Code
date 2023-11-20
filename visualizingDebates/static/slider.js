@@ -352,12 +352,12 @@ function createSlidingTimeline(graphData) {
 
     let mouseRectangle = svg2.append('rect')
         .attr('class', 'mouse-rectangle')
-        .attr('width', 2 * halfWindowSize) // Initial width, double the desired range
+        .attr('width', 2 * halfWindowSize)
         .attr('height', height2)
         .attr('fill', 'transparent')
         .attr('opacity', 1)
-        .attr('x', -halfWindowSize) // Initial x position, half of the desired range
-        .attr('stroke', 'black') // Add a stroke for the border
+        .attr('x', -halfWindowSize)
+        .attr('stroke', 'black')
         .attr('stroke-width', 2);
 
 // Handle mousemove event
@@ -431,10 +431,11 @@ function createSlidingTimeline(graphData) {
             .attr('y1', (d, i) => nodesToShowText[i] ? yScale3(d.speaker) + yScale3.bandwidth() : -1000)
             .attr('y2', (d, i) => nodesToShowText[i] ? 245 : -1000);
 
-        node3.attr('x', d => {
-            return determineXValue(xScale3, d, mouseX, adaptedXBeforeWindow, firstScaledNodeX, antiScaleFactor, adaptedXAfterWindow, lastScaledNodeX);
+        node3
+            .attr('x', d => {
+                return determineXValue(xScale3, d, mouseX, adaptedXBeforeWindow, firstScaledNodeX, antiScaleFactor, adaptedXAfterWindow, lastScaledNodeX);
 
-        }).attr('width', d => {
+            }).attr('width', d => {
             const barWidth = xScale3(d.end_time || d.start_time) - xScale3(d.start_time);
 
             // Check if the bar is within the mouse window
@@ -443,8 +444,7 @@ function createSlidingTimeline(graphData) {
             } else {
                 return barWidth * antiScaleFactor;
             }
-        });
-        node3.attr('opacity', function (d) {
+        }).attr('opacity', function (d) {
             const barX = xScale3(d.start_time);
             const barWidth = xScale3(d.end_time || d.start_time) - barX;
 
@@ -455,6 +455,25 @@ function createSlidingTimeline(graphData) {
                 return 0.2;
             }
         });
+        link3.attr('d', d => {
+            // Calculate midpoints and control points
+            let xMid = (xScale3(d.source.start_time) + xScale3(d.target.start_time)) / 2;
+            let xMid1 = (determineXValue(xScale3, d.source, mouseX, adaptedXBeforeWindow, firstScaledNodeX, antiScaleFactor, adaptedXAfterWindow, lastScaledNodeX) +
+                determineXValue(xScale3, d.source, mouseX, adaptedXBeforeWindow, firstScaledNodeX, antiScaleFactor, adaptedXAfterWindow, lastScaledNodeX)) / 2;
+
+            let xMid2 = (determineXValue(xScale3, d.target, mouseX, adaptedXBeforeWindow, firstScaledNodeX, antiScaleFactor, adaptedXAfterWindow, lastScaledNodeX) +
+                determineXValue(xScale3, d.target, mouseX, adaptedXBeforeWindow, firstScaledNodeX, antiScaleFactor, adaptedXAfterWindow, lastScaledNodeX)) / 2;
+            let yMid1 = yScale3(d.source.speaker) - yScale3.bandwidth() / 2;
+            let yMid2 = yScale3(d.target.speaker) - yScale3.bandwidth() / 3;
+            console.log("Hey")
+            let pathData = [
+                [xMid1, yScale3(d.source.speaker)],
+                [xMid1, yMid1],
+                [xMid2, yMid2],
+                [xMid2, yScale3(d.target.speaker)]
+            ];
+            return curve3(pathData);
+        })
     });
 
 // Handle mouseout event
@@ -468,7 +487,11 @@ function createSlidingTimeline(graphData) {
 
     //--------------------------------------------------------------------
     let nodes3 = graphData.nodes;
+    let links3 = graphData.links;
+
     let timeFormat3 = d3.timeFormat('%H:%M:%S');
+    let barHovered3 = false;
+    let textHovered3 = false;
 
     let margin3 = {top: 20, right: 20, bottom: 40, left: 60};
     let width3 = 1200 - margin3.left - margin3.right;
@@ -514,6 +537,14 @@ function createSlidingTimeline(graphData) {
         .domain(speakers3)
         .range(d3.schemeCategory10);
 
+    d3.forceSimulation(nodes3)
+        .force('link', d3.forceLink(links3).id(d => d.id).distance(20))
+        .force('charge', d3.forceManyBody().strength(-50))
+        .force('center', d3.forceCenter(width3 / 2, height3 / 2));
+
+    let curve3 = d3.line()
+        .curve(d3.curveBasis);
+
     let node3 = svg3.selectAll('.node')
         .data(nodes3)
         .enter().append('rect')
@@ -524,15 +555,28 @@ function createSlidingTimeline(graphData) {
         .attr('height', yScale3.bandwidth())
         .style('fill', d => colorScale3(d.speaker))
 
-    /*let mouseRectangle3 = svg3.append('rect')
-        .attr('class', 'mouse-rectangle')
-        .attr('width', 100)
-        .attr('height', height3)
-        .attr('fill', 'transparent')
-        .attr('opacity', 1)
-        .attr('x', -halfWindowSize)
+    let link3 = svg3.selectAll('.link')
+        .data(links3)
+        .enter().append('path')
+        .attr('class', 'link')
+        .attr('fill', 'none')
+        .attr('marker-end', 'url(#arrowhead)')  // Set a default arrowhead
         .attr('stroke', 'black')
-        .attr('stroke-width', 2);*/
+        .attr('stroke-width', 2)
+        .attr('d', d => {
+            // Calculate midpoints and control points
+            let xMid = (xScale3(d.source.start_time) + xScale3(d.target.start_time)) / 2;
+            let yMid1 = yScale3(d.source.speaker) - yScale3.bandwidth() / 2;
+            let yMid2 = yScale3(d.target.speaker) - yScale3.bandwidth() / 3;
+
+            let pathData = [
+                [xScale3(d.source.start_time) + (xScale3(d.source.end_time || d.source.start_time) - xScale3(d.source.start_time)) / 2, yScale3(d.source.speaker)],
+                [xMid, yMid1],
+                [xMid, yMid2],
+                [xScale3(d.target.start_time) + (xScale3(d.target.end_time || d.target.start_time) - xScale3(d.target.start_time)) / 2, yScale3(d.target.speaker)]
+            ];
+            return curve3(pathData);
+        })
 
     const nodesToShowText = [];
     let lastNodeX = 0; // Declare lastNodeX here
@@ -548,6 +592,114 @@ function createSlidingTimeline(graphData) {
             nodesToShowText[i] = false;
         }
     });
+    node3.on('mouseover', (event, d) => {
+        let currentSpeaker = d.speaker;
+        let textArray = [];
+        textArray.push(d.text);
+
+        // Remove all existing text elements and hover boxes
+        svg3.selectAll('.node').attr('stroke', 'none');
+        svg3.selectAll('.hover-box').remove();
+        link3.attr('stroke', 'black').attr('marker-end', 'url(#arrowhead)');
+        link3.attr('stroke-dasharray', null)
+
+
+        let yPosition = yScale3(currentSpeaker) + yScale3.bandwidth() + 5; // Place the hover box below the bar
+
+        let hoverBox = svg3.append('g')
+            .attr('class', 'hover-box');
+
+        textArray.forEach(function (text, index) {
+            let textelement = hoverBox.append('text')
+                .attr('y', yPosition + 20 + index * 15)
+                .style('visibility', 'visible')
+                .style('cursor', 'pointer')
+                .text(text)
+                .on('mouseover', function () {
+                    textHovered3 = true;
+                })
+                .on('click', function () {
+                    // Handle click event here, e.g., open a link or perform a specific action
+                    console.log('Text clicked: ' + text);
+                });
+            if (text === d.text) {
+                textelement.style('font-weight', 'bold');
+            }
+        });
+
+        let bbox = hoverBox.node().getBBox();
+
+        hoverBox.insert('rect', 'text')
+            .attr('y', yPosition) // Place the hover box below the bar
+            .attr('width', bbox.width + 10)
+            .attr('height', bbox.height + 10)
+            .style('fill', 'white')
+            .style('stroke', 'black')
+            .style('cursor', 'pointer')
+            .on('mouseover', function () {
+                textHovered3 = true;
+            })
+            .on('mouseout', function () {
+                textHovered3 = false;
+                setTimeout(function () {
+                    if (!barHovered3 && !textHovered3) {
+                        svg3.selectAll('.hover-box').remove();
+                        svg3.selectAll('.node').attr('stroke', 'none');
+                        link3.attr('stroke', 'black').attr('marker-end', 'url(#arrowhead)');
+                        link3.attr('stroke-dasharray', null)
+                    }
+                }, 300);
+            });
+        d3.select(event.currentTarget)
+            .attr('stroke', 'black')
+            .attr('stroke-width', 2);
+        barHovered3 = true;
+
+        // Highlight connected links
+        link3.filter(l => l.source === d)
+            .attr('stroke', d => {
+                if (d.text_additional === 'Default Transition') {
+                    return 'white';
+                } else if (d.text_additional === 'Default Inference') {
+                    return 'violet';
+                } else if (d.text_additional === 'Default Rephrase') {
+                    return 'green';
+                } else if (d.text_additional === 'Default Conflict') {
+                    return 'red';
+                } else {
+                    return 'black';
+                }
+            })
+            .attr('stroke-dasharray', d => {
+                if (d.text_additional === 'Default Transition') {
+                    return '5,5';
+                }
+            })
+            .attr('marker-end', d => {
+                if (d.text_additional === 'Default Transition') {
+                    return 'url(#arrowhead-white)'
+                } else if (d.text_additional === 'Default Inference') {
+                    return 'url(#arrowhead-violet)';
+                } else if (d.text_additional === 'Default Rephrase') {
+                    return 'url(#arrowhead-green)';
+                } else if (d.text_additional === 'Default Conflict') {
+                    return 'url(#arrowhead-red)';
+                } else {
+                    return 'url(#arrowhead)';
+                }
+            });
+    })
+        .on('mouseout', function () {
+            barHovered3 = false;
+            setTimeout(function () {
+                if (!barHovered3 && !textHovered3) {
+                    svg3.selectAll('.hover-box').remove();
+                    svg3.selectAll('.node').attr('stroke', 'none');
+                    link3.attr('stroke', 'black').attr('marker-end', 'url(#arrowhead)');
+                    link3.attr('stroke-dasharray', null)
+                }
+            }, 300);
+        });
 
     svg3.selectAll('.bar-text')
         .data(nodes3)
@@ -570,6 +722,67 @@ function createSlidingTimeline(graphData) {
         .attr('y2', (d, i) => nodesToShowText[i] ? 245 : -1000)
         .attr('stroke', 'black')
         .attr('stroke-dasharray', '5,5');
+
+    svg3.append('defs').append('marker')
+        .attr('id', 'arrowhead')
+        .attr('viewBox', '-0 -5 10 10')
+        .attr('refX', 0)
+        .attr('refY', 0)
+        .attr('orient', 'auto')
+        .attr('markerWidth', 8)
+        .attr('markerHeight', 8)
+        .attr('xoverflow', 'visible')
+        .append('svg:path')
+        .attr('d', 'M0,-5L10,0L0,5')
+        .attr('fill', 'black');
+    svg3.append('defs').append('marker')
+        .attr('id', 'arrowhead-red')
+        .attr('viewBox', '-0 -5 10 10')
+        .attr('refX', 0)
+        .attr('refY', 0)
+        .attr('orient', 'auto')
+        .attr('markerWidth', 8)
+        .attr('markerHeight', 8)
+        .attr('xoverflow', 'visible')
+        .append('svg:path')
+        .attr('d', 'M0,-5L10,0L0,5')
+        .attr('fill', 'red');
+    svg3.append('defs').append('marker')
+        .attr('id', 'arrowhead-violet')
+        .attr('viewBox', '-0 -5 10 10')
+        .attr('refX', 0)
+        .attr('refY', 0)
+        .attr('orient', 'auto')
+        .attr('markerWidth', 8)
+        .attr('markerHeight', 8)
+        .attr('xoverflow', 'visible')
+        .append('svg:path')
+        .attr('d', 'M0,-5L10,0L0,5')
+        .attr('fill', 'violet');
+    svg3.append('defs').append('marker')
+        .attr('id', 'arrowhead-green')
+        .attr('viewBox', '-0 -5 10 10')
+        .attr('refX', 0)
+        .attr('refY', 0)
+        .attr('orient', 'auto')
+        .attr('markerWidth', 8)
+        .attr('markerHeight', 8)
+        .attr('xoverflow', 'visible')
+        .append('svg:path')
+        .attr('d', 'M0,-5L10,0L0,5')
+        .attr('fill', 'green');
+    svg3.append('defs').append('marker')
+        .attr('id', 'arrowhead-white')
+        .attr('viewBox', '-0 -5 10 10')
+        .attr('refX', 0)
+        .attr('refY', 0)
+        .attr('orient', 'auto')
+        .attr('markerWidth', 8)
+        .attr('markerHeight', 8)
+        .attr('xoverflow', 'visible')
+        .append('svg:path')
+        .attr('d', 'M0,-5L10,0L0,5')
+        .attr('fill', 'white');
 
     /*    svg3.on('mousemove', function (event) {
             // Get the current mouse position
