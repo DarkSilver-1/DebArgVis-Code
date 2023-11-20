@@ -132,7 +132,7 @@ function createSlidingTimeline(graphData) {
             .attr('class', 'hover-box');
 
         textArray.forEach(function (text, index) {
-            let textelement = hoverBox.append('text')
+            let textElement = hoverBox.append('text')
                 .attr('y', yPosition + 20 + index * 15)
                 .style('visibility', 'visible')
                 .style('cursor', 'pointer')
@@ -145,7 +145,7 @@ function createSlidingTimeline(graphData) {
                     console.log('Text clicked: ' + text);
                 });
             if (text === d.text) {
-                textelement.style('font-weight', 'bold');
+                textElement.style('font-weight', 'bold');
             }
         });
 
@@ -345,7 +345,7 @@ function createSlidingTimeline(graphData) {
         .attr('height', height2)
         .attr('fill', 'transparent')
         .attr('opacity', 1)
-        .attr('x', -halfWindowSize)
+        .attr('x', 0)
         .attr('stroke', 'black')
         .attr('stroke-width', 2);
 
@@ -472,7 +472,6 @@ function createSlidingTimeline(graphData) {
         //mouseRectangle.attr('opacity', 0);
         //node2.attr('opacity', 1.0);
         //node3.attr('opacity', 1.0);
-
     });
 
 
@@ -767,82 +766,5 @@ function createSlidingTimeline(graphData) {
         .append('svg:path')
         .attr('d', 'M0,-5L10,0L0,5')
         .attr('fill', 'white');
-
-    /*    svg3.on('mousemove', function (event) {
-            // Get the current mouse position
-            const mouseX = d3.pointer(event)[0];
-
-            // Update the position and width of the mouse rectangle
-            mouseRectangle3
-                .attr('x', mouseX - halfWindowSize)
-                .attr('opacity', 0.5);
-
-            const nodesInWindow = nodes3.filter(function (d) {
-                const barX = xScale3(d.start_time);
-                const barWidth = xScale3(d.end_time || d.start_time) - barX;
-                return barX <= mouseX + halfWindowSize && barX + barWidth >= mouseX - halfWindowSize;
-            });
-            const lastScaledNodeX = xScale3(d3.max(nodesInWindow, d => d.end_time));
-            const firstScaledNodeX = xScale3(d3.min(nodesInWindow, d => d.start_time));
-            const diagramLength = xScale3(d3.max(nodes3, d => d.end_time))
-            const scaledAreaLength = ((lastScaledNodeX - firstScaledNodeX) * scaleFactor)
-            const unscaledAreaLength = diagramLength - (lastScaledNodeX - firstScaledNodeX)
-            const antiScaledAreaLength = diagramLength - scaledAreaLength
-            const antiScaleFactor = (antiScaledAreaLength) / unscaledAreaLength
-            const beforeAreaLength = firstScaledNodeX * antiScaleFactor
-            const adaptedXBeforeWindow = firstScaledNodeX - (firstScaledNodeX - beforeAreaLength)
-            const adaptedXAfterWindow = firstScaledNodeX * antiScaleFactor + scaledAreaLength
-
-            svg3.selectAll('.bar-text').attr('x', d => {
-                return determineXValue(xScale3, d, mouseX, adaptedXBeforeWindow, firstScaledNodeX, antiScaleFactor, adaptedXAfterWindow, lastScaledNodeX);
-
-            }).attr('y', (d, i) => {
-                return nodesToShowText[i] ? 255 : -1000;
-            })
-            svg3.selectAll('.line-connector')
-                .attr('x1', d => {
-                    return determineXValue(xScale3, d, mouseX, adaptedXBeforeWindow, firstScaledNodeX, antiScaleFactor, adaptedXAfterWindow, lastScaledNodeX);
-                })
-                .attr('x2', d => {
-                    return determineXValue(xScale3, d, mouseX, adaptedXBeforeWindow, firstScaledNodeX, antiScaleFactor, adaptedXAfterWindow, lastScaledNodeX);
-
-                })
-                .attr('y1', (d, i) => nodesToShowText[i] ? yScale3(d.speaker) + yScale3.bandwidth() : -1000)
-                .attr('y2', (d, i) => nodesToShowText[i] ? 245 : -1000);
-
-            node3.attr('x', d => {
-                return determineXValue(xScale3, d, mouseX, adaptedXBeforeWindow, firstScaledNodeX, antiScaleFactor, adaptedXAfterWindow, lastScaledNodeX);
-
-            }).attr('width', d => {
-                const barWidth = xScale3(d.end_time || d.start_time) - xScale3(d.start_time);
-
-                // Check if the bar is within the mouse window
-                if (xScale3(d.start_time) <= mouseX + halfWindowSize && xScale3(d.start_time) + barWidth >= mouseX - halfWindowSize) {
-                    return barWidth * scaleFactor;
-                } else {
-                    return barWidth * antiScaleFactor;
-                }
-            });
-            node3.attr('opacity', function (d) {
-                const barX = xScale3(d.start_time);
-                const barWidth = xScale3(d.end_time || d.start_time) - barX;
-
-                // Check if the bar is within the mouse window
-                if (barX <= mouseX + halfWindowSize && barX + barWidth >= mouseX - halfWindowSize) {
-                    return 1.0;
-                } else {
-                    return 0.2;
-                }
-            });
-        });
-
-    // Handle mouseout event
-        svg3.on('mouseout', function () {
-            // Reset the mouse rectangle and restore full color for all bars
-            mouseRectangle3.attr('opacity', 0);
-            node3.attr('opacity', 1.0);
-            svg3.selectAll('.vertical-line').remove();
-
-        });*/
 
 }
