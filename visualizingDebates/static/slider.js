@@ -16,12 +16,13 @@ function determineXValue(xScale3, d, mouseX, adaptedXBeforeWindow, firstScaledNo
         }
     }
 }
+
 let nodesInWindow = null
 
 function getLinkColor(textAdditional) {
     switch (textAdditional) {
         case 'Default Transition':
-            return 'white';
+            return 'blue';
         case 'Default Inference':
             return 'violet';
         case 'Default Rephrase':
@@ -33,273 +34,23 @@ function getLinkColor(textAdditional) {
     }
 }
 
+function getArrowHeadColor(textAdditional) {
+    if (textAdditional === 'Default Transition') {
+        return 'url(#arrowhead-blue)'
+    } else if (textAdditional === 'Default Inference') {
+        return 'url(#arrowhead-violet)';
+    } else if (textAdditional === 'Default Rephrase') {
+        return 'url(#arrowhead-green)';
+    } else if (textAdditional === 'Default Conflict') {
+        return 'url(#arrowhead-red)';
+    } else {
+        return 'url(#arrowhead)';
+    }
+}
+
 function createSlidingTimeline(graphData) {
 
     console.log(graphData)
-    let nodes = graphData.nodes;
-    let links = graphData.links;
-
-    let barHovered = false;
-    let textHovered = false;
-    let timeFormat = d3.timeFormat('%H:%M:%S');
-
-    let margin = {top: 20, right: 20, bottom: 40, left: 60};
-    let width = 1200 - margin.left - margin.right;
-    let height = 600 - margin.top - margin.bottom;
-
-    let svg = d3
-        .select('#timeline')
-        .attr('width', width + margin.left + margin.right)
-        .attr('height', height + margin.top + margin.bottom)
-        .append('g')
-        .attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
-
-    let timeParser = d3.utcParse('%Y-%m-%dT%H:%M:%S');
-    nodes.forEach(function (d) {
-        d.start_time = timeParser(d.start_time);
-        d.end_time = timeParser(d.end_time);
-    });
-
-    let speakers = Array.from(new Set(nodes.map(function (d) {
-        return d.speaker;
-    })));
-
-    let yScale = d3.scaleBand()
-        .domain(speakers)
-        .range([height, 0])
-        .padding(0.1);
-
-    let xScale = d3.scaleTime()
-        .domain([d3.min(nodes, function (d) {
-            return d.start_time;
-        }), d3.max(nodes, function (d) {
-            return d.end_time || d.start_time;
-        }),])
-        .range([0, width]);
-
-    let xAxis = d3.axisBottom(xScale).tickFormat(timeFormat);
-    svg.append('g')
-        .attr('transform', 'translate(0,' + height + ')')
-        .call(xAxis);
-
-    let yAxis = d3.axisLeft(yScale);
-    svg.append('g')
-        .call(yAxis);
-
-    let colorScale = d3.scaleOrdinal()
-        .domain(speakers)
-        .range(d3.schemeCategory10);
-
-    // Create a force simulation
-    d3.forceSimulation(nodes)
-        .force('link', d3.forceLink(links).id(d => d.id).distance(20))
-        .force('charge', d3.forceManyBody().strength(-50))
-        .force('center', d3.forceCenter(width / 2, height / 2));
-
-    let curve = d3.line()
-        .curve(d3.curveBasis);
-
-    // Draw nodes (rectangles)
-    let node = svg.selectAll('.node')
-        .data(nodes)
-        .enter().append('rect')
-        .attr('class', 'node')
-        .attr('x', d => xScale(d.start_time))
-        .attr('y', d => yScale(d.speaker))
-        .attr('width', d => xScale(d.end_time || d.start_time) - xScale(d.start_time))
-        .attr('height', yScale.bandwidth())
-        .style('fill', d => colorScale(d.speaker))
-
-
-    let link = svg.selectAll('.link')
-        .data(links)
-        .enter().append('path')
-        .attr('class', 'link')
-        .attr('fill', 'none')
-        .attr('marker-end', 'url(#arrowhead)')  // Set a default arrowhead
-        .attr('stroke', 'black')
-        .attr('stroke-width', 2)
-        .attr('d', d => {
-            // Calculate midpoints and control points
-            let xMid = (xScale(d.source.start_time) + xScale(d.target.start_time)) / 2;
-            let yMid1 = yScale(d.source.speaker) - yScale.bandwidth() / 2;
-            let yMid2 = yScale(d.target.speaker) - yScale.bandwidth() / 3;
-
-            let pathData = [[xScale(d.source.start_time) + (xScale(d.source.end_time || d.source.start_time) - xScale(d.source.start_time)) / 2, yScale(d.source.speaker)], [xMid, yMid1], [xMid, yMid2], [xScale(d.target.start_time) + (xScale(d.target.end_time || d.target.start_time) - xScale(d.target.start_time)) / 2, yScale(d.target.speaker)]];
-            return curve(pathData);
-        })
-
-    // Handle mouseover and mouseout events
-    node.on('mouseover', (event, d) => {
-        let currentSpeaker = d.speaker;
-        let textArray = [];
-        textArray.push(d.text);
-
-        // Remove all existing text elements and hover boxes
-        svg.selectAll('.node').attr('stroke', 'none');
-        svg.selectAll('.hover-box').remove();
-        link.attr('stroke', 'black').attr('marker-end', 'url(#arrowhead)');
-        link.attr('stroke-dasharray', null)
-
-
-        let yPosition = yScale(currentSpeaker) + yScale.bandwidth() + 5; // Place the hover box below the bar
-
-        let hoverBox = svg.append('g')
-            .attr('class', 'hover-box');
-
-        textArray.forEach(function (text, index) {
-            let textElement = hoverBox.append('text')
-                .attr('y', yPosition + 20 + index * 15)
-                .style('visibility', 'visible')
-                .style('cursor', 'pointer')
-                .text(text)
-                .on('mouseover', function () {
-                    textHovered = true;
-                })
-                .on('click', function () {
-                    // Handle click event here, e.g., open a link or perform a specific action
-                    console.log('Text clicked: ' + text);
-                });
-            if (text === d.text) {
-                textElement.style('font-weight', 'bold');
-            }
-        });
-
-        let bbox = hoverBox.node().getBBox();
-
-        hoverBox.insert('rect', 'text')
-            .attr('y', yPosition) // Place the hover box below the bar
-            .attr('width', bbox.width + 10)
-            .attr('height', bbox.height + 10)
-            .style('fill', 'white')
-            .style('stroke', 'black')
-            .style('cursor', 'pointer')
-            .on('mouseover', function () {
-                textHovered = true;
-            })
-            .on('mouseout', function () {
-                textHovered = false;
-                setTimeout(function () {
-                    if (!barHovered && !textHovered) {
-                        svg.selectAll('.hover-box').remove();
-                        svg.selectAll('.node').attr('stroke', 'none');
-                        link.attr('stroke', 'black').attr('marker-end', 'url(#arrowhead)');
-                        link.attr('stroke-dasharray', null)
-                    }
-                }, 300);
-            });
-        d3.select(event.currentTarget)
-            .attr('stroke', 'black')
-            .attr('stroke-width', 2);
-        barHovered = true;
-
-        // Highlight connected links
-        link.filter(l => l.source === d)
-            .attr('stroke', d => {
-                if (d.text_additional === 'Default Transition') {
-                    return 'white';
-                } else if (d.text_additional === 'Default Inference') {
-                    return 'violet';
-                } else if (d.text_additional === 'Default Rephrase') {
-                    return 'green';
-                } else if (d.text_additional === 'Default Conflict') {
-                    return 'red';
-                } else {
-                    return 'black';
-                }
-            })
-            .attr('stroke-dasharray', d => {
-                if (d.text_additional === 'Default Transition') {
-                    return '5,5';
-                }
-            })
-            .attr('marker-end', d => {
-                if (d.text_additional === 'Default Transition') {
-                    return 'url(#arrowhead-white)'
-                } else if (d.text_additional === 'Default Inference') {
-                    return 'url(#arrowhead-violet)';
-                } else if (d.text_additional === 'Default Rephrase') {
-                    return 'url(#arrowhead-green)';
-                } else if (d.text_additional === 'Default Conflict') {
-                    return 'url(#arrowhead-red)';
-                } else {
-                    return 'url(#arrowhead)';
-                }
-            });
-    })
-        .on('mouseout', function () {
-            barHovered = false;
-            setTimeout(function () {
-                if (!barHovered && !textHovered) {
-                    svg.selectAll('.hover-box').remove();
-                    svg.selectAll('.node').attr('stroke', 'none');
-                    link.attr('stroke', 'black').attr('marker-end', 'url(#arrowhead)');
-                    link.attr('stroke-dasharray', null)
-                }
-            }, 300);
-        });
-
-    // Add arrowheads
-    svg.append('defs').append('marker')
-        .attr('id', 'arrowhead')
-        .attr('viewBox', '-0 -5 10 10')
-        .attr('refX', 0)
-        .attr('refY', 0)
-        .attr('orient', 'auto')
-        .attr('markerWidth', 8)
-        .attr('markerHeight', 8)
-        .attr('xoverflow', 'visible')
-        .append('svg:path')
-        .attr('d', 'M0,-5L10,0L0,5')
-        .attr('fill', 'black');
-    svg.append('defs').append('marker')
-        .attr('id', 'arrowhead-red')
-        .attr('viewBox', '-0 -5 10 10')
-        .attr('refX', 0)
-        .attr('refY', 0)
-        .attr('orient', 'auto')
-        .attr('markerWidth', 8)
-        .attr('markerHeight', 8)
-        .attr('xoverflow', 'visible')
-        .append('svg:path')
-        .attr('d', 'M0,-5L10,0L0,5')
-        .attr('fill', 'red');
-    svg.append('defs').append('marker')
-        .attr('id', 'arrowhead-violet')
-        .attr('viewBox', '-0 -5 10 10')
-        .attr('refX', 0)
-        .attr('refY', 0)
-        .attr('orient', 'auto')
-        .attr('markerWidth', 8)
-        .attr('markerHeight', 8)
-        .attr('xoverflow', 'visible')
-        .append('svg:path')
-        .attr('d', 'M0,-5L10,0L0,5')
-        .attr('fill', 'violet');
-    svg.append('defs').append('marker')
-        .attr('id', 'arrowhead-green')
-        .attr('viewBox', '-0 -5 10 10')
-        .attr('refX', 0)
-        .attr('refY', 0)
-        .attr('orient', 'auto')
-        .attr('markerWidth', 8)
-        .attr('markerHeight', 8)
-        .attr('xoverflow', 'visible')
-        .append('svg:path')
-        .attr('d', 'M0,-5L10,0L0,5')
-        .attr('fill', 'green');
-    svg.append('defs').append('marker')
-        .attr('id', 'arrowhead-white')
-        .attr('viewBox', '-0 -5 10 10')
-        .attr('refX', 0)
-        .attr('refY', 0)
-        .attr('orient', 'auto')
-        .attr('markerWidth', 8)
-        .attr('markerHeight', 8)
-        .attr('xoverflow', 'visible')
-        .append('svg:path')
-        .attr('d', 'M0,-5L10,0L0,5')
-        .attr('fill', 'white');
 
     let nodes2 = graphData.nodes;
     let timeFormat2 = d3.timeFormat('%H:%M:%S');
@@ -307,6 +58,12 @@ function createSlidingTimeline(graphData) {
     let margin2 = {top: 20, right: 20, bottom: 40, left: 60};
     let width2 = 1200 - margin2.left - margin2.right;
     let height2 = 300 - margin2.top - margin2.bottom;
+
+    let timeParser = d3.utcParse('%Y-%m-%dT%H:%M:%S');
+    nodes2.forEach(function (d) {
+        d.start_time = timeParser(d.start_time);
+        d.end_time = timeParser(d.end_time);
+    });
 
     let svg2 = d3
         .select('#slider')
@@ -367,8 +124,7 @@ function createSlidingTimeline(graphData) {
 
     let isDragging = false;
 
-    svg2.on('mousedown', function (event) {
-        // Set the dragging flag to true when the mouse is pressed
+    svg2.on('mousedown', function () {
         isDragging = true;
     });
     d3.select('body').on('mouseup', function () {
@@ -469,12 +225,27 @@ function createSlidingTimeline(graphData) {
             });
             link3
                 .attr('d', d => {
-                    let xMid1 = (determineXValue(xScale3, d.source, mouseX, adaptedXBeforeWindow, firstScaledNodeX, antiScaleFactor, adaptedXAfterWindow, lastScaledNodeX))
-                    let xMid2 = (determineXValue(xScale3, d.target, mouseX, adaptedXBeforeWindow, firstScaledNodeX, antiScaleFactor, adaptedXAfterWindow, lastScaledNodeX))
-                    let yMid1 = yScale3(d.source.speaker) - yScale3.bandwidth() / 2;
-                    let yMid2 = yScale3(d.target.speaker) - yScale3.bandwidth() / 3;
-                    let pathData = [[xMid1, yScale3(d.source.speaker)], [xMid1, yMid1], [xMid2, yMid2], [xMid2, yScale3(d.target.speaker)]];
+                    let pathData = []
+                    if (d.text_additional === "Default Transition") {
+                        let xMid1 = (determineXValue(xScale3, d.source, mouseX, adaptedXBeforeWindow, firstScaledNodeX, antiScaleFactor, adaptedXAfterWindow, lastScaledNodeX))
+                        let xMid2 = (determineXValue(xScale3, d.target, mouseX, adaptedXBeforeWindow, firstScaledNodeX, antiScaleFactor, adaptedXAfterWindow, lastScaledNodeX))
+                        let yMid1 = yScale3(d.source.speaker) + yScale3.bandwidth();
+                        let yMid2 = yScale3(d.target.speaker) + yScale3.bandwidth() * 2;
+                        pathData = [
+                            [xMid1, yScale3(d.source.speaker) + yScale3.bandwidth()],
+                            [xMid1, yMid1],
+                            [xMid2, yMid2],
+                            [xMid2, yScale3(d.target.speaker) + yScale3.bandwidth()]
+                        ];
+                    } else {
+                        let xMid1 = (determineXValue(xScale3, d.source, mouseX, adaptedXBeforeWindow, firstScaledNodeX, antiScaleFactor, adaptedXAfterWindow, lastScaledNodeX))
+                        let xMid2 = (determineXValue(xScale3, d.target, mouseX, adaptedXBeforeWindow, firstScaledNodeX, antiScaleFactor, adaptedXAfterWindow, lastScaledNodeX))
+                        let yMid1 = yScale3(d.source.speaker) - yScale3.bandwidth() / 2;
+                        let yMid2 = yScale3(d.target.speaker) - yScale3.bandwidth() / 3;
+                        pathData = [[xMid1, yScale3(d.source.speaker)], [xMid1, yMid1], [xMid2, yMid2], [xMid2, yScale3(d.target.speaker)]];
+                    }
                     return curve3(pathData);
+
                 })
                 .attr('visibility', d => {
                     const sourceX = determineXValue(xScale3, d.source, mouseX, adaptedXBeforeWindow, firstScaledNodeX, antiScaleFactor, adaptedXAfterWindow, lastScaledNodeX);
@@ -495,7 +266,6 @@ function createSlidingTimeline(graphData) {
     let nodes3 = graphData.nodes;
     let links3 = graphData.links;
 
-    let timeFormat3 = d3.timeFormat('%H:%M:%S');
     let barHovered3 = false;
     let textHovered3 = false;
 
@@ -568,12 +338,27 @@ function createSlidingTimeline(graphData) {
         .attr('stroke', 'black')
         .attr('stroke-width', 2)
         .attr('d', d => {
-            // Calculate midpoints and control points
-            let xMid = (xScale3(d.source.start_time) + xScale3(d.target.start_time)) / 2;
-            let yMid1 = yScale3(d.source.speaker) - yScale3.bandwidth() / 2;
-            let yMid2 = yScale3(d.target.speaker) - yScale3.bandwidth() / 3;
-
-            let pathData = [[xScale3(d.source.start_time) + (xScale3(d.source.end_time || d.source.start_time) - xScale3(d.source.start_time)) / 2, yScale3(d.source.speaker)], [xMid, yMid1], [xMid, yMid2], [xScale3(d.target.start_time) + (xScale3(d.target.end_time || d.target.start_time) - xScale3(d.target.start_time)) / 2, yScale3(d.target.speaker)]];
+            let pathData = []
+            if (d.text_additional === "Default Transition") {
+                let xMid = (xScale3(d.source.start_time) + xScale3(d.target.start_time)) / 2;
+                let yMid1 = yScale3(d.source.speaker) + yScale3.bandwidth();
+                let yMid2 = yScale3(d.target.speaker) + yScale3.bandwidth() * 2;
+                pathData = [
+                    [xScale3(d.source.start_time) + (xScale3(d.source.end_time || d.source.start_time) - xScale3(d.source.start_time)) / 2, yScale3(d.source.speaker) + yScale3.bandwidth()],
+                    [xMid, yMid1],
+                    [xMid, yMid2],
+                    [xScale3(d.target.start_time) + (xScale3(d.target.end_time || d.target.start_time) - xScale3(d.target.start_time)) / 2, yScale3(d.target.speaker) + yScale3.bandwidth()]
+                ]
+            } else {
+                let xMid = (xScale3(d.source.start_time) + xScale3(d.target.start_time)) / 2;
+                let yMid1 = yScale3(d.source.speaker) - yScale3.bandwidth() / 2;
+                let yMid2 = yScale3(d.target.speaker) - yScale3.bandwidth() / 3;
+                pathData = [
+                    [xScale3(d.source.start_time) + (xScale3(d.source.end_time || d.source.start_time) - xScale3(d.source.start_time)) / 2, yScale3(d.source.speaker)],
+                    [xMid, yMid1],
+                    [xMid, yMid2],
+                    [xScale3(d.target.start_time) + (xScale3(d.target.end_time || d.target.start_time) - xScale3(d.target.start_time)) / 2, yScale3(d.target.speaker)]];
+            }
             return curve3(pathData);
         })
 
@@ -593,9 +378,9 @@ function createSlidingTimeline(graphData) {
     });
     node3.on('mouseover', (event, d) => {
         let currentSpeaker = d.speaker;
-        //let textArray = [];
-        //textArray = d.grouped_texts;
-        let textArray = nodesInWindow.map(d => d.text)
+
+        //let textArray = d.grouped_texts;
+        let textArray = nodesInWindow ? nodesInWindow.map(d => d.text) : []
 
         // Remove all existing text elements and hover boxes
         svg3.selectAll('.node').attr('stroke', 'none');
@@ -607,7 +392,7 @@ function createSlidingTimeline(graphData) {
         let hoverBox = svg3.append('g').attr('class', 'hover-box');
 
         textArray.forEach(function (text, index) {
-            let textelement = hoverBox.append('text')
+            let textElement = hoverBox.append('text')
                 .attr('id', `hovered-text-${index}`)  // Add unique id to each text element
                 .attr('y', yPosition + 20 + index * 15)
                 .style('visibility', 'visible')
@@ -615,7 +400,7 @@ function createSlidingTimeline(graphData) {
                 .text(text)
                 .on('mouseover', function () {
                     textHovered3 = true;
-                    const associatedLinks = links.filter(link => link.source.text === text);
+                    const associatedLinks = links3.filter(link => link.source.text === text);
                     textArray.forEach((t, i) => {
                         link3.attr('stroke', 'black').attr('marker-end', 'url(#arrowhead)');
                         link3.attr('stroke-dasharray', null);
@@ -631,51 +416,42 @@ function createSlidingTimeline(graphData) {
                         .attr('stroke', d => getLinkColor(d.text_additional))
                         .attr('stroke-dasharray', d => (d.text_additional === 'Default Transition') ? '5,5' : null)
                         .attr('marker-end', d => {
-                            switch (d.text_additional) {
-                                case 'Default Transition':
-                                    return 'url(#arrowhead-white)';
-                                case 'Default Inference':
-                                    return 'url(#arrowhead-violet)';
-                                case 'Default Rephrase':
-                                    return 'url(#arrowhead-green)';
-                                case 'Default Conflict':
-                                    return 'url(#arrowhead-red)';
-                                default:
-                                    return 'url(#arrowhead)';
-                            }
+                            return getArrowHeadColor(d.text_additional)
                         });
                     const hoveredNode = svg3.selectAll('.node').filter(node => node.text === text);
                     hoveredNode.attr('stroke', 'black')  // You can customize the stroke color
                         .attr('stroke-width', 2);
                 })
             if (text === d.text) {
-                textelement.style('font-weight', 'bold');
+                textElement.style('font-weight', 'bold');
             }
         });
 
         let bbox = hoverBox.node().getBBox();
 
-        hoverBox.insert('rect', 'text')
-            .attr('y', yPosition) // Place the hover box below the bar
-            .attr('width', bbox.width + 10)
-            .attr('height', bbox.height + 10)
-            .style('fill', 'white')
-            .style('stroke', 'black')
-            .style('cursor', 'pointer')
-            .on('mouseover', function () {
-                textHovered3 = true;
-            })
-            .on('mouseout', function () {
-                textHovered3 = false;
-                setTimeout(function () {
-                    if (!barHovered3 && !textHovered3) {
-                        svg3.selectAll('.hover-box').remove();
-                        svg3.selectAll('.node').attr('stroke', 'none');
-                        link3.attr('stroke', 'black').attr('marker-end', 'url(#arrowhead)');
-                        link3.attr('stroke-dasharray', null)
-                    }
-                }, 300);
-            });
+        if (nodesInWindow) {
+            hoverBox.insert('rect', 'text')
+                .attr('y', yPosition)
+                .attr('width', bbox.width + 10)
+                .attr('height', bbox.height + 10)
+                .style('fill', 'white')
+                .style('stroke', 'black')
+                .style('cursor', 'pointer')
+                .on('mouseover', function () {
+                    textHovered3 = true;
+                })
+                .on('mouseout', function () {
+                    textHovered3 = false;
+                    setTimeout(function () {
+                        if (!barHovered3 && !textHovered3) {
+                            svg3.selectAll('.hover-box').remove();
+                            svg3.selectAll('.node').attr('stroke', 'none');
+                            link3.attr('stroke', 'black').attr('marker-end', 'url(#arrowhead)');
+                            link3.attr('stroke-dasharray', null)
+                        }
+                    }, 300);
+                });
+        }
         d3.select(event.currentTarget)
             .attr('stroke', 'black')
             .attr('stroke-width', 2);
@@ -684,17 +460,7 @@ function createSlidingTimeline(graphData) {
         // Highlight connected links
         link3.filter(l => l.source === d)
             .attr('stroke', d => {
-                if (d.text_additional === 'Default Transition') {
-                    return 'white';
-                } else if (d.text_additional === 'Default Inference') {
-                    return 'violet';
-                } else if (d.text_additional === 'Default Rephrase') {
-                    return 'green';
-                } else if (d.text_additional === 'Default Conflict') {
-                    return 'red';
-                } else {
-                    return 'black';
-                }
+                return getLinkColor(d.text_additional)
             })
             .attr('stroke-dasharray', d => {
                 if (d.text_additional === 'Default Transition') {
@@ -702,17 +468,7 @@ function createSlidingTimeline(graphData) {
                 }
             })
             .attr('marker-end', d => {
-                if (d.text_additional === 'Default Transition') {
-                    return 'url(#arrowhead-white)'
-                } else if (d.text_additional === 'Default Inference') {
-                    return 'url(#arrowhead-violet)';
-                } else if (d.text_additional === 'Default Rephrase') {
-                    return 'url(#arrowhead-green)';
-                } else if (d.text_additional === 'Default Conflict') {
-                    return 'url(#arrowhead-red)';
-                } else {
-                    return 'url(#arrowhead)';
-                }
+                return getArrowHeadColor(d.text_additional)
             });
     })
         .on('mouseout', function () {
@@ -748,7 +504,6 @@ function createSlidingTimeline(graphData) {
         .attr('y2', (d, i) => nodesToShowText[i] ? height3 + 10 : -1000)
         .attr('stroke', 'black')
         .attr('stroke-dasharray', '5,5');
-
     svg3.append('defs').append('marker')
         .attr('id', 'arrowhead')
         .attr('viewBox', '-0 -5 10 10')
@@ -798,7 +553,7 @@ function createSlidingTimeline(graphData) {
         .attr('d', 'M0,-5L10,0L0,5')
         .attr('fill', 'green');
     svg3.append('defs').append('marker')
-        .attr('id', 'arrowhead-white')
+        .attr('id', 'arrowhead-blue')
         .attr('viewBox', '-0 -5 10 10')
         .attr('refX', 0)
         .attr('refY', 0)
@@ -808,6 +563,6 @@ function createSlidingTimeline(graphData) {
         .attr('xoverflow', 'visible')
         .append('svg:path')
         .attr('d', 'M0,-5L10,0L0,5')
-        .attr('fill', 'white');
+        .attr('fill', 'blue');
 
 }
