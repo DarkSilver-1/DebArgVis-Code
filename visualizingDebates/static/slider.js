@@ -16,6 +16,7 @@ function determineXValue(xScale3, d, mouseX, adaptedXBeforeWindow, firstScaledNo
         }
     }
 }
+let nodesInWindow = null
 
 function getLinkColor(textAdditional) {
     switch (textAdditional) {
@@ -350,7 +351,7 @@ function createSlidingTimeline(graphData) {
         .attr('class', 'node')
         .attr('x', d => xScale2(d.start_time))
         .attr('y', d => yScale2(d.speaker))
-        .attr('width', d => xScale2(d.end_time || d.start_time) - xScale(d.start_time))
+        .attr('width', d => xScale2(d.end_time || d.start_time) - xScale2(d.start_time))
         .attr('height', yScale2.bandwidth())
         .style('fill', d => colorScale2(d.speaker))
 
@@ -385,7 +386,7 @@ function createSlidingTimeline(graphData) {
                 .attr('x', mouseX - halfWindowSize)
                 .attr('opacity', 0.5);
 
-            const nodesInWindow = nodes2.filter(function (d) {
+            nodesInWindow = nodes2.filter(function (d) {
                 const barX = xScale2(d.start_time);
                 const barWidth = xScale2(d.end_time || d.start_time) - barX;
 
@@ -592,8 +593,9 @@ function createSlidingTimeline(graphData) {
     });
     node3.on('mouseover', (event, d) => {
         let currentSpeaker = d.speaker;
-        let textArray = [];
-        textArray = d.grouped_texts;
+        //let textArray = [];
+        //textArray = d.grouped_texts;
+        let textArray = nodesInWindow.map(d => d.text)
 
         // Remove all existing text elements and hover boxes
         svg3.selectAll('.node').attr('stroke', 'none');
@@ -741,7 +743,7 @@ function createSlidingTimeline(graphData) {
         .append('line')
         .attr('class', 'line-connector')
         .attr('x1', d => xScale3(d.start_time))
-        .attr('y1', (d, i) => nodesToShowText[i] ? yScale3(d.speaker) + yScale3.bandwidth() : -1000)
+        .attr('y1', (d, i) => nodesToShowText[i] ? height3 : -1000)
         .attr('x2', d => xScale3(d.start_time))
         .attr('y2', (d, i) => nodesToShowText[i] ? height3 + 10 : -1000)
         .attr('stroke', 'black')
