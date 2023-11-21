@@ -446,13 +446,10 @@ function createSlidingTimeline(graphData) {
         link3.attr('stroke', 'black').attr('marker-end', 'url(#arrowhead)');
         link3.attr('stroke-dasharray', null);
 
-        d3.select(event.currentTarget)
-            .attr('stroke', 'black')
-            .attr('stroke-width', 2);
         barHovered3 = true;
 
         const associatedLinks = links3.filter(link => link.source.text === d.text);
-        textArray.forEach((t, i) => {
+        textArray.forEach((t) => {
             link3.attr('stroke', 'black').attr('marker-end', 'url(#arrowhead)');
             link3.attr('stroke-dasharray', null);
             svg3.selectAll('.node').attr('stroke', 'none');
@@ -470,6 +467,10 @@ function createSlidingTimeline(graphData) {
             return this.textContent === d.text;
         });
         hoveredTextElement.style('font-weight', 'bold');
+
+        d3.select(event.currentTarget)
+            .attr('stroke', 'black')
+            .attr('stroke-width', 2);
 
 
         // Highlight connected links
