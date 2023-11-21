@@ -225,18 +225,13 @@ function createSlidingTimeline(graphData) {
             });
             link3
                 .attr('d', d => {
-                    let pathData = []
+                    let pathData
                     if (d.text_additional === "Default Transition") {
                         let xMid1 = (determineXValue(xScale3, d.source, mouseX, adaptedXBeforeWindow, firstScaledNodeX, antiScaleFactor, adaptedXAfterWindow, lastScaledNodeX))
                         let xMid2 = (determineXValue(xScale3, d.target, mouseX, adaptedXBeforeWindow, firstScaledNodeX, antiScaleFactor, adaptedXAfterWindow, lastScaledNodeX))
                         let yMid1 = yScale3(d.source.speaker) + yScale3.bandwidth();
                         let yMid2 = yScale3(d.target.speaker) + yScale3.bandwidth() * 2;
-                        pathData = [
-                            [xMid1, yScale3(d.source.speaker) + yScale3.bandwidth()],
-                            [xMid1, yMid1],
-                            [xMid2, yMid2],
-                            [xMid2, yScale3(d.target.speaker) + yScale3.bandwidth()]
-                        ];
+                        pathData = [[xMid1, yScale3(d.source.speaker) + yScale3.bandwidth()], [xMid1, yMid1], [xMid2, yMid2], [xMid2, yScale3(d.target.speaker) + yScale3.bandwidth()]];
                     } else {
                         let xMid1 = (determineXValue(xScale3, d.source, mouseX, adaptedXBeforeWindow, firstScaledNodeX, antiScaleFactor, adaptedXAfterWindow, lastScaledNodeX))
                         let xMid2 = (determineXValue(xScale3, d.target, mouseX, adaptedXBeforeWindow, firstScaledNodeX, antiScaleFactor, adaptedXAfterWindow, lastScaledNodeX))
@@ -252,6 +247,93 @@ function createSlidingTimeline(graphData) {
                     const targetX = determineXValue(xScale3, d.target, mouseX, adaptedXBeforeWindow, firstScaledNodeX, antiScaleFactor, adaptedXAfterWindow, lastScaledNodeX);
                     return sourceX >= adaptedXBeforeWindow && targetX <= adaptedXAfterWindow ? 'visible' : 'hidden'
                 });
+
+            let textArray = nodesInWindow ? nodesInWindow.map(d => d.text) : []
+            // Remove all existing text elements and hover boxes
+            svg3.selectAll('.node').attr('stroke', 'none');
+            svg3.selectAll('.hover-box').remove();
+            link3.attr('stroke', 'black').attr('marker-end', 'url(#arrowhead)');
+            link3.attr('stroke-dasharray', null);
+
+            //let yPosition = yScale3(currentSpeaker) + yScale3.bandwidth() <= height3 / 2 ? yScale3(currentSpeaker) + yScale3.bandwidth() + 5 : 0;
+            let yPosition = 0
+            let xPosition = width3 + 10;
+            let hoverBox = svg3.append('g').attr('class', 'hover-box');
+
+            textArray.forEach(function (text, index) {
+                let textElement = hoverBox.append('text')
+                    .attr('id', `hovered-text-${index}`)  // Add unique id to each text element
+                    .attr('y', yPosition + 20 + index * 15)
+                    .attr('x', xPosition + 5)
+                    .style('visibility', 'visible')
+                    .style('cursor', 'pointer')
+                    .text(text)
+                    .on('mouseover', function () {
+                        textHovered3 = true;
+                        const associatedLinks = links3.filter(link => link.source.text === text);
+                        textArray.forEach((t, i) => {
+                            link3.attr('stroke', 'black').attr('marker-end', 'url(#arrowhead)');
+                            link3.attr('stroke-dasharray', null);
+                            svg3.selectAll('.node').attr('stroke', 'none');
+                            const isConnected = associatedLinks.some(link => link.target.text === t);
+                            const linkColor = associatedLinks.find(link => link.target.text === t)?.text_additional;
+                            const color = isConnected ? getLinkColor(linkColor) : 'black';
+
+                            svg3.select(`#hovered-text-${i}`)
+                                .style('fill', color);
+                        });
+                        link3.filter(l => l.source.text === text)
+                            .attr('stroke', d => getLinkColor(d.text_additional))
+                            .attr('stroke-dasharray', d => (d.text_additional === 'Default Transition') ? '5,5' : null)
+                            .attr('marker-end', d => {
+                                return getArrowHeadColor(d.text_additional)
+                            });
+                        const hoveredNode = svg3.selectAll('.node').filter(node => node.text === text);
+                        hoveredNode.attr('stroke', 'black')  // You can customize the stroke color
+                            .attr('stroke-width', 2);
+                        textArray.forEach((t, i) => {
+                            if (t !== text) {
+                                svg3.select(`#hovered-text-${i}`).style('font-weight', 'normal');
+                            }
+                        });
+                        textElement.style('font-weight', 'bold');
+                    }).on('mouseout', function () {
+                        textArray.forEach((t, i) => {
+                            svg3.select(`#hovered-text-${i}`)
+                                .style('fill', 'black');
+                        });
+                        textElement.style('font-weight', 'normal');
+                        link3.attr('stroke', 'black').attr('marker-end', 'url(#arrowhead)');
+                        link3.attr('stroke-dasharray', null);
+                        svg3.selectAll('.node').attr('stroke', 'none');
+                    })
+            })
+                        let bbox = hoverBox.node().getBBox();
+
+            if (nodesInWindow) {
+                hoverBox.insert('rect', 'text')
+                    .attr('y', yPosition)
+                    .attr('x', xPosition)
+                    .attr('width', bbox.width + 10)
+                    .attr('height', bbox.height + 10)
+                    .style('fill', 'white')
+                    .style('stroke', 'black')
+                    .style('cursor', 'pointer')
+                    .on('mouseover', function () {
+                        textHovered3 = true;
+                    })
+                    .on('mouseout', function () {
+                        textHovered3 = false;
+                        setTimeout(function () {
+                            if (!barHovered3 && !textHovered3) {
+                                svg3.selectAll('.hover-box').remove();
+                                svg3.selectAll('.node').attr('stroke', 'none');
+                                link3.attr('stroke', 'black').attr('marker-end', 'url(#arrowhead)');
+                                link3.attr('stroke-dasharray', null)
+                            }
+                        }, 300);
+                    });
+            }
         }
 
     }).on('mouseout', function () {
@@ -275,7 +357,7 @@ function createSlidingTimeline(graphData) {
 
     let svg3 = d3
         .select('#time')
-        .attr('width', width3 + margin3.left + margin3.right)
+        .attr('width', 2500 + margin3.left + margin3.right)
         .attr('height', height3 + margin3.top + margin3.bottom)
         .append('g')
         .attr('transform', 'translate(' + margin3.left + ',' + margin3.top + ')');
@@ -338,26 +420,17 @@ function createSlidingTimeline(graphData) {
         .attr('stroke', 'black')
         .attr('stroke-width', 2)
         .attr('d', d => {
-            let pathData = []
+            let pathData
             if (d.text_additional === "Default Transition") {
                 let xMid = (xScale3(d.source.start_time) + xScale3(d.target.start_time)) / 2;
                 let yMid1 = yScale3(d.source.speaker) + yScale3.bandwidth();
                 let yMid2 = yScale3(d.target.speaker) + yScale3.bandwidth() * 2;
-                pathData = [
-                    [xScale3(d.source.start_time) + (xScale3(d.source.end_time || d.source.start_time) - xScale3(d.source.start_time)) / 2, yScale3(d.source.speaker) + yScale3.bandwidth()],
-                    [xMid, yMid1],
-                    [xMid, yMid2],
-                    [xScale3(d.target.start_time) + (xScale3(d.target.end_time || d.target.start_time) - xScale3(d.target.start_time)) / 2, yScale3(d.target.speaker) + yScale3.bandwidth()]
-                ]
+                pathData = [[xScale3(d.source.start_time) + (xScale3(d.source.end_time || d.source.start_time) - xScale3(d.source.start_time)) / 2, yScale3(d.source.speaker) + yScale3.bandwidth()], [xMid, yMid1], [xMid, yMid2], [xScale3(d.target.start_time) + (xScale3(d.target.end_time || d.target.start_time) - xScale3(d.target.start_time)) / 2, yScale3(d.target.speaker) + yScale3.bandwidth()]]
             } else {
                 let xMid = (xScale3(d.source.start_time) + xScale3(d.target.start_time)) / 2;
                 let yMid1 = yScale3(d.source.speaker) - yScale3.bandwidth() / 2;
                 let yMid2 = yScale3(d.target.speaker) - yScale3.bandwidth() / 3;
-                pathData = [
-                    [xScale3(d.source.start_time) + (xScale3(d.source.end_time || d.source.start_time) - xScale3(d.source.start_time)) / 2, yScale3(d.source.speaker)],
-                    [xMid, yMid1],
-                    [xMid, yMid2],
-                    [xScale3(d.target.start_time) + (xScale3(d.target.end_time || d.target.start_time) - xScale3(d.target.start_time)) / 2, yScale3(d.target.speaker)]];
+                pathData = [[xScale3(d.source.start_time) + (xScale3(d.source.end_time || d.source.start_time) - xScale3(d.source.start_time)) / 2, yScale3(d.source.speaker)], [xMid, yMid1], [xMid, yMid2], [xScale3(d.target.start_time) + (xScale3(d.target.end_time || d.target.start_time) - xScale3(d.target.start_time)) / 2, yScale3(d.target.speaker)]];
             }
             return curve3(pathData);
         })
@@ -384,54 +457,21 @@ function createSlidingTimeline(graphData) {
 
         // Remove all existing text elements and hover boxes
         svg3.selectAll('.node').attr('stroke', 'none');
-        svg3.selectAll('.hover-box').remove();
+        //svg3.selectAll('.hover-box').remove();
         link3.attr('stroke', 'black').attr('marker-end', 'url(#arrowhead)');
         link3.attr('stroke-dasharray', null);
 
-        let yPosition = yScale3(currentSpeaker) + yScale3.bandwidth() + 5; // Place the hover box below the bar
+        //let yPosition = yScale3(currentSpeaker) + yScale3.bandwidth() <= height3 / 2 ? yScale3(currentSpeaker) + yScale3.bandwidth() + 5 : 0;
+        let yPosition = 0
+        let xPosition = width3 + 10;
         let hoverBox = svg3.append('g').attr('class', 'hover-box');
-
-        textArray.forEach(function (text, index) {
-            let textElement = hoverBox.append('text')
-                .attr('id', `hovered-text-${index}`)  // Add unique id to each text element
-                .attr('y', yPosition + 20 + index * 15)
-                .style('visibility', 'visible')
-                .style('cursor', 'pointer')
-                .text(text)
-                .on('mouseover', function () {
-                    textHovered3 = true;
-                    const associatedLinks = links3.filter(link => link.source.text === text);
-                    textArray.forEach((t, i) => {
-                        link3.attr('stroke', 'black').attr('marker-end', 'url(#arrowhead)');
-                        link3.attr('stroke-dasharray', null);
-                        svg3.selectAll('.node').attr('stroke', 'none');
-                        const isConnected = associatedLinks.some(link => link.target.text === t);
-                        const linkColor = associatedLinks.find(link => link.target.text === t)?.text_additional;
-                        const color = isConnected ? getLinkColor(linkColor) : 'black';
-
-                        svg3.select(`#hovered-text-${i}`)
-                            .style('fill', color);
-                    });
-                    link3.filter(l => l.source.text === text)
-                        .attr('stroke', d => getLinkColor(d.text_additional))
-                        .attr('stroke-dasharray', d => (d.text_additional === 'Default Transition') ? '5,5' : null)
-                        .attr('marker-end', d => {
-                            return getArrowHeadColor(d.text_additional)
-                        });
-                    const hoveredNode = svg3.selectAll('.node').filter(node => node.text === text);
-                    hoveredNode.attr('stroke', 'black')  // You can customize the stroke color
-                        .attr('stroke-width', 2);
-                })
-            if (text === d.text) {
-                textElement.style('font-weight', 'bold');
-            }
-        });
 
         let bbox = hoverBox.node().getBBox();
 
-        if (nodesInWindow) {
+        /*if (nodesInWindow) {
             hoverBox.insert('rect', 'text')
                 .attr('y', yPosition)
+                .attr('x', xPosition)
                 .attr('width', bbox.width + 10)
                 .attr('height', bbox.height + 10)
                 .style('fill', 'white')
@@ -451,7 +491,7 @@ function createSlidingTimeline(graphData) {
                         }
                     }, 300);
                 });
-        }
+        }*/
         d3.select(event.currentTarget)
             .attr('stroke', 'black')
             .attr('stroke-width', 2);
@@ -475,10 +515,10 @@ function createSlidingTimeline(graphData) {
             barHovered3 = false;
             setTimeout(function () {
                 if (!barHovered3 && !textHovered3) {
-                    svg3.selectAll('.hover-box').remove();
-                    svg3.selectAll('.node').attr('stroke', 'none');
-                    link3.attr('stroke', 'black').attr('marker-end', 'url(#arrowhead)');
-                    link3.attr('stroke-dasharray', null)
+                    //svg3.selectAll('.hover-box').remove();
+                    //svg3.selectAll('.node').attr('stroke', 'none');
+                    //link3.attr('stroke', 'black').attr('marker-end', 'url(#arrowhead)');
+                    //link3.attr('stroke-dasharray', null)
                 }
             }, 300);
         });
