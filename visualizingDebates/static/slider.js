@@ -183,7 +183,6 @@ function createSlidingTimeline(graphData) {
                 })
                 .attr('x2', d => {
                     return determineXValue(xScale3, d, mouseX, adaptedXBeforeWindow, firstScaledNodeX, antiScaleFactor, adaptedXAfterWindow, lastScaledNodeX);
-
                 })
                 .attr('y1', (d, i) => nodesToShowText[i] ? yScale3(d.speaker) + yScale3.bandwidth() : -1000)
                 .attr('y2', (d, i) => nodesToShowText[i] ? height3 + 10 : -1000)
@@ -198,7 +197,12 @@ function createSlidingTimeline(graphData) {
                         return 0.2;
                     }
                 })
-
+            svg3.selectAll('.new-question-line').attr('x1', d => {
+                return determineXValue(xScale3, d, mouseX, adaptedXBeforeWindow, firstScaledNodeX, antiScaleFactor, adaptedXAfterWindow, lastScaledNodeX);
+            }).attr('x2', d => {
+                return determineXValue(xScale3, d, mouseX, adaptedXBeforeWindow, firstScaledNodeX, antiScaleFactor, adaptedXAfterWindow, lastScaledNodeX);
+            }).attr('y1', d => d.newQuestion ? 0 : -1000)
+                .attr('y2', d => d.newQuestion ? height3 : -1000);
             node3
                 .attr('x', d => {
                     return determineXValue(xScale3, d, mouseX, adaptedXBeforeWindow, firstScaledNodeX, antiScaleFactor, adaptedXAfterWindow, lastScaledNodeX);
@@ -330,6 +334,15 @@ function createSlidingTimeline(graphData) {
         //node2.attr('opacity', 1.0);
         //node3.attr('opacity', 1.0);
     });
+    svg2.selectAll('.question-line')
+        .data(nodes2)
+        .enter().append('line')
+        .attr('class', 'new-question-line')
+        .attr('x1', d => xScale2(d.start_time))
+        .attr('x2', d => xScale2(d.start_time))
+        .attr('y1', d => d.newQuestion ? 0 : -1000)
+        .attr('y2', d => d.newQuestion ? height2 : -1000)
+        .style('stroke', 'red');
 
 
     //--------------------------------------------------------------------
@@ -579,5 +592,13 @@ function createSlidingTimeline(graphData) {
         .append('svg:path')
         .attr('d', 'M0,-5L10,0L0,5')
         .attr('fill', 'blue');
-
+    svg3.selectAll('.question-line')
+        .data(nodes3)
+        .enter().append('line')
+        .attr('class', 'new-question-line')
+        .attr('x1', d => xScale3(d.start_time))
+        .attr('x2', d => xScale3(d.start_time))
+        .attr('y1', d => d.newQuestion ? 0 : -1000)
+        .attr('y2', d => d.newQuestion ? height3 : -1000)
+        .style('stroke', 'red');
 }

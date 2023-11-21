@@ -1,11 +1,19 @@
 import json
 import os
 from datetime import datetime
-
 import networkx as nx
 from dotenv import load_dotenv
-
 from ..logger import logging
+
+personIDMapping = {
+    '3866': "Claire Cooper",
+    '3812': 'Fiona Bruce',
+    '3862': 'Andy Burnham',
+    '3861': 'Chris Philip',
+    '3863': 'Helle Thorning-Schmidt',
+    '3864': 'James Graham',
+}
+newTopicQuestionTimes=["2020-05-21 22:52:01", "2020-05-21 23:08:18", "2020-05-21 23:31:20", "2020-05-21 23:43:08"]
 
 load_dotenv()
 datetime_format = os.getenv("DATETIME_FORMAT")
@@ -58,12 +66,24 @@ def extract_file(graph, json_file_path):
 
 
 def add_node_with_locution(graph, node_id, text, node_type, locution):
+    new_question = False
     if locution.get("start"):
         start_time = datetime.strptime(locution.get("start"), datetime_format)
+        if locution.get("start") in newTopicQuestionTimes:
+            new_question = True
+            print(locution.get("start"))
     else:
         start_time = datetime.strptime(replacement_date, datetime_format)
     speaker = locution.get("personID")
-    graph.add_node(node_id, text=text, type=node_type, start=start_time, speaker=speaker)
+    if speaker in personIDMapping:
+        if new_question:
+            graph.add_node(node_id, text=text, type=node_type, start=start_time, speaker=personIDMapping[speaker],
+                           newQuestion=new_question)
+        else:
+            graph.add_node(node_id, text=text, type=node_type, start=start_time, speaker=personIDMapping[speaker])
+    else:
+        graph.add_node(node_id, text=text, type=node_type, start=start_time, speaker="Public")
+
 
 
 def remove_isolated(graph):
