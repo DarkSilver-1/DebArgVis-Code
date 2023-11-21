@@ -308,8 +308,7 @@ function createSlidingTimeline(graphData) {
                         svg3.selectAll('.node').attr('stroke', 'none');
                     })
             })
-                        let bbox = hoverBox.node().getBBox();
-
+            let bbox = hoverBox.node().getBBox();
             if (nodesInWindow) {
                 hoverBox.insert('rect', 'text')
                     .attr('y', yPosition)
@@ -322,17 +321,6 @@ function createSlidingTimeline(graphData) {
                     .on('mouseover', function () {
                         textHovered3 = true;
                     })
-                    .on('mouseout', function () {
-                        textHovered3 = false;
-                        setTimeout(function () {
-                            if (!barHovered3 && !textHovered3) {
-                                svg3.selectAll('.hover-box').remove();
-                                svg3.selectAll('.node').attr('stroke', 'none');
-                                link3.attr('stroke', 'black').attr('marker-end', 'url(#arrowhead)');
-                                link3.attr('stroke-dasharray', null)
-                            }
-                        }, 300);
-                    });
             }
         }
 
@@ -450,52 +438,39 @@ function createSlidingTimeline(graphData) {
         }
     });
     node3.on('mouseover', (event, d) => {
-        let currentSpeaker = d.speaker;
-
         //let textArray = d.grouped_texts;
         let textArray = nodesInWindow ? nodesInWindow.map(d => d.text) : []
 
         // Remove all existing text elements and hover boxes
         svg3.selectAll('.node').attr('stroke', 'none');
-        //svg3.selectAll('.hover-box').remove();
         link3.attr('stroke', 'black').attr('marker-end', 'url(#arrowhead)');
         link3.attr('stroke-dasharray', null);
 
-        //let yPosition = yScale3(currentSpeaker) + yScale3.bandwidth() <= height3 / 2 ? yScale3(currentSpeaker) + yScale3.bandwidth() + 5 : 0;
-        let yPosition = 0
-        let xPosition = width3 + 10;
-        let hoverBox = svg3.append('g').attr('class', 'hover-box');
-
-        let bbox = hoverBox.node().getBBox();
-
-        /*if (nodesInWindow) {
-            hoverBox.insert('rect', 'text')
-                .attr('y', yPosition)
-                .attr('x', xPosition)
-                .attr('width', bbox.width + 10)
-                .attr('height', bbox.height + 10)
-                .style('fill', 'white')
-                .style('stroke', 'black')
-                .style('cursor', 'pointer')
-                .on('mouseover', function () {
-                    textHovered3 = true;
-                })
-                .on('mouseout', function () {
-                    textHovered3 = false;
-                    setTimeout(function () {
-                        if (!barHovered3 && !textHovered3) {
-                            svg3.selectAll('.hover-box').remove();
-                            svg3.selectAll('.node').attr('stroke', 'none');
-                            link3.attr('stroke', 'black').attr('marker-end', 'url(#arrowhead)');
-                            link3.attr('stroke-dasharray', null)
-                        }
-                    }, 300);
-                });
-        }*/
         d3.select(event.currentTarget)
             .attr('stroke', 'black')
             .attr('stroke-width', 2);
         barHovered3 = true;
+
+        const associatedLinks = links3.filter(link => link.source.text === d.text);
+        textArray.forEach((t, i) => {
+            link3.attr('stroke', 'black').attr('marker-end', 'url(#arrowhead)');
+            link3.attr('stroke-dasharray', null);
+            svg3.selectAll('.node').attr('stroke', 'none');
+            const isConnected = associatedLinks.some(link => link.target.text === t);
+            const linkColor = associatedLinks.find(link => link.target.text === t)?.text_additional;
+            const color = isConnected ? getLinkColor(linkColor) : 'black';
+            const hoveredTextElement = svg3.selectAll('.hover-box text').filter(function () {
+                return this.textContent === t;
+            });
+            hoveredTextElement
+                .style('fill', color)
+                .style('font-weight', 'normal'); // Adjust the font-weight as needed
+        });
+        const hoveredTextElement = svg3.selectAll('.hover-box text').filter(function () {
+            return this.textContent === d.text;
+        });
+        hoveredTextElement.style('font-weight', 'bold');
+
 
         // Highlight connected links
         link3.filter(l => l.source === d)
@@ -510,18 +485,17 @@ function createSlidingTimeline(graphData) {
             .attr('marker-end', d => {
                 return getArrowHeadColor(d.text_additional)
             });
-    })
-        .on('mouseout', function () {
-            barHovered3 = false;
-            setTimeout(function () {
-                if (!barHovered3 && !textHovered3) {
-                    //svg3.selectAll('.hover-box').remove();
-                    //svg3.selectAll('.node').attr('stroke', 'none');
-                    //link3.attr('stroke', 'black').attr('marker-end', 'url(#arrowhead)');
-                    //link3.attr('stroke-dasharray', null)
-                }
-            }, 300);
-        });
+    }).on('mouseout', function () {
+        barHovered3 = false;
+        setTimeout(function () {
+            if (!barHovered3 && !textHovered3) {
+                //svg3.selectAll('.hover-box').remove();
+                //svg3.selectAll('.node').attr('stroke', 'none');
+                //link3.attr('stroke', 'black').attr('marker-end', 'url(#arrowhead)');
+                //link3.attr('stroke-dasharray', null)
+            }
+        }, 300);
+    });
 
     svg3.selectAll('.bar-text')
         .data(nodes3)
