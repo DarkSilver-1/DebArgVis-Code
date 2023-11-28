@@ -230,7 +230,7 @@ function createSlidingTimeline(graphData) {
             link3
                 .attr('d', d => {
                     let pathData
-                    if (d.text_additional === "Default Transition") {
+                    if (d.text_additional === "Default Conflict") {
                         let xMid1 = (determineXValue(xScale3, d.source, mouseX, adaptedXBeforeWindow, firstScaledNodeX, antiScaleFactor, adaptedXAfterWindow, lastScaledNodeX))
                         let xMid2 = (determineXValue(xScale3, d.target, mouseX, adaptedXBeforeWindow, firstScaledNodeX, antiScaleFactor, adaptedXAfterWindow, lastScaledNodeX))
                         let yMid1 = yScale3(d.source.speaker) + yScale3.bandwidth();
@@ -245,19 +245,20 @@ function createSlidingTimeline(graphData) {
                     }
                     return curve3(pathData);
 
-                })
-                .attr('visibility', d => {
-                    const sourceX = determineXValue(xScale3, d.source, mouseX, adaptedXBeforeWindow, firstScaledNodeX, antiScaleFactor, adaptedXAfterWindow, lastScaledNodeX);
-                    const targetX = determineXValue(xScale3, d.target, mouseX, adaptedXBeforeWindow, firstScaledNodeX, antiScaleFactor, adaptedXAfterWindow, lastScaledNodeX);
-                    return sourceX >= adaptedXBeforeWindow && targetX <= adaptedXAfterWindow ? 'visible' : 'hidden'
-                });
+                }).attr('marker-end', d => {
+                return getArrowHeadColor(d.text_additional)
+            }).attr('visibility', d => {
+                const sourceX = determineXValue(xScale3, d.source, mouseX, adaptedXBeforeWindow, firstScaledNodeX, antiScaleFactor, adaptedXAfterWindow, lastScaledNodeX);
+                const targetX = determineXValue(xScale3, d.target, mouseX, adaptedXBeforeWindow, firstScaledNodeX, antiScaleFactor, adaptedXAfterWindow, lastScaledNodeX);
+                return sourceX >= adaptedXBeforeWindow && targetX <= adaptedXAfterWindow ? 'visible' : 'hidden'
+            });
 
             let textArray = nodesInWindow ? nodesInWindow.map(d => d.text) : []
             // Remove all existing text elements and hover boxes
             svg3.selectAll('.node').attr('stroke', 'none');
             svg3.selectAll('.hover-box').remove();
-            link3.attr('stroke', 'black').attr('marker-end', 'url(#arrowhead)');
-            link3.attr('stroke-dasharray', null);
+            //link3.attr('stroke', 'black').attr('marker-end', 'url(#arrowhead)');
+            //link3.attr('stroke-dasharray', null);
 
             //let yPosition = yScale3(currentSpeaker) + yScale3.bandwidth() <= height3 / 2 ? yScale3(currentSpeaker) + yScale3.bandwidth() + 5 : 0;
             let yPosition = 0
@@ -274,24 +275,25 @@ function createSlidingTimeline(graphData) {
                     .text(text)
                     .on('mouseover', function () {
                         textHovered3 = true;
-                        const associatedLinks = links3.filter(link => link.source.text === text);
+                        let associatedLinks = links3.filter(link => link.source.text === text);
+                        associatedLinks = associatedLinks.filter(d => ['Default Inference', 'Default Rephrase', 'Default Conflict'].includes(d.text_additional))
                         textArray.forEach((t, i) => {
-                            link3.attr('stroke', 'black').attr('marker-end', 'url(#arrowhead)');
-                            link3.attr('stroke-dasharray', null);
+                            //link3.attr('stroke', 'black').attr('marker-end', 'url(#arrowhead)');
+                            //link3.attr('stroke-dasharray', null);
+                            link3.attr('opacity', 0.2);
                             svg3.selectAll('.node').attr('stroke', 'none');
                             const isConnected = associatedLinks.some(link => link.target.text === t);
                             const linkColor = associatedLinks.find(link => link.target.text === t)?.text_additional;
-                            const color = isConnected ? getLinkColor(linkColor) : 'black';
+                            //const color = isConnected ? getLinkColor(linkColor) : 'black';
+                            const color = getLinkColor(linkColor)
 
-                            svg3.select(`#hovered-text-${i}`)
-                                .style('fill', color);
+                            svg3.select(`#hovered-text-${i}`).style('fill', color);
                         });
                         link3.filter(l => l.source.text === text)
                             .attr('stroke', d => getLinkColor(d.text_additional))
-                            .attr('stroke-dasharray', d => (d.text_additional === 'Default Transition') ? '5,5' : null)
                             .attr('marker-end', d => {
                                 return getArrowHeadColor(d.text_additional)
-                            });
+                            }).attr('opacity', 1.0);
                         const hoveredNode = svg3.selectAll('.node').filter(node => node.text === text);
                         hoveredNode.attr('stroke', 'black')  // You can customize the stroke color
                             .attr('stroke-width', 2);
@@ -307,8 +309,8 @@ function createSlidingTimeline(graphData) {
                                 .style('fill', 'black');
                         });
                         textElement.style('font-weight', 'normal');
-                        link3.attr('stroke', 'black').attr('marker-end', 'url(#arrowhead)');
-                        link3.attr('stroke-dasharray', null);
+                        //link3.attr('stroke', 'black').attr('marker-end', 'url(#arrowhead)');
+                        //link3.attr('stroke-dasharray', null);
                         svg3.selectAll('.node').attr('stroke', 'none');
                     })
             })
@@ -413,25 +415,35 @@ function createSlidingTimeline(graphData) {
         .style('fill', d => colorScale3(d.speaker))
 
     let link3 = svg3.selectAll('.link')
-        .data(links3)
+        .data(links3.filter(d => ['Default Inference', 'Default Rephrase', 'Default Conflict'].includes(d.text_additional)))
         .enter().append('path')
         .attr('class', 'link')
         .attr('fill', 'none')
-        .attr('marker-end', 'url(#arrowhead)')  // Set a default arrowhead
-        .attr('stroke', 'black')
+        .attr('marker-end', 'url(#arrowhead)')
+        .attr('stroke', d => getLinkColor(d.text_additional))
         .attr('stroke-width', 2)
         .attr('d', d => {
             let pathData
-            if (d.text_additional === "Default Transition") {
+            if (d.text_additional === "Default Conflict") {
                 let xMid = (xScale3(d.source.start_time) + xScale3(d.target.start_time)) / 2;
                 let yMid1 = yScale3(d.source.speaker) + yScale3.bandwidth();
                 let yMid2 = yScale3(d.target.speaker) + yScale3.bandwidth() * 2;
-                pathData = [[xScale3(d.source.start_time) + (xScale3(d.source.end_time || d.source.start_time) - xScale3(d.source.start_time)) / 2, yScale3(d.source.speaker) + yScale3.bandwidth()], [xMid, yMid1], [xMid, yMid2], [xScale3(d.target.start_time) + (xScale3(d.target.end_time || d.target.start_time) - xScale3(d.target.start_time)) / 2, yScale3(d.target.speaker) + yScale3.bandwidth()]]
+                pathData = [
+                    [xScale3(d.source.start_time) + (xScale3(d.source.end_time || d.source.start_time) - xScale3(d.source.start_time)) / 2, yScale3(d.source.speaker) + yScale3.bandwidth()],
+                    [xMid, yMid1],
+                    [xMid, yMid2],
+                    [xScale3(d.target.start_time) + (xScale3(d.target.end_time || d.target.start_time) - xScale3(d.target.start_time)) / 2, yScale3(d.target.speaker) + yScale3.bandwidth()]
+                ]
             } else {
                 let xMid = (xScale3(d.source.start_time) + xScale3(d.target.start_time)) / 2;
-                let yMid1 = yScale3(d.source.speaker) - yScale3.bandwidth() / 2;
-                let yMid2 = yScale3(d.target.speaker) - yScale3.bandwidth() / 3;
-                pathData = [[xScale3(d.source.start_time) + (xScale3(d.source.end_time || d.source.start_time) - xScale3(d.source.start_time)) / 2, yScale3(d.source.speaker)], [xMid, yMid1], [xMid, yMid2], [xScale3(d.target.start_time) + (xScale3(d.target.end_time || d.target.start_time) - xScale3(d.target.start_time)) / 2, yScale3(d.target.speaker)]];
+                let yMid1 = yScale3(d.source.speaker) - 10;
+                let yMid2 = yScale3(d.target.speaker) - 10;
+                pathData = [
+                    [xScale3(d.source.start_time) + (xScale3(d.source.end_time || d.source.start_time) - xScale3(d.source.start_time)) / 2, yScale3(d.source.speaker)],
+                    [xMid, yMid1],
+                    [xMid, yMid2],
+                    [xScale3(d.target.start_time) + (xScale3(d.target.end_time || d.target.start_time) - xScale3(d.target.start_time)) / 2, yScale3(d.target.speaker) - 10]
+                ];
             }
             return curve3(pathData);
         })
@@ -456,15 +468,18 @@ function createSlidingTimeline(graphData) {
 
         // Remove all existing text elements and hover boxes
         svg3.selectAll('.node').attr('stroke', 'none');
-        link3.attr('stroke', 'black').attr('marker-end', 'url(#arrowhead)');
-        link3.attr('stroke-dasharray', null);
+        //link3.attr('stroke', 'black').attr('marker-end', 'url(#arrowhead)');
+        //link3.attr('stroke-dasharray', null);
 
         barHovered3 = true;
 
-        const associatedLinks = links3.filter(link => link.source.text === d.text);
+        let associatedLinks = links3.filter(link => link.source.text === d.text);
+        associatedLinks = associatedLinks.filter(d => ['Default Inference', 'Default Rephrase', 'Default Conflict'].includes(d.text_additional))
+
         textArray.forEach((t) => {
-            link3.attr('stroke', 'black').attr('marker-end', 'url(#arrowhead)');
-            link3.attr('stroke-dasharray', null);
+            //link3.attr('stroke', 'black').attr('marker-end', 'url(#arrowhead)');
+            //link3.attr('stroke-dasharray', null);
+            link3.attr('opacity', 0.2);
             svg3.selectAll('.node').attr('stroke', 'none');
             const isConnected = associatedLinks.some(link => link.target.text === t);
             const linkColor = associatedLinks.find(link => link.target.text === t)?.text_additional;
@@ -491,14 +506,9 @@ function createSlidingTimeline(graphData) {
             .attr('stroke', d => {
                 return getLinkColor(d.text_additional)
             })
-            .attr('stroke-dasharray', d => {
-                if (d.text_additional === 'Default Transition') {
-                    return '5,5';
-                }
-            })
             .attr('marker-end', d => {
                 return getArrowHeadColor(d.text_additional)
-            });
+            }).attr('opacity', 1.0);
     }).on('mouseout', function () {
         barHovered3 = false;
         setTimeout(function () {
@@ -532,6 +542,16 @@ function createSlidingTimeline(graphData) {
         .attr('y2', (d, i) => nodesToShowText[i] ? height3 + 10 : -1000)
         .attr('stroke', 'black')
         .attr('stroke-dasharray', '5,5');
+    /*svg3.selectAll('.link-target-line')
+        .data(nodes3)
+        .enter()
+        .append('line')
+        .attr('class', 'line-connector')
+        .attr('x1', d => xScale3(d.start_time) + (xScale3(d.end_time) - xScale3(d.start_time)) / 2)
+        .attr('y1', 0)
+        .attr('x2', d => xScale3(d.start_time) + (xScale3(d.end_time) - xScale3(d.start_time)) / 2)
+        .attr('y2', 500)
+        .attr('stroke', 'green')*/
     svg3.append('defs').append('marker')
         .attr('id', 'arrowhead')
         .attr('viewBox', '-0 -5 10 10')

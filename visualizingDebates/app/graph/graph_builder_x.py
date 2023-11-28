@@ -32,14 +32,19 @@ def build_graph_x():
             if os.path.getsize(json_file_path) != 0 and os.path.getsize(json_file_path) != 68:
                 extract_file(graph, json_file_path)
     logging.info("Extracted the files")
+    print("Extracted the files")
     remove_isolated(graph)
     logging.info("Removed isolated nodes")
+    print("Removed isolated nodes")
     graph = collapse_nodes(graph)
     logging.info("Collapsed the corresponding I and L nodes")
+    print("Collapsed the corresponding I and L nodes")
     collapse_edges(graph)
     logging.info("Collapsed the edges")
+    print("Collapsed the edges")
     new_graph = filter_date(graph, datetime.strptime(filtering_date, date_format).date())
     logging.info(f"Filtered nodes of the day: {filter_date}")
+    print(f"Filtered nodes of the day: {filter_date}")
     return new_graph
 
 
@@ -121,8 +126,10 @@ def collapse_nodes(graph):
             identify_edges_to_update(graph, new_graph, i_node, l_node, edges_to_add, node_id_mapping)
             nodes_to_remove.append(ya_node)
             nodes_to_remove.append(i_node)
-
     populate_graph(edges_to_add, nodes_to_remove, new_graph, graph)
+    print("finished populating")
+    for no in nx.node_link_data(new_graph)["nodes"]:
+        print(no)
     return new_graph
 
 
@@ -208,14 +215,19 @@ def identify_edges_to_update(graph, new_graph, i_node, l_node, edges_to_add, nod
                         edges_to_add.append((l_node, ta))
                         for end in graph.out_edges(ta):
                             sou, tar = end
-                            edges_to_add.append((ta, node_id_mapping[tar]))
+                            if tar not in node_id_mapping:
+                                logging.error("Accessing not mapped secondary node")
+                                print("nooooooooooooooooooooooo")
+                            else:
+                                edges_to_add.append((ta, node_id_mapping[tar]))
         else:
             logging.error("Double connected Assertion")
 
 
 def populate_graph(edges_to_add, nodes_to_remove, new_graph, graph):
+    nodes_to_remove_set = set(nodes_to_remove)
     for node in graph.nodes():
-        if node not in nodes_to_remove and graph.nodes[node]["type"] not in ["I", "L"]:
+        if node not in nodes_to_remove_set and graph.nodes[node]["type"] not in ["I", "L"]:
             new_graph.add_node(node, **graph.nodes[node])
     for edge in edges_to_add:
         s, t = edge

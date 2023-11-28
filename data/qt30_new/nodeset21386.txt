@@ -1,0 +1,4 @@
+<br />
+<b>Warning</b>:  Trying to access array offset on value of type bool in <b>/var/www/html/argly/redirect.php</b> on line <b>8</b><br />
+<br />
+<b>Warning</b>:  Cannot modify header information - headers already sent by (output started at /var/www/html/argly/redirect.php:8) in <b>/var/www/html/argly/redirect.php</b> on line <b>10</b><br />
