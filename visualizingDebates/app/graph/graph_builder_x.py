@@ -39,9 +39,9 @@ def build_graph_x():
     graph = collapse_nodes(graph)
     logging.info("Collapsed the corresponding I and L nodes")
     print("Collapsed the corresponding I and L nodes")
-    collapse_edges(graph)
-    logging.info("Collapsed the edges")
-    print("Collapsed the edges")
+    #collapse_edges(graph)
+    #logging.info("Collapsed the edges")
+    #print("Collapsed the edges")
     new_graph = filter_date(graph, datetime.strptime(filtering_date, date_format).date())
     logging.info(f"Filtered nodes of the day: {filter_date}")
     print(f"Filtered nodes of the day: {filter_date}")
@@ -104,7 +104,6 @@ def collapse_nodes(graph):
     nodes_to_collapse = find_nodes_to_collapse(graph)
     node_id_mapping = create_node_id_mapping(graph, nodes_to_collapse)
 
-    nodes_to_remove = []
     edges_to_add = []
 
     for l_node in nodes_to_collapse:
@@ -125,9 +124,7 @@ def collapse_nodes(graph):
         if not incoming_from_ya:
             new_graph.add_node(l_node, **graph.nodes[l_node], paraphrasedtext=graph.nodes[i_node]["text"])
             identify_edges_to_update(graph, new_graph, i_node, l_node, edges_to_add, node_id_mapping)
-            nodes_to_remove.append(ya_node)
-            nodes_to_remove.append(i_node)
-    populate_graph(edges_to_add, nodes_to_remove, new_graph, graph)
+    populate_graph(edges_to_add, new_graph)
     print("finished populating")
     for no in nx.node_link_data(new_graph)["nodes"]:
         print(no)
@@ -192,7 +189,7 @@ def create_node_id_mapping(graph, nodes_to_collapse):
     return node_id_mapping
 
 
-def identify_edges_to_update(graph, new_graph, i_node, l_node, edges_to_add, node_id_mapping):
+def identify_edges_to_update2(graph, new_graph, i_node, l_node, edges_to_add, node_id_mapping):
     for edge in graph.out_edges(i_node):
         s, t = edge
         if graph.nodes[t]["type"] != "YA":
@@ -225,7 +222,47 @@ def identify_edges_to_update(graph, new_graph, i_node, l_node, edges_to_add, nod
             logging.error("Double connected Assertion")
 
 
-def populate_graph(edges_to_add, nodes_to_remove, new_graph, graph):
+def identify_edges_to_update(graph, new_graph, i_node, l_node, edges_to_add, node_id_mapping):
+    for edge in graph.out_edges(i_node):
+        s, t = edge
+        if graph.nodes[t]["text"] == "Default Transition":
+            continue
+        elif graph.nodes[t]["type"] != "YA":
+            ya_neighbors = {n for n in graph.predecessors(t) if graph.nodes[n]["type"] == "YA"}
+            conn_type = ""
+            if ya_neighbors:
+                conn_type = graph.nodes[ya_neighbors.pop()]["text"]
+            for e in graph.out_edges(t):
+                source, target = e
+                if graph.nodes[target]["type"] == "L":
+                    logging.error("Forbidden edge in graph")
+                else:
+                    if target not in node_id_mapping:
+                        logging.error("Accessing not mapped node")
+                    else:
+                        edges_to_add.append((l_node, node_id_mapping[target], graph.nodes[source]["text"], conn_type))
+        elif graph.nodes[s]["type"] == "L":
+            for e in graph.out_edges(t):
+                source, target = e
+                new_graph.nodes[l_node]["quote"] = graph.nodes[target]["text"]
+                if graph.nodes[target]["type"] == "I":
+                    for en in graph.out_edges(target):
+                        so, ta = en
+                        ya_neighbors = {n for n in graph.predecessors(ta) if graph.nodes[n]["type"] == "YA"}
+                        conn_type = ""
+                        if ya_neighbors:
+                            conn_type = graph.nodes[ya_neighbors.pop()]["text"]
+                        for end in graph.out_edges(ta):
+                            sou, tar = end
+                            if tar not in node_id_mapping:
+                                logging.error("Accessing not mapped secondary node")
+                            else:
+                                edges_to_add.append((l_node, node_id_mapping[tar], graph.nodes[sou]["text"], conn_type))
+        else:
+            logging.error("Double connected Assertion")
+
+
+def populate_graph2(edges_to_add, nodes_to_remove, new_graph, graph):
     nodes_to_remove_set = set(nodes_to_remove)
     for node in graph.nodes():
         if node not in nodes_to_remove_set and graph.nodes[node]["type"] not in ["I", "L"]:
@@ -238,6 +275,12 @@ def populate_graph(edges_to_add, nodes_to_remove, new_graph, graph):
         if source in new_graph.nodes and target in new_graph.nodes:
             edge_attributes = {str(key): value for key, value in graph[source][target].items()}
             new_graph.add_edge(source, target, **edge_attributes)
+
+def populate_graph(edges_to_add, new_graph):
+    for edge in edges_to_add:
+        s, t, text, conn_type = edge
+        new_graph.add_edge(s, t, text_additional=text, conn_type=conn_type)
+
 
 
 def find_l_nodes_to_update(graph):

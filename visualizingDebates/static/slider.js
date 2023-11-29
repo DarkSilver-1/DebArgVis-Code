@@ -255,9 +255,10 @@ function createSlidingTimeline(graphData) {
                         pathData = [[xMid1, yScale3(d.source.speaker) + yScale3.bandwidth()],
                             [xMid1, yMid1], [xMid2, yMid2], [xMid2, yScale3(d.target.speaker) + yScale3.bandwidth() + 10]];
                     } else {
-                        let barWidth = computeBarWidth(xScale3, d.target, mouseX, antiScaleFactor)//in order to determine the middle of the target bar
-                        let xMid1 = (determineXValue(xScale3, d.source, mouseX, adaptedXBeforeWindow, firstScaledNodeX, antiScaleFactor, adaptedXAfterWindow, lastScaledNodeX)) + barWidth / 2
-                        let xMid2 = (determineXValue(xScale3, d.target, mouseX, adaptedXBeforeWindow, firstScaledNodeX, antiScaleFactor, adaptedXAfterWindow, lastScaledNodeX)) + barWidth / 2
+                        let barWidth2 = computeBarWidth(xScale3, d.target, mouseX, antiScaleFactor)//in order to determine the middle of the target bar
+                        let barWidth1 = computeBarWidth(xScale3, d.source, mouseX, antiScaleFactor)//in order to determine the middle of the source bar
+                        let xMid1 = (determineXValue(xScale3, d.source, mouseX, adaptedXBeforeWindow, firstScaledNodeX, antiScaleFactor, adaptedXAfterWindow, lastScaledNodeX)) + barWidth2 / 2
+                        let xMid2 = (determineXValue(xScale3, d.target, mouseX, adaptedXBeforeWindow, firstScaledNodeX, antiScaleFactor, adaptedXAfterWindow, lastScaledNodeX)) + barWidth2 / 2
                         let yMid1 = yScale3(d.source.speaker) - 10;
                         let yMid2 = yScale3(d.target.speaker) - 10;
                         pathData = [
