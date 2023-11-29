@@ -48,6 +48,17 @@ function getArrowHeadColor(textAdditional) {
     }
 }
 
+function computeBarWidth(xScale3, d, mouseX, antiScaleFactor) {
+    const barWidth = xScale3(d.end_time) - xScale3(d.start_time);
+
+    // Check if the bar is within the mouse window
+    if (xScale3(d.start_time) <= mouseX + halfWindowSize && xScale3(d.start_time) + barWidth >= mouseX - halfWindowSize) {
+        return barWidth * scaleFactor;
+    } else {
+        return barWidth * antiScaleFactor > 0 ? barWidth * antiScaleFactor : 0;
+    }
+}
+
 function createSlidingTimeline(graphData) {
 
     console.log(graphData)
@@ -203,19 +214,22 @@ function createSlidingTimeline(graphData) {
                 return determineXValue(xScale3, d, mouseX, adaptedXBeforeWindow, firstScaledNodeX, antiScaleFactor, adaptedXAfterWindow, lastScaledNodeX);
             }).attr('y1', d => d.newQuestion ? 0 : -1000)
                 .attr('y2', d => d.newQuestion ? height3 : -1000);
+            svg3.selectAll('.link-target-line')
+                .data(nodes3)
+                .enter()
+                .append('line')
+                .attr('class', 'line-connector')
+                .attr('x1', d => determineXValue(xScale3, d, mouseX, adaptedXBeforeWindow, firstScaledNodeX, antiScaleFactor, adaptedXAfterWindow, lastScaledNodeX) + computeBarWidth(xScale3, d, mouseX, antiScaleFactor) / 2)
+                .attr('y1', d => yScale3(d.speaker) - 10)
+                .attr('x2', d => determineXValue(xScale3, d, mouseX, adaptedXBeforeWindow, firstScaledNodeX, antiScaleFactor, adaptedXAfterWindow, lastScaledNodeX) + computeBarWidth(xScale3, d, mouseX, antiScaleFactor) / 2)
+                .attr('y2', d => yScale3(d.speaker) + yScale3.bandwidth() + 10)
+                .attr('stroke', 'green')
             node3
                 .attr('x', d => {
                     return determineXValue(xScale3, d, mouseX, adaptedXBeforeWindow, firstScaledNodeX, antiScaleFactor, adaptedXAfterWindow, lastScaledNodeX);
 
                 }).attr('width', d => {
-                const barWidth = xScale3(d.end_time || d.start_time) - xScale3(d.start_time);
-
-                // Check if the bar is within the mouse window
-                if (xScale3(d.start_time) <= mouseX + halfWindowSize && xScale3(d.start_time) + barWidth >= mouseX - halfWindowSize) {
-                    return barWidth * scaleFactor;
-                } else {
-                    return barWidth * antiScaleFactor > 0 ? barWidth * antiScaleFactor : 0;
-                }
+                return computeBarWidth(xScale3, d, mouseX, antiScaleFactor);
             }).attr('opacity', function (d) {
                 const barX = xScale3(d.start_time);
                 const barWidth = xScale3(d.end_time || d.start_time) - barX;
@@ -231,21 +245,33 @@ function createSlidingTimeline(graphData) {
                 .attr('d', d => {
                     let pathData
                     if (d.text_additional === "Default Conflict") {
-                        let xMid1 = (determineXValue(xScale3, d.source, mouseX, adaptedXBeforeWindow, firstScaledNodeX, antiScaleFactor, adaptedXAfterWindow, lastScaledNodeX))
-                        let xMid2 = (determineXValue(xScale3, d.target, mouseX, adaptedXBeforeWindow, firstScaledNodeX, antiScaleFactor, adaptedXAfterWindow, lastScaledNodeX))
-                        let yMid1 = yScale3(d.source.speaker) + yScale3.bandwidth();
-                        let yMid2 = yScale3(d.target.speaker) + yScale3.bandwidth() * 2;
-                        pathData = [[xMid1, yScale3(d.source.speaker) + yScale3.bandwidth()], [xMid1, yMid1], [xMid2, yMid2], [xMid2, yScale3(d.target.speaker) + yScale3.bandwidth()]];
+                        let barWidth = computeBarWidth(xScale3, d.target, mouseX, antiScaleFactor)//in order to determine the middle of the target bar
+                        let xMid1 = (determineXValue(xScale3, d.source, mouseX, adaptedXBeforeWindow, firstScaledNodeX, antiScaleFactor, adaptedXAfterWindow, lastScaledNodeX)) + barWidth / 2
+                        let xMid2 = (determineXValue(xScale3, d.target, mouseX, adaptedXBeforeWindow, firstScaledNodeX, antiScaleFactor, adaptedXAfterWindow, lastScaledNodeX)) + barWidth / 2
+                        //let yMid1 = yScale3(d.source.speaker) + yScale3.bandwidth();
+                        let yMid1 = yScale3(d.source.speaker) + yScale3.bandwidth() + 10;
+                        //let yMid2 = yScale3(d.target.speaker) + yScale3.bandwidth() * 2;
+                        let yMid2 = yScale3(d.target.speaker) + yScale3.bandwidth() + 10;
+                        pathData = [[xMid1, yScale3(d.source.speaker) + yScale3.bandwidth()],
+                            [xMid1, yMid1], [xMid2, yMid2], [xMid2, yScale3(d.target.speaker) + yScale3.bandwidth() + 10]];
                     } else {
-                        let xMid1 = (determineXValue(xScale3, d.source, mouseX, adaptedXBeforeWindow, firstScaledNodeX, antiScaleFactor, adaptedXAfterWindow, lastScaledNodeX))
-                        let xMid2 = (determineXValue(xScale3, d.target, mouseX, adaptedXBeforeWindow, firstScaledNodeX, antiScaleFactor, adaptedXAfterWindow, lastScaledNodeX))
-                        let yMid1 = yScale3(d.source.speaker) - yScale3.bandwidth() / 2;
-                        let yMid2 = yScale3(d.target.speaker) - yScale3.bandwidth() / 3;
-                        pathData = [[xMid1, yScale3(d.source.speaker)], [xMid1, yMid1], [xMid2, yMid2], [xMid2, yScale3(d.target.speaker)]];
+                        let barWidth = computeBarWidth(xScale3, d.target, mouseX, antiScaleFactor)//in order to determine the middle of the target bar
+                        let xMid1 = (determineXValue(xScale3, d.source, mouseX, adaptedXBeforeWindow, firstScaledNodeX, antiScaleFactor, adaptedXAfterWindow, lastScaledNodeX)) + barWidth / 2
+                        let xMid2 = (determineXValue(xScale3, d.target, mouseX, adaptedXBeforeWindow, firstScaledNodeX, antiScaleFactor, adaptedXAfterWindow, lastScaledNodeX)) + barWidth / 2
+                        let yMid1 = yScale3(d.source.speaker) - 10;
+                        let yMid2 = yScale3(d.target.speaker) - 10;
+                        pathData = [
+                            [xMid1, yScale3(d.source.speaker)],
+                            [xMid1, yMid1],
+                            [xMid2, yMid2],
+                            [xMid2, yScale3(d.target.speaker) - 10]];
                     }
                     return curve3(pathData);
 
                 }).attr('marker-end', d => {
+                if (xScale3(d.source.start_time) > xScale3(d.target.start_time)) {
+                    return `url(#arrowhead-${getArrowHeadColor(d.text_additional)}) rotate(180)`;
+                }
                 return getArrowHeadColor(d.text_additional)
             }).attr('visibility', d => {
                 const sourceX = determineXValue(xScale3, d.source, mouseX, adaptedXBeforeWindow, firstScaledNodeX, antiScaleFactor, adaptedXAfterWindow, lastScaledNodeX);
@@ -282,7 +308,7 @@ function createSlidingTimeline(graphData) {
                             //link3.attr('stroke-dasharray', null);
                             link3.attr('opacity', 0.2);
                             svg3.selectAll('.node').attr('stroke', 'none');
-                            const isConnected = associatedLinks.some(link => link.target.text === t);
+                            //const isConnected = associatedLinks.some(link => link.target.text === t);
                             const linkColor = associatedLinks.find(link => link.target.text === t)?.text_additional;
                             //const color = isConnected ? getLinkColor(linkColor) : 'black';
                             const color = getLinkColor(linkColor)
@@ -404,6 +430,17 @@ function createSlidingTimeline(graphData) {
     let curve3 = d3.line()
         .curve(d3.curveBasis);
 
+    svg3.selectAll('.link-target-line')
+        .data(nodes3)
+        .enter()
+        .append('line')
+        .attr('class', 'line-connector')
+        .attr('x1', d => xScale3(d.start_time) + (xScale3(d.end_time) - xScale3(d.start_time)) / 2)
+        .attr('y1', d => yScale3(d.speaker) - 10)
+        .attr('x2', d => xScale3(d.start_time) + (xScale3(d.end_time) - xScale3(d.start_time)) / 2)
+        .attr('y2', d => yScale3(d.speaker) + yScale3.bandwidth() + 10)
+        .attr('stroke', 'green')
+
     let node3 = svg3.selectAll('.node')
         .data(nodes3)
         .enter().append('rect')
@@ -419,7 +456,7 @@ function createSlidingTimeline(graphData) {
         .enter().append('path')
         .attr('class', 'link')
         .attr('fill', 'none')
-        .attr('marker-end', 'url(#arrowhead)')
+        .attr('marker-end', d => getArrowHeadColor(d.text_additional))
         .attr('stroke', d => getLinkColor(d.text_additional))
         .attr('stroke-width', 2)
         .attr('d', d => {
@@ -429,20 +466,20 @@ function createSlidingTimeline(graphData) {
                 let yMid1 = yScale3(d.source.speaker) + yScale3.bandwidth();
                 let yMid2 = yScale3(d.target.speaker) + yScale3.bandwidth() * 2;
                 pathData = [
-                    [xScale3(d.source.start_time) + (xScale3(d.source.end_time || d.source.start_time) - xScale3(d.source.start_time)) / 2, yScale3(d.source.speaker) + yScale3.bandwidth()],
+                    [(xScale3(d.source.start_time) + (xScale3(d.source.end_time || d.source.start_time) - xScale3(d.source.start_time)) / 2), yScale3(d.source.speaker) + yScale3.bandwidth()],
                     [xMid, yMid1],
                     [xMid, yMid2],
-                    [xScale3(d.target.start_time) + (xScale3(d.target.end_time || d.target.start_time) - xScale3(d.target.start_time)) / 2, yScale3(d.target.speaker) + yScale3.bandwidth()]
+                    [(xScale3(d.target.start_time) + (xScale3(d.target.end_time || d.target.start_time) - xScale3(d.target.start_time)) / 2), yScale3(d.target.speaker) + yScale3.bandwidth()]
                 ]
             } else {
                 let xMid = (xScale3(d.source.start_time) + xScale3(d.target.start_time)) / 2;
                 let yMid1 = yScale3(d.source.speaker) - 10;
                 let yMid2 = yScale3(d.target.speaker) - 10;
                 pathData = [
-                    [xScale3(d.source.start_time) + (xScale3(d.source.end_time || d.source.start_time) - xScale3(d.source.start_time)) / 2, yScale3(d.source.speaker)],
+                    [(xScale3(d.source.start_time) + (xScale3(d.source.end_time || d.source.start_time) - xScale3(d.source.start_time)) / 2), yScale3(d.source.speaker)],
                     [xMid, yMid1],
                     [xMid, yMid2],
-                    [xScale3(d.target.start_time) + (xScale3(d.target.end_time || d.target.start_time) - xScale3(d.target.start_time)) / 2, yScale3(d.target.speaker) - 10]
+                    [(xScale3(d.target.start_time) + (xScale3(d.target.end_time || d.target.start_time) - xScale3(d.target.start_time)) / 2), yScale3(d.target.speaker) - 10]
                 ];
             }
             return curve3(pathData);
@@ -555,11 +592,11 @@ function createSlidingTimeline(graphData) {
     svg3.append('defs').append('marker')
         .attr('id', 'arrowhead')
         .attr('viewBox', '-0 -5 10 10')
-        .attr('refX', 0)
+        .attr('refX', 9)
         .attr('refY', 0)
         .attr('orient', 'auto')
-        .attr('markerWidth', 8)
-        .attr('markerHeight', 8)
+        .attr('markerWidth', 3)
+        .attr('markerHeight', 4)
         .attr('xoverflow', 'visible')
         .append('svg:path')
         .attr('d', 'M0,-5L10,0L0,5')
@@ -567,11 +604,11 @@ function createSlidingTimeline(graphData) {
     svg3.append('defs').append('marker')
         .attr('id', 'arrowhead-red')
         .attr('viewBox', '-0 -5 10 10')
-        .attr('refX', 0)
+        .attr('refX', 9)
         .attr('refY', 0)
         .attr('orient', 'auto')
-        .attr('markerWidth', 8)
-        .attr('markerHeight', 8)
+        .attr('markerWidth', 3)
+        .attr('markerHeight', 4)
         .attr('xoverflow', 'visible')
         .append('svg:path')
         .attr('d', 'M0,-5L10,0L0,5')
@@ -579,11 +616,11 @@ function createSlidingTimeline(graphData) {
     svg3.append('defs').append('marker')
         .attr('id', 'arrowhead-violet')
         .attr('viewBox', '-0 -5 10 10')
-        .attr('refX', 0)
+        .attr('refX', 9)
         .attr('refY', 0)
         .attr('orient', 'auto')
-        .attr('markerWidth', 8)
-        .attr('markerHeight', 8)
+        .attr('markerWidth', 3)
+        .attr('markerHeight', 4)
         .attr('xoverflow', 'visible')
         .append('svg:path')
         .attr('d', 'M0,-5L10,0L0,5')
@@ -591,11 +628,11 @@ function createSlidingTimeline(graphData) {
     svg3.append('defs').append('marker')
         .attr('id', 'arrowhead-green')
         .attr('viewBox', '-0 -5 10 10')
-        .attr('refX', 0)
+        .attr('refX', 9)
         .attr('refY', 0)
         .attr('orient', 'auto')
-        .attr('markerWidth', 8)
-        .attr('markerHeight', 8)
+        .attr('markerWidth', 3)
+        .attr('markerHeight', 4)
         .attr('xoverflow', 'visible')
         .append('svg:path')
         .attr('d', 'M0,-5L10,0L0,5')
@@ -603,11 +640,11 @@ function createSlidingTimeline(graphData) {
     svg3.append('defs').append('marker')
         .attr('id', 'arrowhead-blue')
         .attr('viewBox', '-0 -5 10 10')
-        .attr('refX', 0)
+        .attr('refX', 9)
         .attr('refY', 0)
         .attr('orient', 'auto')
-        .attr('markerWidth', 8)
-        .attr('markerHeight', 8)
+        .attr('markerWidth', 3)
+        .attr('markerHeight', 4)
         .attr('xoverflow', 'visible')
         .append('svg:path')
         .attr('d', 'M0,-5L10,0L0,5')

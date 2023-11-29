@@ -29,7 +29,7 @@ def build_graph_x():
     for filename in os.listdir(json_folder_path):
         if filename.endswith('.json'):
             json_file_path = os.path.join(json_folder_path, filename)
-            if os.path.getsize(json_file_path) != 0 and os.path.getsize(json_file_path) != 68:
+            if os.path.getsize(json_file_path) != 0 and os.path.getsize(json_file_path) != 68 and os.path.getsize(json_file_path) != 69:
                 extract_file(graph, json_file_path)
     logging.info("Extracted the files")
     print("Extracted the files")
@@ -50,6 +50,7 @@ def build_graph_x():
 
 def extract_file(graph, json_file_path):
     with open(json_file_path, 'r') as json_file:
+        #print(json_file_path)
         graph_data = json.load(json_file)
 
         for node in graph_data["nodes"]:
