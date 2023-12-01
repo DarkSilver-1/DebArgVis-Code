@@ -31,20 +31,29 @@ def build_graph_x():
             json_file_path = os.path.join(json_folder_path, filename)
             if os.path.getsize(json_file_path) != 0 and os.path.getsize(json_file_path) != 68 and os.path.getsize(json_file_path) != 69:
                 extract_file(graph, json_file_path)
+    #json_file_path = json_folder_path + "/nodeset25937.json"
+    #json_file_path = json_folder_path + "/nodeset25936.json"
+    #extract_file(graph, json_file_path)
     logging.info("Extracted the files")
     print("Extracted the files")
     remove_isolated(graph)
+    print(graph)
     logging.info("Removed isolated nodes")
     print("Removed isolated nodes")
     graph = collapse_nodes(graph)
+    #graph = collapse_graph(graph)
+    print(graph)
     logging.info("Collapsed the corresponding I and L nodes")
     print("Collapsed the corresponding I and L nodes")
     #collapse_edges(graph)
     #logging.info("Collapsed the edges")
     #print("Collapsed the edges")
+    print(graph)
     new_graph = filter_date(graph, datetime.strptime(filtering_date, date_format).date())
+    #new_graph = graph
     logging.info(f"Filtered nodes of the day: {filter_date}")
     print(f"Filtered nodes of the day: {filter_date}")
+    #print(new_graph)
     return new_graph
 
 
@@ -63,33 +72,33 @@ def extract_file(graph, json_file_path):
                 (locution for locution in graph_data["locutions"] if locution["nodeID"] == node_id), None)
 
             if matching_locution:
-                add_node_with_locution(graph, node_id, text, node_type, matching_locution)
+                add_node_with_locution(graph, node_id, text, node_type, matching_locution, json_file_path)
             else:
-                graph.add_node(node_id, text=text, type=node_type)
+                #if graph.has_node(node_id):
+                    #print(json_file_path, graph.nodes[node_id]["file"])
+                graph.add_node(node_id, text=text, type=node_type, file=json_file_path)
 
         for edge in graph_data["edges"]:
             graph.add_edge(edge["fromID"], edge["toID"])
 
 
-def add_node_with_locution(graph, node_id, text, node_type, locution):
+def add_node_with_locution(graph, node_id, text, node_type, locution, filename):
     new_question = False
     if locution.get("start"):
         start_time = datetime.strptime(locution.get("start"), datetime_format)
         if locution.get("start") in newTopicQuestionTimes:
             new_question = True
-            print(locution.get("start"))
     else:
         start_time = datetime.strptime(replacement_date, datetime_format)
     speaker = locution.get("personID")
     if speaker in personIDMapping:
         if new_question:
             graph.add_node(node_id, text=text, type=node_type, start=start_time, speaker=personIDMapping[speaker],
-                           newQuestion=new_question)
+                           newQuestion=new_question, file=filename)
         else:
-            graph.add_node(node_id, text=text, type=node_type, start=start_time, speaker=personIDMapping[speaker])
+            graph.add_node(node_id, text=text, type=node_type, start=start_time, speaker=personIDMapping[speaker], file=filename)
     else:
-        graph.add_node(node_id, text=text, type=node_type, start=start_time, speaker="Public")
-
+        graph.add_node(node_id, text=text, type=node_type, start=start_time, speaker="Public", file=filename)
 
 
 def remove_isolated(graph):
@@ -125,9 +134,8 @@ def collapse_nodes(graph):
             new_graph.add_node(l_node, **graph.nodes[l_node], paraphrasedtext=graph.nodes[i_node]["text"])
             identify_edges_to_update(graph, new_graph, i_node, l_node, edges_to_add, node_id_mapping)
     populate_graph(edges_to_add, new_graph)
-    print("finished populating")
-    for no in nx.node_link_data(new_graph)["nodes"]:
-        print(no)
+    #for no in nx.node_link_data(new_graph)["nodes"]:
+    #    print(no)
     return new_graph
 
 
@@ -145,7 +153,6 @@ def collapse_edges(graph):
 
 def filter_date(graph, target_date):
     subgraph = nx.MultiDiGraph()
-
     for node, data in graph.nodes(data=True):
         if "start" in data and data["start"].date() == target_date and data.get("type") == "L":
             subgraph.add_node(node, **data)
@@ -171,7 +178,7 @@ def create_node_id_mapping(graph, nodes_to_collapse):
     node_id_mapping = {}
     for l_node in nodes_to_collapse:
         neighbors = set(graph.neighbors(l_node))
-        ya_nodes = {n for n in neighbors if graph.nodes[n]["type"] == "YA"}
+        ya_nodes = {n for n in neighbors if graph.nodes[n]["type"] == "YA" and graph.nodes[n]["text"] != "Analysing"}
         if ya_nodes:
             ya_node = ya_nodes.pop()
             i_nodes = {n for n in graph.neighbors(ya_node) if graph.nodes[n]["type"] == "I"}
@@ -215,7 +222,6 @@ def identify_edges_to_update2(graph, new_graph, i_node, l_node, edges_to_add, no
                             sou, tar = end
                             if tar not in node_id_mapping:
                                 logging.error("Accessing not mapped secondary node")
-                                print("nooooooooooooooooooooooo")
                             else:
                                 edges_to_add.append((ta, node_id_mapping[tar]))
         else:
@@ -260,6 +266,56 @@ def identify_edges_to_update(graph, new_graph, i_node, l_node, edges_to_add, nod
                                 edges_to_add.append((l_node, node_id_mapping[tar], graph.nodes[sou]["text"], conn_type))
         else:
             logging.error("Double connected Assertion")
+
+
+def collapse_graph(graph):
+    new_graph = nx.MultiDiGraph()
+    nodes_to_collapse = set()
+    for node, attributes in graph.nodes(data=True):
+        if attributes["type"] == "L":
+            nodes_to_collapse.add(node)
+
+    node_id_mapping = {}
+    for l_node in nodes_to_collapse:
+        neighbors = set(graph.neighbors(l_node))
+        ya_nodes = {n for n in neighbors if graph.nodes[n]["type"] == "YA"}
+        while ya_nodes:
+            ya_node = ya_nodes.pop()
+            i_nodes = {n for n in graph.neighbors(ya_node) if graph.nodes[n]["type"] == "I"}
+            if i_nodes:
+                i_node = i_nodes.pop()
+                predecessors = set(graph.predecessors(l_node))
+                predecessor_ya_node = next((p for p in predecessors if graph.nodes[p]["type"] == "YA"), None)
+                if predecessor_ya_node:
+                    predecessors = set(graph.predecessors(predecessor_ya_node))
+                    predecessor_l_node = next((p for p in predecessors if graph.nodes[p]["type"] == "L"), None)
+                    if i_node not in node_id_mapping and predecessor_l_node:
+                        node_id_mapping[i_node] = predecessor_l_node
+                        new_graph.add_node(l_node, **graph.nodes[predecessor_l_node], paraphrasedtext=graph.nodes[i_node]["text"])
+                else:
+                    node_id_mapping[i_node] = l_node
+                    new_graph.add_node(l_node, **graph.nodes[l_node], paraphrasedtext=graph.nodes[i_node]["text"])
+
+    edges_to_add = []
+    for i_node in [n for n in graph.nodes if graph.nodes[n]["type"] == "I"]:
+        for edge in graph.out_edges(i_node):
+            source, target = edge
+            ya_neighbors = {n for n in graph.predecessors(target) if graph.nodes[n]["type"] == "YA"}
+            conn_type = ""
+            if ya_neighbors:
+                conn_type = graph.nodes[ya_neighbors.pop()]["text"]
+            for e in graph.out_edges(target):
+                s, t = e
+                if graph.nodes[t]["type"] == "L":
+                    logging.error("Forbidden edge in graph")
+                else:
+                    if t not in node_id_mapping or i_node not in node_id_mapping:
+                        logging.error("Accessing not mapped node")
+                    else:
+                        edges_to_add.append((node_id_mapping[i_node], node_id_mapping[t], graph.nodes[s]["text"], conn_type))
+
+    populate_graph(edges_to_add, new_graph)
+    return new_graph
 
 
 def populate_graph2(edges_to_add, nodes_to_remove, new_graph, graph):
