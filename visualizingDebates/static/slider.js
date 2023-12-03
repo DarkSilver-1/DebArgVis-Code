@@ -87,7 +87,7 @@ function createSlidingTimeline(graphData) {
                 return isBarWithinMouseWindow(barX, barWidth, mouseX, halfWindowSize);
             });
             if (!(prevNodesInWindow && (nodesInWindow[0] === prevNodesInWindow[0] && nodesInWindow[nodesInWindow.length - 1] === prevNodesInWindow[prevNodesInWindow.length - 1]))) {
-                updateDiagram(mouseX, xScale, node2, nodes, svg3, height3, yScale3, node3, link, curve);
+                updateDiagram(mouseX, xScale, node2, nodes, svg3, height3, yScale3, node3, link, curve, scaleFactor);
             }
             prevNodesInWindow = nodesInWindow
         }
@@ -110,11 +110,10 @@ function createSlidingTimeline(graphData) {
     videoplayer.addEventListener('timeupdate', function () {
         const currentTime = videoplayer.currentTime;
         console.log(currentTime)
-        updateDiagram(mouseX, xScale, node2, nodes, svg3, height3, yScale3, node3, link, curve);
+        updateDiagram(currentTime, xScale, node2, nodes, svg3, height3, yScale3, node3, link, curve, scaleFactor);
     });
 
     //--------------------------------------------------------------------
-    //let nodes = graphData.nodes;
 
     let barHovered3 = false;
     let textHovered3 = false;
@@ -133,14 +132,6 @@ function createSlidingTimeline(graphData) {
         .domain(speakers3)
         .range([height3, 0])
         .padding(0.1);
-
-    /*let xScale = d3.scaleTime()
-        .domain([d3.min(nodes, function (d) {
-            return d.start_time;
-        }), d3.max(nodes, function (d) {
-            return d.end_time || d.start_time;
-        }),])
-        .range([0, width3]);*/
 
     let xAxis3 = d3.axisBottom(xScale).ticks(0);
     svg3.append('g')
@@ -226,7 +217,6 @@ function createSlidingTimeline(graphData) {
         })
     textHovered3 = addTextBox(width3, svg3, nodes, textHovered3, links, link);
 
-    //const nodesToShowText = findNodesToShowText(nodes, xScale);
     node3.on('mouseover', (event, d) => {
         let textArray = nodesInWindow ? nodesInWindow.map(d => d.text) : []
 
@@ -413,7 +403,7 @@ function isBarWithinMouseWindow(barX, barWidth, mouseX, halfWindowSize) {
     return barX <= mouseX + halfWindowSize && barX + barWidth >= mouseX - halfWindowSize;
 }
 
-function updateDiagram(mouseX, xScale, node2, nodes, svg3, height3, yScale3, node3, link, curve) {
+function updateDiagram(mouseX, xScale, node2, nodes, svg3, height3, yScale3, node3, link, curve, scaleFactor) {
 
     node2.attr('opacity', function (d) {
         const barX = xScale(d.start_time);
@@ -421,8 +411,8 @@ function updateDiagram(mouseX, xScale, node2, nodes, svg3, height3, yScale3, nod
         return isBarWithinMouseWindow(barX, barWidth, mouseX, halfWindowSize) ? 1.0 : 0.2;
     });
 
-    const lastScaledNodeX = xScale(d3.max(nodesInWindow, d => d.end_time));
-    const firstScaledNodeX = xScale(d3.min(nodesInWindow, d => d.start_time));
+    const lastScaledNodeX = nodesInWindow.length !== 0 ? xScale(d3.max(nodesInWindow, d => d.end_time)) : 0;
+    const firstScaledNodeX = nodesInWindow.length !== 0 ? xScale(d3.min(nodesInWindow, d => d.start_time)) : 0;
     const diagramLength = xScale(d3.max(nodes, d => d.end_time))
     const scaledAreaLength = ((lastScaledNodeX - firstScaledNodeX) * scaleFactor)
     const unscaledAreaLength = diagramLength - (lastScaledNodeX - firstScaledNodeX)
@@ -436,7 +426,7 @@ function updateDiagram(mouseX, xScale, node2, nodes, svg3, height3, yScale3, nod
         .attr('transform', d => `translate(${determineXValue(xScale, d, mouseX, adaptedXBeforeWindow, firstScaledNodeX, antiScaleFactor, adaptedXAfterWindow, lastScaledNodeX)}, ${yScale3(d.speaker)})`)
         .attr('opacity', function (d) {
             const barX = xScale(d.start_time);
-            const barWidth = xScale(d.end_time || d.start_time) - barX;
+            const barWidth = xScale(d.end_time) - barX;
             return isBarWithinMouseWindow(barX, barWidth, mouseX, halfWindowSize) ? 1.0 : 0.2;
         });
     node3.select('.line-connector')
@@ -471,12 +461,7 @@ function updateDiagram(mouseX, xScale, node2, nodes, svg3, height3, yScale3, nod
             return sourceX >= adaptedXBeforeWindow && targetX <= adaptedXAfterWindow ? 'visible' : 'hidden'
         })
 
-
-    // Remove all existing text elements and hover boxes
     svg3.selectAll('.node').attr('stroke', 'none');
-    //svg3.selectAll('.hover-box').remove();
-    //link.attr('stroke', 'black').attr('marker-end', 'url(#arrowhead)');
-    //link.attr('stroke-dasharray', null);
 
     let yPosition = 0;
     let textArray = nodesInWindow ? nodesInWindow.map(d => d.text) : [];
@@ -489,7 +474,13 @@ function updateDiagram(mouseX, xScale, node2, nodes, svg3, height3, yScale3, nod
             return d3.select(this).style('visibility') !== 'hidden';
         })
         .attr('y', (d, index) => yPosition + 20 + index * 15);
-
+    if (nodesInWindow.length === 0) {
+        node2.attr('opacity', 1.0)
+        node3.attr('opacity', 1.0)
+        link.attr('opacity', 1.0)
+        link.attr('visibility', 'visible')
+        svg3.selectAll('.hover-box text').style('visibility','visible')
+    }
 }
 
 function addTextBox(width3, svg3, nodes, textHovered3, links, link) {
