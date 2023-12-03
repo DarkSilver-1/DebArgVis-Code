@@ -1,0 +1,26 @@
+.videoPlayerContainer {
+    display: none;
+    position: absolute;
+    top: 0;
+    right: 0;
+    max-width: 800px; /* Adjust this value based on your desired maximum width */
+    max-height: 400px; /* Adjust this value based on your desired maximum height */
+    margin: 20px auto; /* Center the video player container */
+}
+
+.videoPlayer {
+    width: 100%;
+    height: 100%;
+    max-width: 400px; /* Ensure the video does not exceed its container's width */
+    max-height: 200px; /* Ensure the video does not exceed its container's height */
+}
+
+.container {
+    position: relative;
+    width: 100%;
+    margin: 0 auto;
+}
+
+.hover-box{
+    color: blueviolet;
+}
