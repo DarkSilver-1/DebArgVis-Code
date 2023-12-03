@@ -8,18 +8,20 @@ function createSlidingTimeline(graphData) {
 
     console.log(graphData)
 
-    let nodes2 = graphData.nodes;
+    let nodes = graphData.nodes;
+    let links = graphData.links;
+
     let timeFormat2 = d3.timeFormat('%H:%M:%S');
 
     let margin2 = {top: 20, right: 20, bottom: 40, left: 60};
     let width2 = 1200 - margin2.left - margin2.right;
     let height2 = 150 - margin2.top - margin2.bottom;
 
-    parseTimeData(nodes2);
+    parseTimeData(nodes);
 
     let svg2 = createSVG('#slider', width2, height2, margin2);
 
-    let speakers2 = Array.from(new Set(nodes2.map(function (d) {
+    let speakers2 = Array.from(new Set(nodes.map(function (d) {
         return d.speaker;
     })));
 
@@ -28,15 +30,15 @@ function createSlidingTimeline(graphData) {
         .range([height2, 0])
         .padding(0.1);
 
-    let xScale2 = d3.scaleTime()
-        .domain([d3.min(nodes2, function (d) {
+    let xScale = d3.scaleTime()
+        .domain([d3.min(nodes, function (d) {
             return d.start_time;
-        }), d3.max(nodes2, function (d) {
+        }), d3.max(nodes, function (d) {
             return d.end_time;
         }),])
         .range([0, width2]);
 
-    let xAxis2 = d3.axisBottom(xScale2).tickFormat(timeFormat2);
+    let xAxis2 = d3.axisBottom(xScale).tickFormat(timeFormat2);
     svg2.append('g')
         .attr('transform', 'translate(0,' + height2 + ')')
         .call(xAxis2);
@@ -48,7 +50,7 @@ function createSlidingTimeline(graphData) {
     let colorScale2 = createColorScale(speakers2);
 
 
-    let node2 = createNodes(svg2, nodes2, xScale2, yScale2, colorScale2);
+    let node2 = createNodes(svg2, nodes, xScale, yScale2, colorScale2);
 
 
     let mouseRectangle = svg2.append('rect')
@@ -79,13 +81,13 @@ function createSlidingTimeline(graphData) {
             mouseRectangle
                 .attr('x', mouseX - halfWindowSize)
                 .attr('opacity', 0.5);
-            nodesInWindow = nodes2.filter(function (d) {
-                const barX = xScale2(d.start_time);
-                const barWidth = xScale2(d.end_time) - barX;
+            nodesInWindow = nodes.filter(function (d) {
+                const barX = xScale(d.start_time);
+                const barWidth = xScale(d.end_time) - barX;
                 return isBarWithinMouseWindow(barX, barWidth, mouseX, halfWindowSize);
             });
             if (!(prevNodesInWindow && (nodesInWindow[0] === prevNodesInWindow[0] && nodesInWindow[nodesInWindow.length - 1] === prevNodesInWindow[prevNodesInWindow.length - 1]))) {
-                updateDiagram(mouseRectangle, mouseX, nodes2, xScale2, node2, xScale3, nodes3, svg3, nodesToShowText, height3, yScale3, node3, link3, curve3);
+                updateDiagram(mouseX, xScale, node2, nodes, svg3, height3, yScale3, node3, link, curve);
             }
             prevNodesInWindow = nodesInWindow
         }
@@ -96,11 +98,11 @@ function createSlidingTimeline(graphData) {
         //node3.attr('opacity', 1.0);
     });
     svg2.selectAll('.question-line')
-        .data(nodes2)
+        .data(nodes)
         .enter().append('line')
         .attr('class', 'new-question-line')
-        .attr('x1', d => xScale2(d.start_time))
-        .attr('x2', d => xScale2(d.start_time))
+        .attr('x1', d => xScale(d.start_time))
+        .attr('x2', d => xScale(d.start_time))
         .attr('y1', d => d.newQuestion ? 0 : -1000)
         .attr('y2', d => d.newQuestion ? height2 : -1000)
         .style('stroke', 'red');
@@ -108,12 +110,11 @@ function createSlidingTimeline(graphData) {
     videoplayer.addEventListener('timeupdate', function () {
         const currentTime = videoplayer.currentTime;
         console.log(currentTime)
-        updateDiagram(mouseRectangle, currentTime, nodes2, xScale2, node2, xScale3, nodes3, svg3, nodesToShowText, height3, yScale3, node3, link3, curve3);
+        updateDiagram(mouseX, xScale, node2, nodes, svg3, height3, yScale3, node3, link, curve);
     });
 
     //--------------------------------------------------------------------
-    let nodes3 = graphData.nodes;
-    let links3 = graphData.links;
+    //let nodes = graphData.nodes;
 
     let barHovered3 = false;
     let textHovered3 = false;
@@ -124,7 +125,7 @@ function createSlidingTimeline(graphData) {
 
     let svg3 = createSVG('#time', 2500 + margin3.left + margin3.right, height3, margin3);
 
-    let speakers3 = Array.from(new Set(nodes3.map(function (d) {
+    let speakers3 = Array.from(new Set(nodes.map(function (d) {
         return d.speaker;
     })));
 
@@ -133,15 +134,15 @@ function createSlidingTimeline(graphData) {
         .range([height3, 0])
         .padding(0.1);
 
-    let xScale3 = d3.scaleTime()
-        .domain([d3.min(nodes3, function (d) {
+    /*let xScale = d3.scaleTime()
+        .domain([d3.min(nodes, function (d) {
             return d.start_time;
-        }), d3.max(nodes3, function (d) {
+        }), d3.max(nodes, function (d) {
             return d.end_time || d.start_time;
         }),])
-        .range([0, width3]);
+        .range([0, width3]);*/
 
-    let xAxis3 = d3.axisBottom(xScale3).ticks(0);
+    let xAxis3 = d3.axisBottom(xScale).ticks(0);
     svg3.append('g')
         .attr('transform', 'translate(0,' + height3 + ')')
         .call(xAxis3);
@@ -154,32 +155,32 @@ function createSlidingTimeline(graphData) {
         .domain(speakers3)
         .range(d3.schemeCategory10);
 
-    d3.forceSimulation(nodes3)
-        .force('link', d3.forceLink(links3).id(d => d.id).distance(20))
+    d3.forceSimulation(nodes)
+        .force('link', d3.forceLink(links).id(d => d.id).distance(20))
         .force('charge', d3.forceManyBody().strength(-50))
         .force('center', d3.forceCenter(width3 / 2, height3 / 2));
 
-    let curve3 = d3.line()
+    let curve = d3.line()
         .curve(d3.curveBasis);
 
-    let nodesToShowText = findNodesToShowText(nodes3, xScale3)
+    let nodesToShowText = findNodesToShowText(nodes, xScale)
 
     let node3 = svg3.selectAll('.node-group')
-        .data(nodes3)
+        .data(nodes)
         .enter()
         .append("g")
         .attr("class", "node-group")
-        .attr('transform', d => `translate(${xScale3(d.start_time)}, ${yScale3(d.speaker)})`);
+        .attr('transform', d => `translate(${xScale(d.start_time)}, ${yScale3(d.speaker)})`);
     node3.append('line')
         .attr('class', 'line-connector')
-        .attr('x1', d => (xScale3(d.end_time) - xScale3(d.start_time)) / 2)
+        .attr('x1', d => (xScale(d.end_time) - xScale(d.start_time)) / 2)
         .attr('y1', -10)
-        .attr('x2', d => (xScale3(d.end_time) - xScale3(d.start_time)) / 2)
+        .attr('x2', d => (xScale(d.end_time) - xScale(d.start_time)) / 2)
         .attr('y2', yScale3.bandwidth() + 10)
         .attr('stroke', 'green');
     node3.append('rect')
         .attr('class', 'node')
-        .attr('width', d => xScale3(d.end_time) - xScale3(d.start_time))
+        .attr('width', d => xScale(d.end_time) - xScale(d.start_time))
         .attr('height', yScale3.bandwidth())
         .style('fill', d => colorScale3(d.speaker));
     node3.append('line')
@@ -200,8 +201,8 @@ function createSlidingTimeline(graphData) {
         .attr('font-size', '10px')
         .attr('visibility', (d, i) => nodesToShowText[i] ? 'visible' : 'hidden');
 
-    let link3 = svg3.selectAll('.link')
-        .data(links3.filter(d => ['Default Inference', 'Default Rephrase', 'Default Conflict'].includes(d.text_additional)))
+    let link = svg3.selectAll('.link')
+        .data(links.filter(d => ['Default Inference', 'Default Rephrase', 'Default Conflict'].includes(d.text_additional)))
         .enter().append('path')
         .attr('class', 'link')
         .attr('fill', 'none')
@@ -212,20 +213,20 @@ function createSlidingTimeline(graphData) {
             let pathData
             let adapt_y = d.text_additional === "Default Conflict" ? yScale3.bandwidth() + 10 : -10
             let adapt_start_y = d.text_additional === "Default Conflict" ? yScale3.bandwidth() : 0
-            let xMid = (xScale3(d.source.start_time) + xScale3(d.target.start_time)) / 2;
+            let xMid = (xScale(d.source.start_time) + xScale(d.target.start_time)) / 2;
             let yMid1 = yScale3(d.source.speaker) + adapt_y;
             let yMid2 = yScale3(d.target.speaker) + adapt_y;
             pathData = [
-                [(xScale3(d.source.start_time) + (xScale3(d.source.end_time) - xScale3(d.source.start_time)) / 2), yScale3(d.source.speaker) + adapt_start_y],
+                [(xScale(d.source.start_time) + (xScale(d.source.end_time) - xScale(d.source.start_time)) / 2), yScale3(d.source.speaker) + adapt_start_y],
                 [xMid, yMid1],
                 [xMid, yMid2],
-                [(xScale3(d.target.start_time) + (xScale3(d.target.end_time) - xScale3(d.target.start_time)) / 2), yScale3(d.target.speaker) + adapt_y]
+                [(xScale(d.target.start_time) + (xScale(d.target.end_time) - xScale(d.target.start_time)) / 2), yScale3(d.target.speaker) + adapt_y]
             ]
-            return curve3(pathData);
+            return curve(pathData);
         })
-    textHovered3 = addTextBox(width3, svg3, nodes3, textHovered3, links3, link3);
+    textHovered3 = addTextBox(width3, svg3, nodes, textHovered3, links, link);
 
-    //const nodesToShowText = findNodesToShowText(nodes3, xScale3);
+    //const nodesToShowText = findNodesToShowText(nodes, xScale);
     node3.on('mouseover', (event, d) => {
         let textArray = nodesInWindow ? nodesInWindow.map(d => d.text) : []
 
@@ -233,11 +234,11 @@ function createSlidingTimeline(graphData) {
 
         barHovered3 = true;
 
-        let associatedLinks = links3.filter(link => link.source.text === d.text);
+        let associatedLinks = links.filter(link => link.source.text === d.text);
         associatedLinks = associatedLinks.filter(d => ['Default Inference', 'Default Rephrase', 'Default Conflict'].includes(d.text_additional))
 
         textArray.forEach((t) => {
-            link3.attr('opacity', 0.2);
+            link.attr('opacity', 0.2);
             svg3.selectAll('.node').attr('stroke', 'none');
             const isConnected = associatedLinks.some(link => link.target.text === t);
             const linkColor = associatedLinks.find(link => link.target.text === t)?.text_additional;
@@ -260,7 +261,7 @@ function createSlidingTimeline(graphData) {
 
 
         // Highlight connected links
-        link3.filter(l => l.source === d)
+        link.filter(l => l.source === d)
             .attr('stroke', d => {
                 return getLinkColor(d.text_additional)
             })
@@ -280,19 +281,9 @@ function createSlidingTimeline(graphData) {
     })
 
     svg3.append('defs').append('marker')
-        .attr('id', 'arrowhead')
-        .attr('viewBox', '-0 -5 10 10')
-        .attr('refX', 9)
-        .attr('refY', 0)
-        .attr('orient', 'auto')
-        .attr('markerWidth', 3)
-        .attr('markerHeight', 4)
-        .attr('xoverflow', 'visible')
-        .append('svg:path')
-        .attr('d', 'M0,-5L10,0L0,5')
-        .attr('fill', 'black');
-    svg3.append('defs').append('marker')
+        .attr('class', 'arrowhead')
         .attr('id', 'arrowhead-red')
+        .append('svg:path')
         .attr('viewBox', '-0 -5 10 10')
         .attr('refX', 9)
         .attr('refY', 0)
@@ -300,11 +291,12 @@ function createSlidingTimeline(graphData) {
         .attr('markerWidth', 3)
         .attr('markerHeight', 4)
         .attr('xoverflow', 'visible')
-        .append('svg:path')
         .attr('d', 'M0,-5L10,0L0,5')
         .attr('fill', 'red');
     svg3.append('defs').append('marker')
+        .attr('class', 'arrowhead')
         .attr('id', 'arrowhead-violet')
+        .append('svg:path')
         .attr('viewBox', '0 -5 10 10')
         .attr('refX', 9)
         .attr('refY', 0)
@@ -312,12 +304,12 @@ function createSlidingTimeline(graphData) {
         .attr('markerWidth', 3)
         .attr('markerHeight', 4)
         .attr('xoverflow', 'visible')
-        .append('svg:path')
-        .attr('class', 'arrowhead')
         .attr('d', 'M0,-5L10,0L0,5')
         .attr('fill', 'violet');
     svg3.append('defs').append('marker')
+        .attr('class', 'arrowhead')
         .attr('id', 'arrowhead-green')
+        .append('svg:path')
         .attr('viewBox', '-0 -5 10 10')
         .attr('refX', 9)
         .attr('refY', 0)
@@ -325,19 +317,17 @@ function createSlidingTimeline(graphData) {
         .attr('markerWidth', 3)
         .attr('markerHeight', 4)
         .attr('xoverflow', 'visible')
-        .append('svg:path')
         .attr('d', 'M0,-5L10,0L0,5')
         .attr('fill', 'green');
-
 }
 
-function determineXValue(xScale3, d, mouseX, adaptedXBeforeWindow, firstScaledNodeX, antiScaleFactor, adaptedXAfterWindow, lastScaledNodeX) {
-    const barX = xScale3(d.start_time);
-    const barWidth = xScale3(d.end_time || d.start_time) - barX;
+function determineXValue(xScale, d, mouseX, adaptedXBeforeWindow, firstScaledNodeX, antiScaleFactor, adaptedXAfterWindow, lastScaledNodeX) {
+    const barX = xScale(d.start_time);
+    const barWidth = xScale(d.end_time || d.start_time) - barX;
 
     // Check if the bar is within the mouse window
     if (barX <= mouseX + halfWindowSize && barX + barWidth >= mouseX - halfWindowSize) {
-        return adaptedXBeforeWindow + (xScale3(d.start_time) - firstScaledNodeX) * scaleFactor;
+        return adaptedXBeforeWindow + (xScale(d.start_time) - firstScaledNodeX) * scaleFactor;
     } else {
         if (barX < mouseX - halfWindowSize) {
             return barX * antiScaleFactor;
@@ -408,11 +398,11 @@ function createNodes(svg, nodes, xScale, yScale, colorScale) {
         .style('fill', d => colorScale(d.speaker));
 }
 
-function computeBarWidth(xScale3, d, mouseX, antiScaleFactor) {
-    const barWidth = xScale3(d.end_time) - xScale3(d.start_time);
+function computeBarWidth(xScale, d, mouseX, antiScaleFactor) {
+    const barWidth = xScale(d.end_time) - xScale(d.start_time);
 
     // Check if the bar is within the mouse window
-    if (xScale3(d.start_time) <= mouseX + halfWindowSize && xScale3(d.start_time) + barWidth >= mouseX - halfWindowSize) {
+    if (xScale(d.start_time) <= mouseX + halfWindowSize && xScale(d.start_time) + barWidth >= mouseX - halfWindowSize) {
         return barWidth * scaleFactor;
     } else {
         return barWidth * antiScaleFactor > 0 ? barWidth * antiScaleFactor : 0;
@@ -423,17 +413,17 @@ function isBarWithinMouseWindow(barX, barWidth, mouseX, halfWindowSize) {
     return barX <= mouseX + halfWindowSize && barX + barWidth >= mouseX - halfWindowSize;
 }
 
-function updateDiagram(mouseRectangle, mouseX, nodes2, xScale2, node2, xScale3, nodes3, svg3, nodesToShowText, height3, yScale3, node3, link3, curve3) {
+function updateDiagram(mouseX, xScale, node2, nodes, svg3, height3, yScale3, node3, link, curve) {
 
     node2.attr('opacity', function (d) {
-        const barX = xScale2(d.start_time);
-        const barWidth = xScale2(d.end_time || d.start_time) - barX;
+        const barX = xScale(d.start_time);
+        const barWidth = xScale(d.end_time) - barX;
         return isBarWithinMouseWindow(barX, barWidth, mouseX, halfWindowSize) ? 1.0 : 0.2;
     });
 
-    const lastScaledNodeX = xScale3(d3.max(nodesInWindow, d => d.end_time));
-    const firstScaledNodeX = xScale3(d3.min(nodesInWindow, d => d.start_time));
-    const diagramLength = xScale3(d3.max(nodes3, d => d.end_time))
+    const lastScaledNodeX = xScale(d3.max(nodesInWindow, d => d.end_time));
+    const firstScaledNodeX = xScale(d3.min(nodesInWindow, d => d.start_time));
+    const diagramLength = xScale(d3.max(nodes, d => d.end_time))
     const scaledAreaLength = ((lastScaledNodeX - firstScaledNodeX) * scaleFactor)
     const unscaledAreaLength = diagramLength - (lastScaledNodeX - firstScaledNodeX)
     const antiScaledAreaLength = diagramLength - scaledAreaLength
@@ -443,28 +433,28 @@ function updateDiagram(mouseRectangle, mouseX, nodes2, xScale2, node2, xScale3, 
     const adaptedXAfterWindow = firstScaledNodeX * antiScaleFactor + scaledAreaLength
 
     node3
-        .attr('transform', d => `translate(${determineXValue(xScale3, d, mouseX, adaptedXBeforeWindow, firstScaledNodeX, antiScaleFactor, adaptedXAfterWindow, lastScaledNodeX)}, ${yScale3(d.speaker)})`)
+        .attr('transform', d => `translate(${determineXValue(xScale, d, mouseX, adaptedXBeforeWindow, firstScaledNodeX, antiScaleFactor, adaptedXAfterWindow, lastScaledNodeX)}, ${yScale3(d.speaker)})`)
         .attr('opacity', function (d) {
-            const barX = xScale3(d.start_time);
-            const barWidth = xScale3(d.end_time || d.start_time) - barX;
+            const barX = xScale(d.start_time);
+            const barWidth = xScale(d.end_time || d.start_time) - barX;
             return isBarWithinMouseWindow(barX, barWidth, mouseX, halfWindowSize) ? 1.0 : 0.2;
         });
     node3.select('.line-connector')
-        .attr('x1', d => computeBarWidth(xScale3, d, mouseX, antiScaleFactor) / 2)
-        .attr('x2', d => computeBarWidth(xScale3, d, mouseX, antiScaleFactor) / 2);
+        .attr('x1', d => computeBarWidth(xScale, d, mouseX, antiScaleFactor) / 2)
+        .attr('x2', d => computeBarWidth(xScale, d, mouseX, antiScaleFactor) / 2);
     node3.select('.node')
-        .attr('width', d => computeBarWidth(xScale3, d, mouseX, antiScaleFactor))
+        .attr('width', d => computeBarWidth(xScale, d, mouseX, antiScaleFactor))
 
 
-    link3
+    link
         .attr('d', d => {
             let pathData
             let adapt_y = d.text_additional === "Default Conflict" ? yScale3.bandwidth() + 10 : -10
             let adapt_start_y = d.text_additional === "Default Conflict" ? yScale3.bandwidth() : 0
-            let barWidth1 = computeBarWidth(xScale3, d.source, mouseX, antiScaleFactor)
-            let barWidth2 = computeBarWidth(xScale3, d.target, mouseX, antiScaleFactor)
-            let xMid1 = (determineXValue(xScale3, d.source, mouseX, adaptedXBeforeWindow, firstScaledNodeX, antiScaleFactor, adaptedXAfterWindow, lastScaledNodeX)) + barWidth1 / 2
-            let xMid2 = (determineXValue(xScale3, d.target, mouseX, adaptedXBeforeWindow, firstScaledNodeX, antiScaleFactor, adaptedXAfterWindow, lastScaledNodeX)) + barWidth2 / 2
+            let barWidth1 = computeBarWidth(xScale, d.source, mouseX, antiScaleFactor)
+            let barWidth2 = computeBarWidth(xScale, d.target, mouseX, antiScaleFactor)
+            let xMid1 = (determineXValue(xScale, d.source, mouseX, adaptedXBeforeWindow, firstScaledNodeX, antiScaleFactor, adaptedXAfterWindow, lastScaledNodeX)) + barWidth1 / 2
+            let xMid2 = (determineXValue(xScale, d.target, mouseX, adaptedXBeforeWindow, firstScaledNodeX, antiScaleFactor, adaptedXAfterWindow, lastScaledNodeX)) + barWidth2 / 2
             let yMid1 = yScale3(d.source.speaker) + adapt_y;
             let yMid2 = yScale3(d.target.speaker) + adapt_y;
             pathData = [
@@ -473,11 +463,11 @@ function updateDiagram(mouseRectangle, mouseX, nodes2, xScale2, node2, xScale3, 
                 [xMid2, yMid2],
                 [xMid2, yScale3(d.target.speaker) + adapt_y]
             ];
-            return curve3(pathData);
+            return curve(pathData);
         })
         .attr('visibility', d => {
-            const sourceX = determineXValue(xScale3, d.source, mouseX, adaptedXBeforeWindow, firstScaledNodeX, antiScaleFactor, adaptedXAfterWindow, lastScaledNodeX);
-            const targetX = determineXValue(xScale3, d.target, mouseX, adaptedXBeforeWindow, firstScaledNodeX, antiScaleFactor, adaptedXAfterWindow, lastScaledNodeX);
+            const sourceX = determineXValue(xScale, d.source, mouseX, adaptedXBeforeWindow, firstScaledNodeX, antiScaleFactor, adaptedXAfterWindow, lastScaledNodeX);
+            const targetX = determineXValue(xScale, d.target, mouseX, adaptedXBeforeWindow, firstScaledNodeX, antiScaleFactor, adaptedXAfterWindow, lastScaledNodeX);
             return sourceX >= adaptedXBeforeWindow && targetX <= adaptedXAfterWindow ? 'visible' : 'hidden'
         })
 
@@ -485,8 +475,8 @@ function updateDiagram(mouseRectangle, mouseX, nodes2, xScale2, node2, xScale3, 
     // Remove all existing text elements and hover boxes
     svg3.selectAll('.node').attr('stroke', 'none');
     //svg3.selectAll('.hover-box').remove();
-    //link3.attr('stroke', 'black').attr('marker-end', 'url(#arrowhead)');
-    //link3.attr('stroke-dasharray', null);
+    //link.attr('stroke', 'black').attr('marker-end', 'url(#arrowhead)');
+    //link.attr('stroke-dasharray', null);
 
     let yPosition = 0;
     let textArray = nodesInWindow ? nodesInWindow.map(d => d.text) : [];
@@ -502,11 +492,11 @@ function updateDiagram(mouseRectangle, mouseX, nodes2, xScale2, node2, xScale3, 
 
 }
 
-function addTextBox(width3, svg3, nodes3, textHovered3, links3, link3) {
+function addTextBox(width3, svg3, nodes, textHovered3, links, link) {
     let yPosition = 0
     let xPosition = width3 + 10;
     let hoverBox = svg3.append('g').attr('class', 'hover-box');
-    let textArray = nodes3.map(d => d.text)
+    let textArray = nodes.map(d => d.text)
     textArray.forEach(function (text, index) {
         let textElement = hoverBox.append('text')
             .attr('id', `hovered-text-${index}`)  // Add unique id to each text element
@@ -517,16 +507,16 @@ function addTextBox(width3, svg3, nodes3, textHovered3, links3, link3) {
             .text(text)
             .on('mouseover', function () {
                 textHovered3 = true;
-                let associatedLinks = links3.filter(link => link.source.text === text);
+                let associatedLinks = links.filter(link => link.source.text === text);
                 associatedLinks = associatedLinks.filter(d => ['Default Inference', 'Default Rephrase', 'Default Conflict'].includes(d.text_additional))
                 textArray.forEach((t, i) => {
-                    link3.attr('opacity', 0.2);
+                    link.attr('opacity', 0.2);
                     svg3.selectAll('.node').attr('stroke', 'none');
                     const linkColor = associatedLinks.find(link => link.target.text === t)?.text_additional;
                     const color = getLinkColor(linkColor)
                     svg3.select(`#hovered-text-${i}`).style('fill', color);
                 });
-                link3.filter(l => l.source.text === text)
+                link.filter(l => l.source.text === text)
                     .attr('stroke', d => getLinkColor(d.text_additional))
                     .attr('marker-start', d => {
                         return getArrowHeadColor(d.text_additional)
@@ -566,14 +556,14 @@ function addTextBox(width3, svg3, nodes3, textHovered3, links3, link3) {
     return textHovered3;
 }
 
-function findNodesToShowText(nodes3, xScale3) {
+function findNodesToShowText(nodes, xScale) {
     const nodesToShowText = [];
     let lastNodeX = 0; // Declare lastNodeX here
 
-    nodes3.forEach(function (d, i) {
-        const barX = xScale3(d.start_time);
+    nodes.forEach(function (d, i) {
+        const barX = xScale(d.start_time);
 
-        if (barX >= lastNodeX + halfWindowSize || xScale3(d.end_time) - barX > halfWindowSize) {
+        if (barX >= lastNodeX + halfWindowSize || xScale(d.end_time) - barX > halfWindowSize) {
             nodesToShowText[i] = true;
             lastNodeX = barX;
         } else {
