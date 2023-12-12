@@ -1,11 +1,11 @@
 const scaleFactor = 8;
 const halfWindowSize = 30;
+let currentTime = 0;
 
 let prevNodesInWindow = null
 let nodesInWindow = null
 
 function createSlidingTimeline(graphData) {
-
     console.log(graphData)
 
     let nodes = graphData.nodes;
@@ -107,10 +107,20 @@ function createSlidingTimeline(graphData) {
         .attr('y2', d => d.newQuestion ? height2 : -1000)
         .style('stroke', 'red');
     let videoplayer = document.getElementById('videoPlayer')
+    videoplayer.currentTime = currentTime
     videoplayer.addEventListener('timeupdate', function () {
-        const currentTime = videoplayer.currentTime;
-        console.log(currentTime)
-        updateDiagram(currentTime, xScale, node2, nodes, svg3, height3, yScale3, node3, link, curve, scaleFactor);
+        const currentTimeVid = currentTime;
+        nodesInWindow = nodes.filter(function (d) {
+            const updatedTime = new Date(d.start_time.getTime());
+            const barX = xScale(updatedTime);
+            const barWidth = xScale(d.end_time) - barX;
+            return isBarWithinMouseWindow(barX, barWidth, currentTimeVid, halfWindowSize);
+        });
+        mouseRectangle
+            .attr('x', currentTimeVid - halfWindowSize)
+            .attr('opacity', 0.5);
+        updateDiagram(currentTimeVid, xScale, node2, nodes, svg3, height3, yScale3, node3, link, curve, scaleFactor);
+        currentTime = videoplayer.currentTime
     });
 
     //--------------------------------------------------------------------
@@ -215,7 +225,7 @@ function createSlidingTimeline(graphData) {
             ]
             return curve(pathData);
         })
-    textHovered3 = addTextBox(width3, svg3, nodes, textHovered3, links, link);
+    addTextBox(width3, svg3, nodes, textHovered3, links, link);
 
     node3.on('mouseover', (event, d) => {
         let textArray = nodesInWindow ? nodesInWindow.map(d => d.text) : []
@@ -265,9 +275,15 @@ function createSlidingTimeline(graphData) {
     node3.on('click', (event, d) => {
         document.getElementById('videoPlayerContainer').style.display = 'block';
         let videoplayer = document.getElementById('videoPlayer')
-        //videoplayer.currentTime = 20
-        console.log(d.start_time)
-        videoplayer.play()
+        const currentTime = xScale(d.start_time);
+        nodesInWindow = nodes.filter(function (d) {
+            const updatedTime = d.start_time;
+            const barX = xScale(updatedTime);
+            const barWidth = xScale(d.end_time) - barX;
+            return isBarWithinMouseWindow(barX, barWidth, currentTime, halfWindowSize);
+        });
+        videoplayer.currentTime = currentTime;
+        videoplayer.play();
     })
 
     svg3.append('defs').append('marker')
@@ -357,10 +373,11 @@ function getArrowHeadColor(textAdditional) {
 }
 
 function parseTimeData(nodes) {
-    const timeParser = d3.utcParse('%Y-%m-%dT%H:%M:%S');
     nodes.forEach(function (d) {
-        d.start_time = timeParser(d.start_time);
-        d.end_time = timeParser(d.end_time);
+        const isoStartTime = new Date(d.start_time).toISOString();
+        const isoEndTime = new Date(d.end_time).toISOString();
+        d.start_time = d3.isoParse(isoStartTime);
+        d.end_time = d3.isoParse(isoEndTime)
     });
 }
 
@@ -479,7 +496,7 @@ function updateDiagram(mouseX, xScale, node2, nodes, svg3, height3, yScale3, nod
         node3.attr('opacity', 1.0)
         link.attr('opacity', 1.0)
         link.attr('visibility', 'visible')
-        svg3.selectAll('.hover-box text').style('visibility','visible')
+        svg3.selectAll('.hover-box text').style('visibility', 'visible')
     }
 }
 
