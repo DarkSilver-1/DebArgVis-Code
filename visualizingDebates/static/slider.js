@@ -90,6 +90,7 @@ function createSlidingTimeline(graphData) {
                 updateDiagram(mouseX, xScale, node2, nodes, svg3, height3, yScale3, node3, link, curve, scaleFactor);
             }
             prevNodesInWindow = nodesInWindow
+            videoplayer.currentTime = mouseX
         }
     }).on('mouseout', function () {
         // Reset the mouse rectangle and restore full color for all bars
