@@ -91,36 +91,37 @@ def extract_file(graph, json_file_path, transcript):
                 if part == "":
                     for transcript_part in transcript:
                         for line in transcript[transcript_part]:
-                            # if json_file_path == "../data/singleDebate\\nodeset17968.json":
-                            #    print(adapted_text)
-                            #    print(line[2])
                             if adapted_text.lower() in line[2].lower():
-                                # print(transcript_part)
-                                # print(json_file_path)
                                 part = transcript_part
                                 break
                 part_index = 0
                 index = 0
                 found = False
+                found1 = False
                 for line in transcript[part]:
                     if adapted_text.lower() in line[2].lower():
                         part_index = index
-                        found = True
+                        found1 = True
                         break
                     index += 1
                 statement_index = 0
                 index = 0
-                split_sentences = re.split(r'[.!?]', transcript[part][part_index][2])
-                for statement in split_sentences:
-                    if adapted_text in statement:
-                        statement_index = index
-                    index += 1
+                split_sentences = re.findall(r'[^.!?]+[.!?]?', transcript[part][part_index][2])
+                if found1:
+                    for statement in split_sentences:
+                        if adapted_text.lower() in statement.lower():
+                            found = True
+                            statement_index = index
+                        index += 1
+                    #if not found:
+                        #print(split_sentences)
+                        #print(adapted_text)
                 print(split_sentences[statement_index])
                 print(adapted_text)
                 print(f"Part: {part}, Part_Index: {part_index}, Statement: {statement_index}")
                 print()
 
-                #if not found:
+                #if not found1:
                 #    print(json_file_path)
                 #    print(adapted_text)
                 add_node_with_locution(graph, node_id, adapted_text, node_type, matching_locution, json_file_path,
