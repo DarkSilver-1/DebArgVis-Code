@@ -113,26 +113,27 @@ def extract_file(graph, json_file_path, transcript):
                             found = True
                             statement_index = index
                         index += 1
-                    #if not found:
-                        #print(split_sentences)
-                        #print(adapted_text)
+                    # if not found:
+                    # print(split_sentences)
+                    # print(adapted_text)
                 print(split_sentences[statement_index])
                 print(adapted_text)
                 print(f"Part: {part}, Part_Index: {part_index}, Statement: {statement_index}")
                 print()
 
-                #if not found1:
+                # if not found1:
                 #    print(json_file_path)
                 #    print(adapted_text)
                 add_node_with_locution(graph, node_id, adapted_text, node_type, matching_locution, json_file_path,
-                                       part, part_index, statement_index)#TODO
+                                       part, part_index, statement_index)
             else:
                 graph.add_node(node_id, text=text, type=node_type, file=json_file_path)
         for edge in graph_data["edges"]:
             graph.add_edge(edge["fromID"], edge["toID"])
 
 
-def add_node_with_locution(graph, node_id, text, node_type, locution, filename, transcript_part, part_index, statement_index):
+def add_node_with_locution(graph, node_id, text, node_type, locution, filename, transcript_part, part_index,
+                           statement_index):
     new_question = False
     if locution.get("start"):
         start_time = datetime.strptime(locution.get("start"), datetime_format)
@@ -143,18 +144,14 @@ def add_node_with_locution(graph, node_id, text, node_type, locution, filename, 
     speaker = locution.get("personID")
     if speaker not in personIDMapping:
         speaker = "Public"
-    #print(f"Part: {part_index}, Part_Index: {part_index}, Statement: {statement_index}")
-    #if text.lower() not in transcript_part[2].lower():
-        #print(text)
-        #print(transcript_part[2])
-        #print()
 
     if new_question:
         graph.add_node(node_id, text=text, type=node_type, start=start_time, speaker=personIDMapping[speaker],
-                       newQuestion=new_question, file=filename)
+                       newQuestion=new_question, file=filename, part=transcript_part, part_index=part_index,
+                       statement_index=statement_index)
     else:
         graph.add_node(node_id, text=text, type=node_type, start=start_time, speaker=personIDMapping[speaker],
-                       file=filename)
+                       file=filename, part=transcript_part, part_index=part_index, statement_index=statement_index)
 
 
 def remove_isolated(graph):
