@@ -49,17 +49,17 @@ def build_graph_x():
 
 def extract_transcript():
     transcript = {
-        "Part 1": []
+        1: []
     }
     new_part_pattern = re.compile(r'^Part \d+$')
     text_pattern = re.compile(r"\[([\d:]+)\]\s*(.*)")
     speaker_pattern = re.compile(r"^[a-zA-Z]+ [a-zA-Z0-9-]+$")
-    current_line = "Part 1"
+    current_line = 1
     current_speaker = ""
     with open(transcript_path, 'r') as file:
         for line in file:
             if new_part_pattern.match(line):
-                current_line = line.strip()
+                current_line = int(line.strip().split()[1])
                 transcript[current_line] = []
             elif speaker_pattern.match(line):
                 current_speaker = line.strip()
@@ -68,7 +68,8 @@ def extract_transcript():
                 time_stamp = match.group(1)
                 data = match.group(2)
                 transcript[current_line].append([time_stamp, current_speaker, data])
-    # for t in transcript:
+    #for t in transcript:
+    #    print(t)
     #    for it in transcript[t]:
     #        print(it)
     return transcript
@@ -77,7 +78,7 @@ def extract_transcript():
 def extract_file(graph, json_file_path, transcript):
     with open(json_file_path, 'r') as json_file:
         graph_data = json.load(json_file)
-        part = ""
+        part = 0
         for node in graph_data["nodes"]:
             node_id = node["nodeID"]
             text = node["text"]
@@ -88,7 +89,7 @@ def extract_file(graph, json_file_path, transcript):
                 (locution for locution in graph_data["locutions"] if locution["nodeID"] == node_id), None)
             if matching_locution:
                 adapted_text = text.split(":", 1)[1].strip()
-                if part == "":
+                if part == 0:
                     for transcript_part in transcript:
                         for line in transcript[transcript_part]:
                             if adapted_text.lower() in line[2].lower():
@@ -116,10 +117,10 @@ def extract_file(graph, json_file_path, transcript):
                     # if not found:
                     # print(split_sentences)
                     # print(adapted_text)
-                print(split_sentences[statement_index])
-                print(adapted_text)
-                print(f"Part: {part}, Part_Index: {part_index}, Statement: {statement_index}")
-                print()
+                #print(split_sentences[statement_index])
+                #print(adapted_text)
+                #print(f"Part: {part}, Part_Index: {part_index}, Statement: {statement_index}")
+                #print()
 
                 # if not found1:
                 #    print(json_file_path)

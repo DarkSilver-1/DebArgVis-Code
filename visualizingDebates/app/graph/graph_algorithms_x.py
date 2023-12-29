@@ -4,6 +4,13 @@ import networkx as nx
 
 from ..logger import logging
 
+def order_graph_x(graph_data):
+    graph_data = nx.node_link_data(graph_data)
+    graph_data["nodes"] = sorted(graph_data["nodes"], key=lambda x: (x["part"], x["part_index"], x["statement_index"]))
+    for node in graph_data["nodes"]:
+        print(node["part"], node["part_index"], node["statement_index"])
+        print(node["text"])
+
 
 def order_graph(graph_data):
     graph_data = nx.node_link_data(graph_data)
