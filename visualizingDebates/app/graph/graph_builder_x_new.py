@@ -101,37 +101,22 @@ def extract_file(graph, json_file_path, transcript):
                                 break
                 part_index = 0
                 index = 0
-                found = False
                 for line in transcript[part]:
                     if adapted_text.lower() in line[2].lower():
                         part_index = index
-                        found = True
                         break
                     index += 1
-                statement_index = 0
-                index = 0
-                split_sentences = re.split(r'[.!?]', transcript[part][part_index][2])
-                for statement in split_sentences:
-                    if adapted_text in statement:
-                        statement_index = index
-                    index += 1
-                print(split_sentences[statement_index])
-                print(adapted_text)
-                print(f"Part: {part}, Part_Index: {part_index}, Statement: {statement_index}")
-                print()
 
-                #if not found:
-                #    print(json_file_path)
-                #    print(adapted_text)
+                #TODO search for the correct part of the part
                 add_node_with_locution(graph, node_id, adapted_text, node_type, matching_locution, json_file_path,
-                                       part, part_index, statement_index)#TODO
+                                       transcript[part][part_index])
             else:
                 graph.add_node(node_id, text=text, type=node_type, file=json_file_path)
         for edge in graph_data["edges"]:
             graph.add_edge(edge["fromID"], edge["toID"])
 
 
-def add_node_with_locution(graph, node_id, text, node_type, locution, filename, transcript_part, part_index, statement_index):
+def add_node_with_locution(graph, node_id, text, node_type, locution, filename, transcript_part):
     new_question = False
     if locution.get("start"):
         start_time = datetime.strptime(locution.get("start"), datetime_format)
@@ -142,11 +127,11 @@ def add_node_with_locution(graph, node_id, text, node_type, locution, filename, 
     speaker = locution.get("personID")
     if speaker not in personIDMapping:
         speaker = "Public"
-    #print(f"Part: {part_index}, Part_Index: {part_index}, Statement: {statement_index}")
-    #if text.lower() not in transcript_part[2].lower():
-        #print(text)
-        #print(transcript_part[2])
-        #print()
+
+    if text.lower() not in transcript_part[2].lower():
+        print(text)
+        print(transcript_part[2])
+        print()
 
     if new_question:
         graph.add_node(node_id, text=text, type=node_type, start=start_time, speaker=personIDMapping[speaker],
