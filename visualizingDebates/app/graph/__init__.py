@@ -17,5 +17,3 @@ logging.info("Creating the graph")
 graph_data = group_elements_x(order_graph(build_graph_x()))
 order_graph_x(build_graph_x())
 # graph_data = order_graph(build_graph_x())
-# for d in graph_data["nodes"]:
-#    print(d["text"])

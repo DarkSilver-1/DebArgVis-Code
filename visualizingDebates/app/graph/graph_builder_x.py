@@ -66,8 +66,9 @@ def extract_transcript():
             elif text_pattern.match(line):
                 match = text_pattern.match(line)
                 time_stamp = match.group(1)
-                data = match.group(2)
-                transcript[current_line].append([time_stamp, current_speaker, data])
+                data = re.findall(r'[^.!?]+[.!?]?', match.group(2))
+                found = [False] * len(data)
+                transcript[current_line].append([time_stamp, current_speaker, data, found])
     #for t in transcript:
     #    print(t)
     #    for it in transcript[t]:
@@ -89,44 +90,49 @@ def extract_file(graph, json_file_path, transcript):
                 (locution for locution in graph_data["locutions"] if locution["nodeID"] == node_id), None)
             if matching_locution:
                 adapted_text = text.split(":", 1)[1].strip()
+                if len(adapted_text) > 5: #yes and no should directly match
+                    adapted_text = adapted_text.lower()
                 if part == 0:
                     for transcript_part in transcript:
                         for line in transcript[transcript_part]:
-                            if adapted_text.lower() in line[2].lower():
-                                part = transcript_part
-                                break
+                            for sentence in line[2]:
+                                if adapted_text in sentence.lower():
+                                    part = transcript_part
+                                    break
+
                 part_index = 0
-                index = 0
-                found = False
-                found1 = False
-                for line in transcript[part]:
-                    if adapted_text.lower() in line[2].lower():
-                        part_index = index
-                        found1 = True
-                        break
-                    index += 1
                 statement_index = 0
                 index = 0
-                split_sentences = re.findall(r'[^.!?]+[.!?]?', transcript[part][part_index][2])
-                if found1:
-                    for statement in split_sentences:
-                        if adapted_text.lower() in statement.lower():
-                            found = True
-                            statement_index = index
-                        index += 1
-                    # if not found:
-                    # print(split_sentences)
-                    # print(adapted_text)
-                #print(split_sentences[statement_index])
-                #print(adapted_text)
-                #print(f"Part: {part}, Part_Index: {part_index}, Statement: {statement_index}")
-                #print()
+                found = False
+                prev_matched_index = -1
+                prev_matched_inner_index = -1
+                for line in transcript[part]:
+                    inner_index = 0
+                    for sentence in line[2]:
+                        compare_text = sentence
+                        if len(adapted_text) > 5:
+                            compare_text = sentence.lower()
+                        if adapted_text in compare_text:
+                            if line[3][inner_index]:
+                                prev_matched_index = index
+                                prev_matched_inner_index = inner_index
+                            else:
+                                line[3][inner_index] = True
+                                part_index = index
+                                statement_index = inner_index
+                                found = True
+                                break
+                        inner_index += 1
+                    index += 1
+                if not found and prev_matched_index != -1:
+                    part_index = prev_matched_index
+                    statement_index = prev_matched_inner_index
+                    transcript[part][part_index][3][statement_index] = True
 
-                # if not found1:
-                #    print(json_file_path)
-                #    print(adapted_text)
+                #print(f"Part: {part}, Part_Index: {part_index}, Statement: {statement_index}")
+
                 add_node_with_locution(graph, node_id, adapted_text, node_type, matching_locution, json_file_path,
-                                       part, part_index, statement_index)
+                                       part, part_index, statement_index, transcript)
             else:
                 graph.add_node(node_id, text=text, type=node_type, file=json_file_path)
         for edge in graph_data["edges"]:
@@ -134,7 +140,7 @@ def extract_file(graph, json_file_path, transcript):
 
 
 def add_node_with_locution(graph, node_id, text, node_type, locution, filename, transcript_part, part_index,
-                           statement_index):
+                           statement_index, transcript):
     new_question = False
     if locution.get("start"):
         start_time = datetime.strptime(locution.get("start"), datetime_format)
@@ -149,10 +155,11 @@ def add_node_with_locution(graph, node_id, text, node_type, locution, filename, 
     if new_question:
         graph.add_node(node_id, text=text, type=node_type, start=start_time, speaker=personIDMapping[speaker],
                        newQuestion=new_question, file=filename, part=transcript_part, part_index=part_index,
-                       statement_index=statement_index)
+                       statement_index=statement_index, part_time=transcript[transcript_part][part_index][0])
     else:
         graph.add_node(node_id, text=text, type=node_type, start=start_time, speaker=personIDMapping[speaker],
-                       file=filename, part=transcript_part, part_index=part_index, statement_index=statement_index)
+                       file=filename, part=transcript_part, part_index=part_index, statement_index=statement_index,
+                       part_time=transcript[transcript_part][part_index][0])
 
 
 def remove_isolated(graph):
@@ -163,8 +170,10 @@ def remove_isolated(graph):
 
 def filter_date(graph, target_date):
     subgraph = nx.MultiDiGraph()
+
     for node, data in graph.nodes(data=True):
-        if "start" in data and data["start"].date() == target_date and data.get("type") == "L":
+        #if "start" in data and data["start"].date() == target_date and data.get("type") == "L":
+        if "start" in data and data.get("type") == "L":
             subgraph.add_node(node, **data)
 
     for from_node, to_node, data in graph.edges(data=True):
