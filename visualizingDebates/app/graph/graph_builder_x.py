@@ -67,12 +67,8 @@ def extract_transcript():
                 match = text_pattern.match(line)
                 time_stamp = match.group(1)
                 data = re.findall(r'[^.!?]+[.!?]?', match.group(2))
-                found = [False] * len(data)
+                found = [[]] * len(data)
                 transcript[current_line].append([time_stamp, current_speaker, data, found])
-    #for t in transcript:
-    #    print(t)
-    #    for it in transcript[t]:
-    #        print(it)
     return transcript
 
 
@@ -103,9 +99,6 @@ def extract_file(graph, json_file_path, transcript):
                 part_index = 0
                 statement_index = 0
                 index = 0
-                found = False
-                prev_matched_index = -1
-                prev_matched_inner_index = -1
                 for line in transcript[part]:
                     inner_index = 0
                     for sentence in line[2]:
@@ -113,23 +106,30 @@ def extract_file(graph, json_file_path, transcript):
                         if len(adapted_text) > 5:
                             compare_text = sentence.lower()
                         if adapted_text in compare_text:
-                            if line[3][inner_index]:
-                                prev_matched_index = index
-                                prev_matched_inner_index = inner_index
-                            else:
-                                line[3][inner_index] = True
+                            first_char_index = compare_text.find(adapted_text)
+                            last_char_index = first_char_index + len(adapted_text)
+                            if len(line[3][inner_index]) == 0:
+                                line[3][inner_index] = [(adapted_text, first_char_index, last_char_index)]
                                 part_index = index
                                 statement_index = inner_index
-                                found = True
                                 break
+                            else:
+                                distinct = True
+                                for match in line[3][inner_index]:
+                                    if match[2] > first_char_index and match[1] < last_char_index:
+                                        distinct = False
+                                if distinct:
+                                    line[3][inner_index].append((adapted_text, first_char_index, last_char_index))
+                                    line[3][inner_index] = sorted(line[3][inner_index], key=lambda x: match[1])
+                                    count = 0
+                                    for match in line[3][inner_index]:
+                                        match = (match[0], match[1], match[2], count)
+                                        count += 1
+                                    part_index = index
+                                    statement_index = inner_index
+                                    break
                         inner_index += 1
                     index += 1
-                if not found and prev_matched_index != -1:
-                    part_index = prev_matched_index
-                    statement_index = prev_matched_inner_index
-                    transcript[part][part_index][3][statement_index] = True
-
-                #print(f"Part: {part}, Part_Index: {part_index}, Statement: {statement_index}")
 
                 add_node_with_locution(graph, node_id, adapted_text, node_type, matching_locution, json_file_path,
                                        part, part_index, statement_index, transcript)
