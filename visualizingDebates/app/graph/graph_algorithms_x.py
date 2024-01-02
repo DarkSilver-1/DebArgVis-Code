@@ -38,12 +38,13 @@ def extract_transcript():
 def order_graph_x(graph_data):
     #transcript = extract_transcript()
     graph_data = nx.node_link_data(graph_data)
-    graph_data["nodes"] = sorted(graph_data["nodes"], key=lambda x: (x["part"], x["part_index"], x["statement_index"]))
+    #graph_data["nodes"] = sorted(graph_data["nodes"], key=lambda x: (x["part"], x["part_index"], x["statement_index"]))
     part = 1
     part_index = 0
     statement_index = 0
     for node in graph_data["nodes"]:
-        print(node["part_time"], node["speaker"], ": ", node["text"])
+        #print(node)
+        #print(node["part_time"], node["speaker"], ": ", node["text"])
         if node["part"] == part and node["part_index"] == part_index:
             #TODO test if multiplte statements use this text
             if node["statement_index"] >= statement_index:

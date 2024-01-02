@@ -43,8 +43,59 @@ def build_graph_x():
     graph = collapse_graph(graph)
     logging.info("Collapsed the corresponding I and L nodes")
     new_graph = filter_date(graph, datetime.strptime(filtering_date, date_format).date())
+    complete_transcript_mapping(new_graph, transcript)
     logging.info(f"Filtered nodes of the day: {filter_date}")
     return new_graph
+
+
+def complete_transcript_mapping(graph, transcript):
+    graph_data = nx.node_link_data(graph)
+    graph_data["nodes"] = sorted(graph_data["nodes"], key=lambda x: (x["part"], x["part_index"], x["statement_index"]))
+    part = 1
+    part_index = 0
+    statement_index = 0
+    count = 0
+    for node in graph_data["nodes"]:
+        if node["part"] != part or node["part_index"] != part_index:
+            part = node["part"]
+            part_index = node["part_index"]
+            statement_index = 0
+        if node["part"] == part and node["part_index"] == part_index:
+            statement_number = len(transcript[part][part_index][3][node["statement_index"]])
+            last_statement = ""
+            if statement_number > 1:
+                for statement in transcript[part][part_index][3][node["statement_index"]]:
+                    if statement[0] == node["text"].lower():
+                        last_statement = statement[0]#[statement[1]:statement[2]]
+                        #print(last_statement)  # TODO: test if several nodes share one statement index and split the correct part
+            else:
+                last_statement = transcript[part][part_index][2][node["statement_index"]]
+            while statement_index < node["statement_index"]:
+                if "transcript_text" in node:
+                    node["transcript_text"] += transcript[part][part_index][2][statement_index]
+                else:
+                    node["transcript_text"] = transcript[part][part_index][2][statement_index]
+                statement_index += 1
+                count += 1
+            if statement_index == node["statement_index"]:
+                if "transcript_text" in node:
+                    node["transcript_text"] += last_statement
+                else:
+                    node["transcript_text"] = last_statement
+                count += 1
+
+            if count >= statement_number:
+                statement_index += 1
+                count = 0
+
+
+
+    for node in graph_data["nodes"]:
+        if "transcript_text" in node:
+            print(node["part_time"], node["speaker"], ": ", node["transcript_text"],
+                  node["statement_index"])
+        else:
+            print(node["part_time"], node["speaker"], ": ", "WARNING ", node["text"], node["statement_index"])
 
 
 def extract_transcript():
@@ -81,12 +132,11 @@ def extract_file(graph, json_file_path, transcript):
             text = node["text"]
             node_type = node["type"]
 
-            # Check if there is a matching locution for the node
             matching_locution = next(
                 (locution for locution in graph_data["locutions"] if locution["nodeID"] == node_id), None)
             if matching_locution:
                 adapted_text = text.split(":", 1)[1].strip()
-                if len(adapted_text) > 5: #yes and no should directly match
+                if len(adapted_text) > 5:  # yes and no should directly match
                     adapted_text = adapted_text.lower()
                 if part == 0:
                     for transcript_part in transcript:
@@ -172,7 +222,7 @@ def filter_date(graph, target_date):
     subgraph = nx.MultiDiGraph()
 
     for node, data in graph.nodes(data=True):
-        #if "start" in data and data["start"].date() == target_date and data.get("type") == "L":
+        # if "start" in data and data["start"].date() == target_date and data.get("type") == "L":
         if "start" in data and data.get("type") == "L":
             subgraph.add_node(node, **data)
 
