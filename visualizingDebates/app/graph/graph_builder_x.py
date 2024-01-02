@@ -64,10 +64,15 @@ def complete_transcript_mapping(graph, transcript):
             statement_number = len(transcript[part][part_index][3][node["statement_index"]])
             last_statement = ""
             if statement_number > 1:
+                c = 0
                 for statement in transcript[part][part_index][3][node["statement_index"]]:
                     if statement[0] == node["text"].lower():
-                        last_statement = statement[0]#[statement[1]:statement[2]]
-                        #print(last_statement)  # TODO: test if several nodes share one statement index and split the correct part
+                        if c == 0:
+                            start = 0
+                        else:
+                            start = transcript[part][part_index][3][node["statement_index"]][c-1][2]
+                        last_statement = transcript[part][part_index][2][node["statement_index"]][start:statement[2]]
+                    c += 1
             else:
                 last_statement = transcript[part][part_index][2][node["statement_index"]]
             while statement_index < node["statement_index"]:
@@ -84,6 +89,9 @@ def complete_transcript_mapping(graph, transcript):
                     node["transcript_text"] = last_statement
                 count += 1
 
+            if count == 0:
+                node["transcript_text"] = "ERROR: UNMAPPED STATEMENT"
+
             if count >= statement_number:
                 statement_index += 1
                 count = 0
@@ -92,8 +100,7 @@ def complete_transcript_mapping(graph, transcript):
 
     for node in graph_data["nodes"]:
         if "transcript_text" in node:
-            print(node["part_time"], node["speaker"], ": ", node["transcript_text"],
-                  node["statement_index"])
+            print(node["part_time"], node["speaker"], ": ", node["transcript_text"])
         else:
             print(node["part_time"], node["speaker"], ": ", "WARNING ", node["text"], node["statement_index"])
 
