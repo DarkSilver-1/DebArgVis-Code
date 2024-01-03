@@ -41,11 +41,8 @@ def build_graph_x_old():
     logging.info("Removed isolated nodes")
     graph = collapse_graph(graph)
     logging.info("Collapsed the corresponding I and L nodes")
-    print("1 old", graph)
     new_graph = filter_date(graph, datetime.strptime(filtering_date, date_format).date())
-    print("2 old", new_graph)
     logging.info("Filtered nodes")
-    print("3 old", new_graph)
     return new_graph
 
 
