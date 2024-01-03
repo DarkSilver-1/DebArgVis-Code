@@ -4,6 +4,7 @@ from .graph_algorithms import group_elements, determine_end
 from .graph_algorithms_x import order_graph, group_elements_x, order_graph_x
 from .graph_builder import build_graph
 from .graph_builder_x import build_graph_x
+from .graph_builder_x_old import build_graph_x_old
 
 static_param1 = "value1"
 static_param2 = "value2"
@@ -14,6 +15,6 @@ graph = group_elements(graph)
 graph = determine_end(graph)
 
 logging.info("Creating the graph")
-#graph_data = group_elements_x(order_graph(build_graph_x()))
+graph_data_old = group_elements_x(order_graph(build_graph_x_old()))
 graph_data = order_graph_x(build_graph_x())
 # graph_data = order_graph(build_graph_x())

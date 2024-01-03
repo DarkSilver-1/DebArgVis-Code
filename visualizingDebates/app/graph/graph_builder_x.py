@@ -42,10 +42,13 @@ def build_graph_x():
     logging.info("Removed isolated nodes")
     graph = collapse_graph(graph)
     logging.info("Collapsed the corresponding I and L nodes")
+    print("1 x", graph)
     new_graph = filter_date(graph, datetime.strptime(filtering_date, date_format).date())
+    print("2 x", new_graph)
     logging.info("Mapped back to transcript")
     complete_transcript_mapping(new_graph, transcript)
     logging.info("Filtered nodes")
+    print("3 x", new_graph)
     return new_graph
 
 
@@ -227,8 +230,7 @@ def filter_date(graph, target_date):
     subgraph = nx.MultiDiGraph()
 
     for node, data in graph.nodes(data=True):
-        # if "start" in data and data["start"].date() == target_date and data.get("type") == "L":
-        if "start" in data and data.get("type") == "L":
+        if "speaker" in data and data.get("type") == "L": # The first check is to check if there has even been a matching locution
             subgraph.add_node(node, **data)
 
     for from_node, to_node, data in graph.edges(data=True):
