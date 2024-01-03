@@ -226,14 +226,14 @@ function createSlidingTimeline(graphData) {
 
         barHovered3 = true;
 
-        let associatedLinks = links.filter(link => link.source.text === d.transcript_text);
+        let associatedLinks = links.filter(link => link.source.transcript_text === d.transcript_text);
         associatedLinks = associatedLinks.filter(d => ['Default Inference', 'Default Rephrase', 'Default Conflict'].includes(d.text_additional))
 
         textArray.forEach((t) => {
             link.attr('opacity', 0.2);
             svg3.selectAll('.node').attr('stroke', 'none');
-            const isConnected = associatedLinks.some(link => link.target.text === t);
-            const linkColor = associatedLinks.find(link => link.target.text === t)?.text_additional;
+            const isConnected = associatedLinks.some(link => link.target.transcript_text === t);
+            const linkColor = associatedLinks.find(link => link.target.transcript_text === t)?.text_additional;
             const color = isConnected ? getLinkColor(linkColor) : 'black';
             const hoveredTextElement = svg3.selectAll('.hover-box text').filter(function () {
                 return this.textContent === t;
