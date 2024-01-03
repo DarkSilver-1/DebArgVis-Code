@@ -220,13 +220,13 @@ function createSlidingTimeline(graphData) {
     addTextBox(width3, svg3, nodes, textHovered3, links, link);
 
     node3.on('mouseover', (event, d) => {
-        let textArray = nodesInWindow ? nodesInWindow.map(d => d.text) : []
+        let textArray = nodesInWindow ? nodesInWindow.map(d => d.transcript_text) : []
 
         svg3.selectAll('.node').attr('stroke', 'none');
 
         barHovered3 = true;
 
-        let associatedLinks = links.filter(link => link.source.text === d.text);
+        let associatedLinks = links.filter(link => link.source.text === d.transcript_text);
         associatedLinks = associatedLinks.filter(d => ['Default Inference', 'Default Rephrase', 'Default Conflict'].includes(d.text_additional))
 
         textArray.forEach((t) => {
@@ -243,7 +243,7 @@ function createSlidingTimeline(graphData) {
                 .style('font-weight', 'normal');
         });
         const hoveredTextElement = svg3.selectAll('.hover-box text').filter(function () {
-            return this.textContent === d.text;
+            return this.textContent === d.transcript_text;
         });
         hoveredTextElement.style('font-weight', 'bold');
 
@@ -363,10 +363,13 @@ function getArrowHeadColor(textAdditional) {
 
 function parseTimeData(nodes) {
     nodes.forEach(function (d) {
-        const isoStartTime = new Date(d.start_time).toISOString();
+        console.log(d)
+        d.start_time = new Date(d.part_time)
+        d.end_time = new Date(d.end_part_time)
+        /*const isoStartTime = new Date(d.start_time).toISOString();
         const isoEndTime = new Date(d.end_time).toISOString();
         d.start_time = d3.isoParse(isoStartTime);
-        d.end_time = d3.isoParse(isoEndTime)
+        d.end_time = d3.isoParse(isoEndTime)*/
     });
 }
 
@@ -485,39 +488,39 @@ function addTextBox(width3, svg3, nodes, textHovered3, links, link) {
     let hoverBox = svg3.append('g').attr('class', 'hover-box');
     let textArray;
     if (nodesInWindow) {
-        textArray = nodesInWindow.map(d => d.text)
+        textArray = nodesInWindow.map(d => d.transcript_text)
     } else {
-        textArray = nodes.map(d => d.text)
+        textArray = nodes.map(d => d.transcript_text)
     }
-    textArray.forEach(function (text, index) {
+    textArray.forEach(function (transcript_text, index) {
         let textElement = hoverBox.append('text')
             .attr('id', `hovered-text-${index}`)  // Add unique id to each text element
             .attr('y', yPosition + 20 + index * 15)
             .attr('x', xPosition + 5)
             .style('visibility', 'visible')
             .style('cursor', 'pointer')
-            .text(text)
+            .text(transcript_text)
             .on('mouseover', function () {
                 textHovered3 = true;
-                let associatedLinks = links.filter(link => link.source.text === text);
+                let associatedLinks = links.filter(link => link.source.transcript_text === transcript_text);
                 associatedLinks = associatedLinks.filter(d => ['Default Inference', 'Default Rephrase', 'Default Conflict'].includes(d.text_additional))
                 textArray.forEach((t, i) => {
                     link.attr('opacity', 0.2);
                     svg3.selectAll('.node').attr('stroke', 'none');
-                    const linkColor = associatedLinks.find(link => link.target.text === t)?.text_additional;
+                    const linkColor = associatedLinks.find(link => link.target.transcript_text === t)?.text_additional;
                     const color = getLinkColor(linkColor)
                     svg3.select(`#hovered-text-${i}`).style('fill', color);
                 });
-                link.filter(l => l.source.text === text)
+                link.filter(l => l.source.transcript_text === transcript_text)
                     .attr('stroke', d => getLinkColor(d.text_additional))
                     .attr('marker-start', d => {
                         return getArrowHeadColor(d.text_additional)
                     }).attr('opacity', 1.0);
-                const hoveredNode = svg3.selectAll('.node').filter(node => node.text === text);
+                const hoveredNode = svg3.selectAll('.node').filter(node => node.transcript_text === transcript_text);
                 hoveredNode.attr('stroke', 'black')
                     .attr('stroke-width', 2);
                 textArray.forEach((t, i) => {
-                    if (t !== text) {
+                    if (t !== transcript_text) {
                         svg3.select(`#hovered-text-${i}`).style('font-weight', 'normal');
                     }
                 });
