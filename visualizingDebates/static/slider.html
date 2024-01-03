@@ -4,25 +4,33 @@
     <meta charset="UTF-8">
     <meta content="IE=edge" http-equiv="X-UA-Compatible">
     <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <link rel="stylesheet" href="style.css" type="text/css">
     <title>Graph Visualization</title>
     <script src="https://d3js.org/d3.v7.min.js"></script>
-    <link rel="stylesheet" href="style.css">
+    <style>
+        body {
+            background-color: #282c34; /* Set your desired background color */
+            color: #fff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+
+        }
+    </style>
+
 </head>
 <body>
 <h1>Timeline</h1>
 <p></p>
-<!--<svg height="400" id="timeline" width="800"></svg>-->
 <svg height="400" id="time" width="800"></svg>
 <div class="container">
-<svg height="500" id="slider" width="800"></svg>
-<div id="videoPlayerContainer" style="display: block;" class="videoPlayerContainer">
-    <video id="videoPlayer" controls width="320" height="240" class="videoPlayer" preload="auto">
-        <source src="testvideo.mp4" type="video/mp4">
-        Your browser does not support the video tag.
-    </video>
-</div></div>
-
-
+    <svg height="500" id="slider" width="800"></svg>
+    <div id="videoPlayerContainer" style="display: block;" class="videoPlayerContainer">
+        <video id="videoPlayer" controls width="320" height="240" class="videoPlayer" preload="auto">
+            <source src="testvideo.mp4" type="video/mp4">
+            Your browser does not support the video tag.
+        </video>
+    </div>
+</div>
 <script>
     fetch('/slider')
         .then(response => response.json())

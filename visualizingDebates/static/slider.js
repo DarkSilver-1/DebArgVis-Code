@@ -58,7 +58,7 @@ function createSlidingTimeline(graphData) {
         .attr('fill', 'transparent')
         .attr('opacity', 1)
         .attr('x', -2 * halfWindowSize)
-        .attr('stroke', 'black')
+        .attr('stroke', 'white')
         .attr('stroke-width', 2);
 
     let isDragging = false;
@@ -182,7 +182,7 @@ function createSlidingTimeline(graphData) {
         .attr('y1', yScale3.bandwidth())
         .attr('x2', 0)
         .attr('y2', d => height3 - yScale3(d.speaker) + 5)
-        .attr('stroke', 'black')
+        .attr('stroke', 'gray')
         .attr('stroke-dasharray', '5,5')
         .attr('visibility', (d, i) => nodesToShowText[i] ? 'visible' : 'hidden');
     node3.append('text')
@@ -192,7 +192,8 @@ function createSlidingTimeline(graphData) {
         .text(d => d3.timeFormat('%H:%M:%S')(d.start_time))
         .attr('text-anchor', 'middle')
         .attr('font-size', '10px')
-        .attr('visibility', (d, i) => nodesToShowText[i] ? 'visible' : 'hidden');
+        .attr('visibility', (d, i) => nodesToShowText[i] ? 'visible' : 'hidden')
+        .attr('fill', 'white');
 
     let link = svg3.selectAll('.link')
         .data(links.filter(d => ['Default Inference', 'Default Rephrase', 'Default Conflict'].includes(d.text_additional)))
@@ -234,7 +235,7 @@ function createSlidingTimeline(graphData) {
             svg3.selectAll('.node').attr('stroke', 'none');
             const isConnected = associatedLinks.some(link => link.target.transcript_text === t);
             const linkColor = associatedLinks.find(link => link.target.transcript_text === t)?.text_additional;
-            const color = isConnected ? getLinkColor(linkColor) : 'black';
+            const color = isConnected ? getLinkColor(linkColor) : 'white';
             const hoveredTextElement = svg3.selectAll('.hover-box text').filter(function () {
                 return this.textContent === t;
             });
@@ -343,7 +344,7 @@ function getLinkColor(textAdditional) {
         case 'Default Conflict':
             return 'red';
         default:
-            return 'black';
+            return 'white';
     }
 }
 
@@ -499,6 +500,7 @@ function addTextBox(width3, svg3, nodes, textHovered3, links, link) {
             .attr('x', xPosition + 5)
             .style('visibility', 'visible')
             .style('cursor', 'pointer')
+            .style('fill', 'white')
             .text(transcript_text)
             .on('mouseover', function () {
                 textHovered3 = true;
@@ -528,7 +530,7 @@ function addTextBox(width3, svg3, nodes, textHovered3, links, link) {
             }).on('mouseout', function () {
                 textArray.forEach((t, i) => {
                     svg3.select(`#hovered-text-${i}`)
-                        .style('fill', 'black');
+                        .style('fill', 'white');
                 });
                 textElement.style('font-weight', 'normal');
                 svg3.selectAll('.node').attr('stroke', 'none');
@@ -542,8 +544,8 @@ function addTextBox(width3, svg3, nodes, textHovered3, links, link) {
         .attr('width', Math.min(bbox.width + 10, 1200))
         .attr('height', Math.min(bbox.height + 10, 478))
         .style('overflow-y', 'auto')
-        .style('fill', 'whitesmoke')
-        .style('stroke', 'black')
+        .style('fill', '#282c34')
+        .style('stroke', 'white')
         .style('cursor', 'pointer')
         .on('mouseover', function () {
             textHovered3 = true;
@@ -558,7 +560,7 @@ function findNodesToShowText(nodes, xScale) {
     nodes.forEach(function (d, i) {
         const barX = xScale(d.start_time);
 
-        if (barX >= lastNodeX + halfWindowSize || xScale(d.end_time) - barX > halfWindowSize) {
+        if (barX >= lastNodeX + halfWindowSize*2.5 || xScale(d.end_time) - barX > halfWindowSize*2.5) {
             nodesToShowText[i] = true;
             lastNodeX = barX;
         } else {

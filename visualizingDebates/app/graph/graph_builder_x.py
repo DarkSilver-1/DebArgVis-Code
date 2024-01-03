@@ -28,7 +28,6 @@ transcript_path = os.getenv("TRANSCRIPT_PATH")
 
 def build_graph_x():
     graph = nx.MultiDiGraph()
-    json_file_path = 'C:/Users/Martin Gruber/OneDrive - gw.uni-passau.de/Studium/7. Semester/Bachelorarbeit/Data/qt30/nodeset17930.json'
     json_folder_path = os.getenv("FOLDER_PATH")
     transcript = extract_transcript()
     for filename in os.listdir(json_folder_path):
