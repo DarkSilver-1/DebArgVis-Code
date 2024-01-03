@@ -43,8 +43,9 @@ def build_graph_x():
     graph = collapse_graph(graph)
     logging.info("Collapsed the corresponding I and L nodes")
     new_graph = filter_date(graph, datetime.strptime(filtering_date, date_format).date())
+    logging.info("Mapped back to transcript")
     complete_transcript_mapping(new_graph, transcript)
-    logging.info(f"Filtered nodes of the day: {filter_date}")
+    logging.info("Filtered nodes")
     return new_graph
 
 
@@ -76,33 +77,30 @@ def complete_transcript_mapping(graph, transcript):
             else:
                 last_statement = transcript[part][part_index][2][node["statement_index"]]
             while statement_index < node["statement_index"]:
-                if "transcript_text" in node:
-                    node["transcript_text"] += transcript[part][part_index][2][statement_index]
+                if not graph.has_node(node["id"]):
+                    graph.add_node(node["id"])
+                if "transcript_text" in graph.nodes[node["id"]]:
+                    graph.nodes[node["id"]]["transcript_text"] += transcript[part][part_index][2][statement_index]
                 else:
-                    node["transcript_text"] = transcript[part][part_index][2][statement_index]
+                    graph.nodes[node["id"]]["transcript_text"] = transcript[part][part_index][2][statement_index]
                 statement_index += 1
                 count += 1
+
             if statement_index == node["statement_index"]:
-                if "transcript_text" in node:
-                    node["transcript_text"] += last_statement
+                if "transcript_text" in graph.nodes[node["id"]]:
+                    graph.nodes[node["id"]]["transcript_text"] += last_statement
                 else:
-                    node["transcript_text"] = last_statement
+                    graph.nodes[node["id"]]["transcript_text"] = last_statement
                 count += 1
 
             if count == 0:
-                node["transcript_text"] = "ERROR: UNMAPPED STATEMENT"
+                if not graph.has_node(node["id"]):
+                    graph.add_node(node["id"])
+                graph.nodes[node["id"]]["transcript_text"] = "ERROR: UNMAPPED STATEMENT"
 
             if count >= statement_number:
                 statement_index += 1
                 count = 0
-
-
-
-    for node in graph_data["nodes"]:
-        if "transcript_text" in node:
-            print(node["part_time"], node["speaker"], ": ", node["transcript_text"])
-        else:
-            print(node["part_time"], node["speaker"], ": ", "WARNING ", node["text"], node["statement_index"])
 
 
 def extract_transcript():
