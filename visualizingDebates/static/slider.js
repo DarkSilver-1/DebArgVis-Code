@@ -170,7 +170,7 @@ function createSlidingTimeline(graphData) {
         .attr('y1', -10)
         .attr('x2', d => (xScale(d.end_time) - xScale(d.start_time)) / 2)
         .attr('y2', yScale3.bandwidth() + 10)
-        .attr('stroke', 'green');
+        .attr('stroke', d => colorScale3(d.speaker));
     node3.append('rect')
         .attr('class', 'node')
         .attr('width', d => xScale(d.end_time) - xScale(d.start_time))
@@ -364,13 +364,8 @@ function getArrowHeadColor(textAdditional) {
 
 function parseTimeData(nodes) {
     nodes.forEach(function (d) {
-        console.log(d)
         d.start_time = new Date(d.part_time)
         d.end_time = new Date(d.end_part_time)
-        /*const isoStartTime = new Date(d.start_time).toISOString();
-        const isoEndTime = new Date(d.end_time).toISOString();
-        d.start_time = d3.isoParse(isoStartTime);
-        d.end_time = d3.isoParse(isoEndTime)*/
     });
 }
 
@@ -555,7 +550,7 @@ function addTextBox(width3, svg3, nodes, textHovered3, links, link) {
 
 function findNodesToShowText(nodes, xScale) {
     const nodesToShowText = [];
-    let lastNodeX = 0; // Declare lastNodeX here
+    let lastNodeX = 0;
 
     nodes.forEach(function (d, i) {
         const barX = xScale(d.start_time);
