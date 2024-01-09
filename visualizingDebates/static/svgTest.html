@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <style>
+        body {
+            background-color: darkcyan;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+        }
+    </style>
+</head>
+<body>
+<div style="background-color: antiquewhite;">
+    <svg width="500" height="300" xmlns="http://www.w3.org/2000/svg" id="svg">
+        <text id="text" x="10" y="30" font-family="Arial" font-size="14" fill="black">
+
+        </text>
+    </svg>
+
+</div>
+
+<script>
+    textArray = ["This is the very first line", "NNNNNNNNN text that needs to be split into multiple lines it is really long believe me it doesnt fit no no it does not stop asking and trying","This is the first line", "This is the third line"]
+    let text = document.getElementById("text");
+    let end = 400
+
+    var previousX = 10;
+    textArray.forEach(function (tspan) {
+        let tspanPart = document.createElementNS("http://www.w3.org/2000/svg", "tspan");
+        tspanPart.textContent = tspan
+        text.appendChild(tspanPart)
+        if (tspanPart.getComputedTextLength() + previousX > end) {
+            previousX = 10
+            tspanPart.setAttribute('dy', "1.2em")
+        }
+        tspanPart.setAttribute('x', previousX);
+        previousX += tspanPart.getComputedTextLength()
+    });
+
+    var verticalLine = document.createElementNS("http://www.w3.org/2000/svg", "line");
+    verticalLine.setAttribute('x1', end);
+    verticalLine.setAttribute('y1', 0);
+    verticalLine.setAttribute('x2', end);
+    verticalLine.setAttribute('y2', end);
+    verticalLine.setAttribute('stroke', 'black');
+    verticalLine.setAttribute('stroke-width', '2');
+    document.getElementById('svg').appendChild(verticalLine);
+
+</script>
+
+</body>
+</html>
