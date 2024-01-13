@@ -17,30 +17,71 @@
 <body>
 <div style="background-color: antiquewhite;">
     <svg width="500" height="300" xmlns="http://www.w3.org/2000/svg" id="svg">
-        <text id="text" x="10" y="30" font-family="Arial" font-size="14" fill="black">
-
-        </text>
     </svg>
 
 </div>
 
 <script>
-    textArray = ["This is the very first line", "NNNNNNNNN text that needs to be split into multiple lines it is really long believe me it doesnt fit no no it does not stop asking and trying","This is the first line", "This is the third line"]
-    let text = document.getElementById("text");
+    textArray = ["This is the very first line", "This is the first line", "NNNNNNNNN text that needs to be split into multiple lines it is really long believe me it doesnt fit no no it does not stop asking and trying!!!! kdg djndjfngkdjfbnkfdjcb nkfdjb kdfjbkjfdnbk idgnkdjngfdjng ", "This is the third line"]
+    let text = document.getElementById("svg");
     let end = 400
-
-    var previousX = 10;
+    let maxNumOfLetters = 60 //determine using getComputedTextLength()
+    let previousTspan = null
+    let previousX = 10;
+    let count = 1
     textArray.forEach(function (tspan) {
-        let tspanPart = document.createElementNS("http://www.w3.org/2000/svg", "tspan");
-        tspanPart.textContent = tspan
-        text.appendChild(tspanPart)
-        if (tspanPart.getComputedTextLength() + previousX > end) {
-            previousX = 10
-            tspanPart.setAttribute('dy', "1.2em")
+            let prevCut = 0
+            let finished = false
+            if (tspan.length > maxNumOfLetters) {
+                let newText = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                text.appendChild(newText)
+
+                let prevTextLen = previousTspan.innerHTML.length
+                let lineLength = prevTextLen
+                prevCut = 0
+
+                while (!finished) {
+                    let tspanTextPart = tspan.substring(prevCut, Math.min(prevCut + maxNumOfLetters - lineLength, tspan.length))
+                    prevCut = Math.min(prevCut + maxNumOfLetters - lineLength, tspan.length)
+                    prevTextLen = tspanTextPart.length
+                    let tspanPart = document.createElementNS("http://www.w3.org/2000/svg", "tspan");
+                    tspanPart.textContent = tspanTextPart
+                    newText.appendChild(tspanPart)
+                    if (tspanPart.getComputedTextLength() + previousX > end + 20) {
+                        previousX = 10
+                        tspanPart.setAttribute('dy', "1.2em")
+                    }
+                    if (lineLength += tspanTextPart.length === maxNumOfLetters) {
+                        lineLength = 0
+                    } else {
+                        lineLength += tspanTextPart.length
+                    }
+                    tspanPart.setAttribute('x', previousX);
+                    previousX += tspanPart.getComputedTextLength()
+                    previousTspan = tspanPart
+                    if(prevCut === tspan.length){
+                        finished = true
+                    }
+                    count++
+                }
+            } else {
+
+                let tspanPart = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                tspanPart.textContent = tspan
+                text.appendChild(tspanPart)
+                if (tspanPart.getComputedTextLength() + previousX > end) {
+                    previousX = 10
+                    tspanPart.setAttribute('dy', "1.2em")
+                    count = 1
+                }
+                tspanPart.setAttribute('x', previousX);
+                previousX += tspanPart.getComputedTextLength()
+                console.log("First prev x", previousX)
+                previousTspan = tspanPart
+            }
         }
-        tspanPart.setAttribute('x', previousX);
-        previousX += tspanPart.getComputedTextLength()
-    });
+    )
+    ;
 
     var verticalLine = document.createElementNS("http://www.w3.org/2000/svg", "line");
     verticalLine.setAttribute('x1', end);

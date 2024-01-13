@@ -164,13 +164,13 @@ function createSlidingTimeline(graphData) {
         .append("g")
         .attr("class", "node-group")
         .attr('transform', d => `translate(${xScale(d.start_time)}, ${yScale3(d.speaker)})`);
-    node3.append('line')
+    /*node3.append('line')
         .attr('class', 'line-connector')
         .attr('x1', d => (xScale(d.end_time) - xScale(d.start_time)) / 2)
         .attr('y1', -10)
         .attr('x2', d => (xScale(d.end_time) - xScale(d.start_time)) / 2)
         .attr('y2', yScale3.bandwidth() + 10)
-        .attr('stroke', d => colorScale3(d.speaker));
+        .attr('stroke', d => colorScale3(d.speaker));*/
     node3.append('rect')
         .attr('class', 'node')
         .attr('width', d => xScale(d.end_time) - xScale(d.start_time))
@@ -205,7 +205,7 @@ function createSlidingTimeline(graphData) {
         .attr('stroke-width', 2)
         .attr('d', d => {
             let pathData
-            let adapt_y = d.text_additional === "Default Conflict" ? yScale3.bandwidth() + 10 : -10
+            let adapt_y = d.text_additional === "Default Conflict" ? yScale3.bandwidth() + 15 : -10
             let adapt_start_y = d.text_additional === "Default Conflict" ? yScale3.bandwidth() : 0
             let xMid = (xScale(d.source.start_time) + xScale(d.target.start_time)) / 2;
             let yMid1 = yScale3(d.source.speaker) + adapt_y;
@@ -214,7 +214,7 @@ function createSlidingTimeline(graphData) {
                 [(xScale(d.source.start_time) + (xScale(d.source.end_time) - xScale(d.source.start_time)) / 2), yScale3(d.source.speaker) + adapt_start_y],
                 [xMid, yMid1],
                 [xMid, yMid2],
-                [(xScale(d.target.start_time) + (xScale(d.target.end_time) - xScale(d.target.start_time)) / 2), yScale3(d.target.speaker) + adapt_y]
+                [(xScale(d.target.start_time) + (xScale(d.target.end_time) - xScale(d.target.start_time)) / 2), yScale3(d.target.speaker) + adapt_start_y]
             ]
             return curve(pathData);
         })
@@ -279,7 +279,6 @@ function createSlidingTimeline(graphData) {
     svg3.append('defs').append('marker')
         .attr('class', 'arrowhead')
         .attr('id', 'arrowhead-red')
-        .append('svg:path')
         .attr('viewBox', '-0 -5 10 10')
         .attr('refX', 9)
         .attr('refY', 0)
@@ -287,12 +286,12 @@ function createSlidingTimeline(graphData) {
         .attr('markerWidth', 3)
         .attr('markerHeight', 4)
         .attr('xoverflow', 'visible')
+        .append('svg:path')
         .attr('d', 'M0,-5L10,0L0,5')
         .attr('fill', 'red');
     svg3.append('defs').append('marker')
         .attr('class', 'arrowhead')
         .attr('id', 'arrowhead-violet')
-        .append('svg:path')
         .attr('viewBox', '0 -5 10 10')
         .attr('refX', 9)
         .attr('refY', 0)
@@ -300,12 +299,12 @@ function createSlidingTimeline(graphData) {
         .attr('markerWidth', 3)
         .attr('markerHeight', 4)
         .attr('xoverflow', 'visible')
+        .append('svg:path')
         .attr('d', 'M0,-5L10,0L0,5')
         .attr('fill', 'violet');
     svg3.append('defs').append('marker')
         .attr('class', 'arrowhead')
         .attr('id', 'arrowhead-green')
-        .append('svg:path')
         .attr('viewBox', '-0 -5 10 10')
         .attr('refX', 9)
         .attr('refY', 0)
@@ -313,6 +312,7 @@ function createSlidingTimeline(graphData) {
         .attr('markerWidth', 3)
         .attr('markerHeight', 4)
         .attr('xoverflow', 'visible')
+        .append('svg:path')
         .attr('d', 'M0,-5L10,0L0,5')
         .attr('fill', 'green');
 }
@@ -443,7 +443,7 @@ function updateDiagram(mouseX, xScale, node2, nodes, svg3, height3, yScale3, nod
     link
         .attr('d', d => {
             let pathData
-            let adapt_y = d.text_additional === "Default Conflict" ? yScale3.bandwidth() + 10 : -10
+            let adapt_y = d.text_additional === "Default Conflict" ? yScale3.bandwidth() + 15 : -10
             let adapt_start_y = d.text_additional === "Default Conflict" ? yScale3.bandwidth() : 0
             let barWidth1 = computeBarWidth(xScale, d.source, mouseX, antiScaleFactor)
             let barWidth2 = computeBarWidth(xScale, d.target, mouseX, antiScaleFactor)
@@ -455,7 +455,7 @@ function updateDiagram(mouseX, xScale, node2, nodes, svg3, height3, yScale3, nod
                 [xMid1, yScale3(d.source.speaker) + adapt_start_y],
                 [xMid1, yMid1],
                 [xMid2, yMid2],
-                [xMid2, yScale3(d.target.speaker) + adapt_y]
+                [xMid2, yScale3(d.target.speaker) + adapt_start_y]
             ];
             return curve(pathData);
         })
