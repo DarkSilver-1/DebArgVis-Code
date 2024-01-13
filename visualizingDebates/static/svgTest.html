@@ -22,9 +22,8 @@
 </div>
 
 <script>
-    textArray = ["This is the very first line", "This is the first line", "NNNNNNNNN text that needs to be split into multiple lines it is really long believe me it doesnt fit no no it does not stop asking and trying!!!! kdg djndjfngkdjfbnkfdjcb nkfdjb kdfjbkjfdnbk idgnkdjngfdjng ", "This is the third line"]
+    textArray = ["This is the very first line", "This is the first line", "NNNNN NNNNNNNNNNNNNNNNNNN text that needs to be split into multiple lines it is really long believe me it doesnt fit no no it does not stop asking and trying!!!! kdg djndjfngkdjfbnkfdjcb nkfdjb kdfjbkjfdnbk idgnkdjngfdjng ", "This is the third line"]
     let text = document.getElementById("svg");
-    let end = 400
     let maxNumOfLetters = 60 //determine using getComputedTextLength()
     let previousX = 10;
     let yValue = 1.2
@@ -35,7 +34,6 @@
             let newText = document.createElementNS("http://www.w3.org/2000/svg", "text");
 
             if (numberOfCharsInLine + tspan.length > maxNumOfLetters) {
-
                 text.appendChild(newText)
                 newText.setAttribute('y', yValue + "em")
                 prevCutIndex = 0
@@ -43,16 +41,24 @@
                 while (!finished) {
                     let lastCutIndex = Math.min(prevCutIndex + maxNumOfLetters - numberOfCharsInLine, tspan.length)
                     let tspanTextPart = tspan.substring(prevCutIndex, lastCutIndex)
-                    prevCutIndex = lastCutIndex
-
-                    console.log(tspanTextPart)
-
+                    if (tspan.length - prevCutIndex > maxNumOfLetters - numberOfCharsInLine) {
+                        let lastWhitespace = tspanTextPart.lastIndexOf(' ');
+                        if (lastWhitespace !== -1) {
+                            tspanTextPart = tspanTextPart.substring(0, lastWhitespace)
+                            prevCutIndex += lastWhitespace
+                            numberOfCharsInLine = maxNumOfLetters
+                        } else {
+                            tspanTextPart = ""
+                            numberOfCharsInLine = maxNumOfLetters
+                        }
+                    } else {
+                        prevCutIndex = lastCutIndex
+                        numberOfCharsInLine += tspanTextPart.length
+                    }
                     let tspanPart = document.createElementNS("http://www.w3.org/2000/svg", "tspan");
                     tspanPart.textContent = tspanTextPart
                     newText.appendChild(tspanPart)
-
-                    numberOfCharsInLine += tspanTextPart.length
-                    if (!firstCut) {
+                    if (!firstCut && tspanTextPart !== "") {
                         previousX = 10
                         tspanPart.setAttribute('dy', "1.2em")
                         yValue += 1.2
@@ -60,7 +66,6 @@
                     if (numberOfCharsInLine >= maxNumOfLetters) {
                         numberOfCharsInLine -= maxNumOfLetters
                     }
-
                     tspanPart.setAttribute('x', previousX);
                     previousX += tspanPart.getComputedTextLength()
                     finished = prevCutIndex === tspan.length
@@ -69,18 +74,17 @@
             } else {
                 newText.textContent = tspan
                 text.appendChild(newText)
-
                 newText.setAttribute('y', yValue + "em")
                 newText.setAttribute('x', previousX);
-
                 numberOfCharsInLine += tspan.length
                 previousX += newText.getComputedTextLength()
             }
 
         }
     )
-    ;
 
+
+    let end = 400
     var verticalLine = document.createElementNS("http://www.w3.org/2000/svg", "line");
     verticalLine.setAttribute('x1', end);
     verticalLine.setAttribute('y1', 0);
