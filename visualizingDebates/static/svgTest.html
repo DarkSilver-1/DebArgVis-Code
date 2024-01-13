@@ -26,59 +26,57 @@
     let text = document.getElementById("svg");
     let end = 400
     let maxNumOfLetters = 60 //determine using getComputedTextLength()
-    let previousTspan = null
     let previousX = 10;
-    let count = 1
+    let yValue = 1.2
+    let numberOfCharsInLine = 0;
     textArray.forEach(function (tspan) {
-            let prevCut = 0
+            let prevCutIndex = 0
             let finished = false
-            if (tspan.length > maxNumOfLetters) {
-                let newText = document.createElementNS("http://www.w3.org/2000/svg", "text");
+            let newText = document.createElementNS("http://www.w3.org/2000/svg", "text");
+
+            if (numberOfCharsInLine + tspan.length > maxNumOfLetters) {
+
                 text.appendChild(newText)
-
-                let prevTextLen = previousTspan.innerHTML.length
-                let lineLength = prevTextLen
-                prevCut = 0
-
+                newText.setAttribute('y', yValue + "em")
+                prevCutIndex = 0
+                let firstCut = true
                 while (!finished) {
-                    let tspanTextPart = tspan.substring(prevCut, Math.min(prevCut + maxNumOfLetters - lineLength, tspan.length))
-                    prevCut = Math.min(prevCut + maxNumOfLetters - lineLength, tspan.length)
-                    prevTextLen = tspanTextPart.length
+                    let lastCutIndex = Math.min(prevCutIndex + maxNumOfLetters - numberOfCharsInLine, tspan.length)
+                    let tspanTextPart = tspan.substring(prevCutIndex, lastCutIndex)
+                    prevCutIndex = lastCutIndex
+
+                    console.log(tspanTextPart)
+
                     let tspanPart = document.createElementNS("http://www.w3.org/2000/svg", "tspan");
                     tspanPart.textContent = tspanTextPart
                     newText.appendChild(tspanPart)
-                    if (tspanPart.getComputedTextLength() + previousX > end + 20) {
+
+                    numberOfCharsInLine += tspanTextPart.length
+                    if (!firstCut) {
                         previousX = 10
                         tspanPart.setAttribute('dy', "1.2em")
+                        yValue += 1.2
                     }
-                    if (lineLength += tspanTextPart.length === maxNumOfLetters) {
-                        lineLength = 0
-                    } else {
-                        lineLength += tspanTextPart.length
+                    if (numberOfCharsInLine >= maxNumOfLetters) {
+                        numberOfCharsInLine -= maxNumOfLetters
                     }
+
                     tspanPart.setAttribute('x', previousX);
                     previousX += tspanPart.getComputedTextLength()
-                    previousTspan = tspanPart
-                    if(prevCut === tspan.length){
-                        finished = true
-                    }
-                    count++
+                    finished = prevCutIndex === tspan.length
+                    firstCut = false
                 }
             } else {
+                newText.textContent = tspan
+                text.appendChild(newText)
 
-                let tspanPart = document.createElementNS("http://www.w3.org/2000/svg", "text");
-                tspanPart.textContent = tspan
-                text.appendChild(tspanPart)
-                if (tspanPart.getComputedTextLength() + previousX > end) {
-                    previousX = 10
-                    tspanPart.setAttribute('dy', "1.2em")
-                    count = 1
-                }
-                tspanPart.setAttribute('x', previousX);
-                previousX += tspanPart.getComputedTextLength()
-                console.log("First prev x", previousX)
-                previousTspan = tspanPart
+                newText.setAttribute('y', yValue + "em")
+                newText.setAttribute('x', previousX);
+
+                numberOfCharsInLine += tspan.length
+                previousX += newText.getComputedTextLength()
             }
+
         }
     )
     ;
