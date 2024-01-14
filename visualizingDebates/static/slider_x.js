@@ -1,6 +1,8 @@
 const scaleFactor = 8;
 const halfWindowSize = 30;
 let currentTime = 0;
+let textBoxWidth = 1000
+let colorScale = null
 
 let prevNodesInWindow = null
 let nodesInWindow = null
@@ -378,6 +380,7 @@ function createSVG(selector, width, height, margin) {
 }
 
 function createColorScale(domain) {
+    colorScale = d3.scaleOrdinal().domain(domain).range(d3.schemeCategory10)
     return d3.scaleOrdinal().domain(domain).range(d3.schemeCategory10);
 }
 
@@ -478,6 +481,34 @@ function updateDiagram(mouseX, xScale, node2, nodes, svg3, height3, yScale3, nod
     }
 }
 
+function textHoverAction(links, transcript_text, textArray, link, svg3, newText) {
+    let associatedLinks = links.filter(link => link.source.transcript_text === transcript_text);
+    associatedLinks = associatedLinks.filter(d => ['Default Inference', 'Default Rephrase', 'Default Conflict'].includes(d.text_additional))
+    link.attr('opacity', 0.2);
+    svg3.selectAll('.node').attr('stroke', 'none');
+    textArray.forEach((t, i) => {
+        const linkColor = associatedLinks.find(link => link.target.transcript_text === t)?.text_additional;
+        const color = getLinkColor(linkColor)
+        if (color !== "white") {
+            svg3.select(`#hovered-text-${i}`).style('fill', color);
+        }
+    });
+    link.filter(l => l.source.transcript_text === transcript_text)
+        .attr('stroke', d => getLinkColor(d.text_additional))
+        .attr('marker-start', d => {
+            return getArrowHeadColor(d.text_additional)
+        }).attr('opacity', 1.0);
+    const hoveredNode = svg3.selectAll('.node').filter(node => node.transcript_text === transcript_text);
+    hoveredNode.attr('stroke', 'black')
+        .attr('stroke-width', 2);
+    textArray.forEach((t, i) => {
+        if (t !== transcript_text) {
+            svg3.select(`#hovered-text-${i}`).style('font-weight', 'normal');
+        }
+    });
+    newText.style('font-weight', 'bold');
+}
+
 function addTextBox(width3, svg3, nodes, textHovered3, links, link) {
     let yPosition = 0
     let xPosition = width3 + 10;
@@ -488,49 +519,96 @@ function addTextBox(width3, svg3, nodes, textHovered3, links, link) {
     } else {
         textArray = nodes.map(d => d.transcript_text)
     }
+    let fontSizeInPixels = parseFloat(d3.select('body').style('font-size'));
+    let defaultX = width3 + 10
+    let maxNumOfLetters = 100
+    let previousX = defaultX;
+    let yValue = 1.2
+    let numberOfCharsInLine = 0;
+    let previousSpeaker = null
+    let background = null
+    let prevBoxy = 0
     textArray.forEach(function (transcript_text, index) {
-        let textElement = hoverBox.append('text')
-            .attr('id', `hovered-text-${index}`)
-            .attr('y', yPosition + 20 + index * 15)
-            .attr('x', xPosition + 5)
-            .style('visibility', 'visible')
-            .style('cursor', 'pointer')
-            .style('fill', 'white')
-            .text(transcript_text)
-            .on('mouseover', function () {
-                textHovered3 = true;
-                let associatedLinks = links.filter(link => link.source.transcript_text === transcript_text);
-                associatedLinks = associatedLinks.filter(d => ['Default Inference', 'Default Rephrase', 'Default Conflict'].includes(d.text_additional))
-                textArray.forEach((t, i) => {
-                    link.attr('opacity', 0.2);
-                    svg3.selectAll('.node').attr('stroke', 'none');
-                    const linkColor = associatedLinks.find(link => link.target.transcript_text === t)?.text_additional;
-                    const color = getLinkColor(linkColor)
-                    svg3.select(`#hovered-text-${i}`).style('fill', color);
-                });
-                link.filter(l => l.source.transcript_text === transcript_text)
-                    .attr('stroke', d => getLinkColor(d.text_additional))
-                    .attr('marker-start', d => {
-                        return getArrowHeadColor(d.text_additional)
-                    }).attr('opacity', 1.0);
-                const hoveredNode = svg3.selectAll('.node').filter(node => node.transcript_text === transcript_text);
-                hoveredNode.attr('stroke', 'black')
-                    .attr('stroke-width', 2);
-                textArray.forEach((t, i) => {
-                    if (t !== transcript_text) {
-                        svg3.select(`#hovered-text-${i}`).style('font-weight', 'normal');
+        let prevCutIndex = 0
+        let finished = false
+        let node = nodes.find(node => node.transcript_text === transcript_text)
+        let speaker = node.speaker
+        if (speaker !== previousSpeaker) {
+            if (previousSpeaker !== null) {
+                yValue += 2.4
+            }
+            hoverBox.append('text').text(speaker).attr('y', yValue + "em").attr('fill', "white").attr('x', defaultX).style('font-weight', 'bold')
+            if (background !== null) {
+                let backgroundHeight = yValue - prevBoxy;
+                background.attr('height', (backgroundHeight-1.5) + "em")
+            }
+            background = hoverBox.insert('rect').attr('x', defaultX).attr('y', (yValue + 0.5) + "em").attr('width', textBoxWidth).style('fill', colorScale(speaker)).attr('opacity', 0.2)
+            prevBoxy = yValue + 1.0
+            previousX = defaultX
+            yValue += 1.4
+            numberOfCharsInLine = 0
+            previousSpeaker = speaker
+
+        }
+
+        let newText = hoverBox.append('text');
+
+        if (numberOfCharsInLine + transcript_text.length > maxNumOfLetters) {
+            newText.attr('y', yValue + "em").attr('id', `hovered-text-${index}`).attr('fill', "white").attr('x', previousX)
+            prevCutIndex = 0
+            let firstCut = true
+            while (!finished) {
+                let lastCutIndex = Math.min(prevCutIndex + maxNumOfLetters - numberOfCharsInLine, transcript_text.length)
+                let tspanTextPart = transcript_text.substring(prevCutIndex, lastCutIndex)
+                if (transcript_text.length - prevCutIndex > maxNumOfLetters - numberOfCharsInLine) {
+                    let lastWhitespace = tspanTextPart.lastIndexOf(' ');
+                    if (lastWhitespace !== -1) {
+                        tspanTextPart = tspanTextPart.substring(0, lastWhitespace)
+                        prevCutIndex += lastWhitespace
+                        numberOfCharsInLine = maxNumOfLetters
+                    } else {
+                        tspanTextPart = ""
+                        numberOfCharsInLine = maxNumOfLetters
                     }
-                });
-                textElement.style('font-weight', 'bold');
-            }).on('mouseout', function () {
-                textArray.forEach((t, i) => {
-                    svg3.select(`#hovered-text-${i}`)
-                        .style('fill', 'white');
-                });
-                textElement.style('font-weight', 'normal');
-                svg3.selectAll('.node').attr('stroke', 'none');
-            })
+                } else {
+                    prevCutIndex = lastCutIndex
+                    numberOfCharsInLine += tspanTextPart.length
+                }
+                let tspanPart = newText.append('tspan').text(tspanTextPart)
+                if (!firstCut && tspanTextPart !== "") {
+                    previousX = defaultX
+                    tspanPart.attr('dy', "1.2em")
+                    yValue += 1.2
+                }
+                if (numberOfCharsInLine >= maxNumOfLetters) {
+                    numberOfCharsInLine -= maxNumOfLetters
+                }
+                tspanPart.attr('x', previousX);
+                previousX += tspanPart.node().getComputedTextLength()
+                finished = prevCutIndex === transcript_text.length
+                firstCut = false
+            }
+        } else {
+            newText.attr('y', yValue + "em").attr('x', previousX).attr('id', `hovered-text-${index}`).attr('fill', "white").text(transcript_text)
+            numberOfCharsInLine += transcript_text.length
+            previousX += newText.node().getComputedTextLength()
+        }
+        newText.on("mouseover", function () {
+            textHovered3 = true;
+            textHoverAction(links, transcript_text, textArray, link, svg3, newText);
+        }).on('mouseout', function () {
+            textArray.forEach((t, i) => {
+                svg3.select(`#hovered-text-${i}`)
+                    .style('fill', 'white');
+            });
+            newText.style('font-weight', 'normal');
+            svg3.selectAll('.node').attr('stroke', 'none');
+        })
     })
+    let bboxBackground = background.node().getBBox();
+    let yValueInPixels = yValue * fontSizeInPixels;
+    background.attr('height', (yValue - prevBoxy + 1.2)+ "em")
+
     let bbox = hoverBox.node().getBBox();
     hoverBox.insert('rect', 'text')
         .attr('class', ".hover-box")
@@ -555,7 +633,7 @@ function findNodesToShowText(nodes, xScale) {
     nodes.forEach(function (d, i) {
         const barX = xScale(d.start_time);
 
-        if (barX >= lastNodeX + halfWindowSize*2.5 || xScale(d.end_time) - barX > halfWindowSize*2.5) {
+        if (barX >= lastNodeX + halfWindowSize * 2.5 || xScale(d.end_time) - barX > halfWindowSize * 2.5) {
             nodesToShowText[i] = true;
             lastNodeX = barX;
         } else {
