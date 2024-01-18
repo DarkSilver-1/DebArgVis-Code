@@ -1,4 +1,6 @@
 const scaleFactor = 8;
+const smallerScaleFactor = scaleFactor / 2;
+const smallestScaleFactor = scaleFactor / 4;
 const halfWindowSize = 30;
 let currentTime = 0;
 let textBoxWidth = 1000
@@ -6,6 +8,32 @@ let colorScale = null
 
 let prevNodesInWindow = null
 let nodesInWindow = null
+let nodesFarLeftOfWindow = [];
+let nodesLeftOfWindow = [];
+let nodesRightOfWindow = [];
+let nodesFarRightOfWindow = [];
+
+function groupNodes(nodes, xScale, mouseX) {
+    nodesInWindow = []
+    nodesFarLeftOfWindow = [];
+    nodesLeftOfWindow = [];
+    nodesRightOfWindow = [];
+    nodesFarRightOfWindow = [];
+    nodes.forEach(function (d) {
+        const barX = xScale(d.start_time);
+        if (barX >= mouseX - 3 * halfWindowSize && barX < mouseX - 2 * halfWindowSize) {
+            nodesFarLeftOfWindow.push(d)
+        } else if (barX >= mouseX - 2 * halfWindowSize && barX < mouseX - halfWindowSize) {
+            nodesLeftOfWindow.push(d)
+        } else if (barX < mouseX + 2 * halfWindowSize && barX >= mouseX + halfWindowSize) {
+            nodesRightOfWindow.push(d)
+        } else if (barX < mouseX + 3 * halfWindowSize && barX >= mouseX + 2 * halfWindowSize) {
+            nodesFarRightOfWindow.push(d)
+        } else if (barX < mouseX + halfWindowSize && barX >= mouseX - halfWindowSize) {
+            nodesInWindow.push(d)
+        }
+    })
+}
 
 function createSlidingTimeline(graphData) {
     console.log(graphData)
@@ -75,23 +103,22 @@ function createSlidingTimeline(graphData) {
     });
 
     svg2.on('mousemove', function (event) {
-        if (isDragging) {
-            videoplayer.pause()
-            const mouseX = d3.pointer(event)[0];
-            mouseRectangle
-                .attr('x', mouseX - halfWindowSize)
-                .attr('opacity', 0.5);
-            nodesInWindow = nodes.filter(function (d) {
-                const barX = xScale(d.start_time);
-                const barWidth = xScale(d.end_time) - barX;
-                return isBarWithinMouseWindow(barX, barWidth, mouseX, halfWindowSize);
-            });
-            if (!(prevNodesInWindow && (nodesInWindow[0] === prevNodesInWindow[0] && nodesInWindow[nodesInWindow.length - 1] === prevNodesInWindow[prevNodesInWindow.length - 1]))) {
-                updateDiagram(mouseX, xScale, node2, nodes, svg3, height3, yScale3, node3, link, curve, scaleFactor, width3, links);
+            if (isDragging) {
+                videoplayer.pause()
+                const mouseX = d3.pointer(event)[0];
+                mouseRectangle
+                    .attr('x', mouseX - halfWindowSize)
+                    .attr('opacity', 0.5);
+
+                groupNodes(nodes, xScale, mouseX);
+
+                if (!(prevNodesInWindow && (nodesInWindow[0] === prevNodesInWindow[0] && nodesInWindow[nodesInWindow.length - 1] === prevNodesInWindow[prevNodesInWindow.length - 1]))) {
+                    updateDiagram(mouseX, xScale, node2, nodes, svg3, height3, yScale3, node3, link, curve, scaleFactor, width3, links);
+                }
+                prevNodesInWindow = nodesInWindow
             }
-            prevNodesInWindow = nodesInWindow
         }
-    })
+    )
     svg2.selectAll('.question-line')
         .data(nodes)
         .enter().append('line')
@@ -104,11 +131,8 @@ function createSlidingTimeline(graphData) {
     let videoplayer = document.getElementById('videoPlayer')
     videoplayer.addEventListener('timeupdate', function () {
         const currentTimeVid = xScale(new Date(nodes[0].start_time.getTime() + videoplayer.currentTime * 1000))
-        nodesInWindow = nodes.filter(function (d) {
-            const barX = xScale(d.start_time);
-            const barWidth = xScale(d.end_time) - barX;
-            return isBarWithinMouseWindow(barX, barWidth, currentTimeVid, halfWindowSize);
-        });
+
+        groupNodes(nodes, xScale, currentTimeVid)
         mouseRectangle
             .attr('x', currentTimeVid - halfWindowSize)
             .attr('opacity', 0.5);
@@ -117,7 +141,7 @@ function createSlidingTimeline(graphData) {
     });
 
 
-    //--------------------------------------------------------------------
+//--------------------------------------------------------------------
 
     let barHovered3 = false;
     let textHovered3 = false;
@@ -325,9 +349,29 @@ function determineXValue(xScale, d, mouseX, adaptedXBeforeWindow, firstScaledNod
 
     // Check if the bar is within the mouse window
     if (barX <= mouseX + halfWindowSize && barX + barWidth >= mouseX - halfWindowSize) {
-        return adaptedXBeforeWindow + (xScale(d.start_time) - firstScaledNodeX) * scaleFactor;
+        return adaptedXBeforeWindow + (barX - firstScaledNodeX) * scaleFactor;
     } else {
         if (barX < mouseX - halfWindowSize) {
+            return barX * antiScaleFactor;
+        } else {
+            return adaptedXAfterWindow + (barX - lastScaledNodeX) * antiScaleFactor
+        }
+    }
+}
+
+function determineXValue2(xScale, d, mouseX, adaptedXBeforeWindow, firstScaledNodeX, antiScaleFactor, adaptedXAfterWindow, lastScaledNodeX, firstScaledNodeXSmaller, firstScaledNodeXSmallest, lastScaledNodeXSmaller, lastScaledNodeXSmallest, adaptedXBeforeSmallWindow2, adaptedXBeforeSmallestWindow2) {
+    const barX = xScale(d.start_time);
+    const barWidth = xScale(d.end_time || d.start_time) - barX;
+
+    // Check if the bar is within the mouse window
+    if (barX <= mouseX + halfWindowSize && barX + barWidth >= mouseX - halfWindowSize) {
+        return adaptedXBeforeWindow + adaptedXBeforeSmallWindow2 + adaptedXBeforeSmallestWindow2 + (xScale(d.start_time) - firstScaledNodeX) * scaleFactor;
+    } else if (barX <= mouseX + 2 * halfWindowSize && barX + barWidth >= mouseX - 2 * halfWindowSize) {
+        return adaptedXBeforeWindow + adaptedXBeforeSmallestWindow2 + (xScale(d.start_time) - firstScaledNodeXSmaller) * smallerScaleFactor;
+    } else if (barX <= mouseX + 3 * halfWindowSize && barX + barWidth >= mouseX - 3 * halfWindowSize) {
+        return adaptedXBeforeWindow + (xScale(d.start_time) - firstScaledNodeXSmallest) * smallestScaleFactor
+    } else {
+        if (barX < mouseX - 3 * halfWindowSize) {
             return barX * antiScaleFactor;
         } else {
             return adaptedXAfterWindow + (barX - lastScaledNodeX) * antiScaleFactor
@@ -412,15 +456,21 @@ function isBarWithinMouseWindow(barX, barWidth, mouseX, halfWindowSize) {
 }
 
 function updateDiagram(mouseX, xScale, node2, nodes, svg3, height3, yScale3, node3, link, curve, scaleFactor, width3, links) {
+    const lastScaledNodeX = nodesInWindow.length !== 0 ? xScale(d3.max(nodesInWindow, d => d.end_time)) : 0;
+    //const lastScaledNodeX2 = nodesInWindow.length !== 0 ? nodesInWindow.slice(-1) : 0;
+    console.log(lastScaledNodeX === lastScaledNodeX2)
+    console.log(lastScaledNodeX)
+    console.log(lastScaledNodeX2)
 
+    const firstScaledNodeX = nodesInWindow.length !== 0 ? xScale(d3.min(nodesInWindow, d => d.start_time)) : 0;
     node2.attr('opacity', function (d) {
         const barX = xScale(d.start_time);
-        const barWidth = xScale(d.end_time) - barX;
-        return isBarWithinMouseWindow(barX, barWidth, mouseX, halfWindowSize) ? 1.0 : 0.2;
+        //const barWidth = xScale(d.end_time) - barX;
+        return barX < lastScaledNodeX && barX >= firstScaledNodeX ? 1.0 : 0.2
+        //return isBarWithinMouseWindow(barX, barWidth, mouseX, halfWindowSize) ? 1.0 : 0.2;
     });
 
-    const lastScaledNodeX = nodesInWindow.length !== 0 ? xScale(d3.max(nodesInWindow, d => d.end_time)) : 0;
-    const firstScaledNodeX = nodesInWindow.length !== 0 ? xScale(d3.min(nodesInWindow, d => d.start_time)) : 0;
+
     const diagramLength = xScale(d3.max(nodes, d => d.end_time))
     const scaledAreaLength = ((lastScaledNodeX - firstScaledNodeX) * scaleFactor)
     const unscaledAreaLength = diagramLength - (lastScaledNodeX - firstScaledNodeX)
@@ -435,7 +485,8 @@ function updateDiagram(mouseX, xScale, node2, nodes, svg3, height3, yScale3, nod
         .attr('opacity', function (d) {
             const barX = xScale(d.start_time);
             const barWidth = xScale(d.end_time) - barX;
-            return isBarWithinMouseWindow(barX, barWidth, mouseX, halfWindowSize) ? 1.0 : 0.2;
+            return barX < lastScaledNodeX && barX >= firstScaledNodeX ? 1.0 : 0.2
+            //return isBarWithinMouseWindow(barX, barWidth, mouseX, halfWindowSize) ? 1.0 : 0.2;
         });
     node3.select('.line-connector')
         .attr('x1', d => computeBarWidth(xScale, d, mouseX, antiScaleFactor) / 2)
@@ -540,7 +591,7 @@ function addTextBox(width3, svg3, nodes, textHovered3, links, link) {
             hoverBox.append('text').text(speaker).attr('y', yValue + "em").attr('fill', "white").attr('x', defaultX).style('font-weight', 'bold')
             if (background !== null) {
                 let backgroundHeight = yValue - prevBoxy;
-                background.attr('height', (backgroundHeight-1.5) + "em")
+                background.attr('height', (backgroundHeight - 1.5) + "em")
             }
             background = hoverBox.insert('rect').attr('x', defaultX).attr('y', (yValue + 0.5) + "em").attr('width', textBoxWidth).style('fill', colorScale(speaker)).attr('opacity', 0.2)
             prevBoxy = yValue + 1.0
@@ -605,9 +656,7 @@ function addTextBox(width3, svg3, nodes, textHovered3, links, link) {
             svg3.selectAll('.node').attr('stroke', 'none');
         })
     })
-    let bboxBackground = background.node().getBBox();
-    let yValueInPixels = yValue * fontSizeInPixels;
-    background.attr('height', (yValue - prevBoxy + 1.2)+ "em")
+    background.attr('height', (yValue - prevBoxy + 1.2) + "em")
 
     let bbox = hoverBox.node().getBBox();
     hoverBox.insert('rect', 'text')
