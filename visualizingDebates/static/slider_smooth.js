@@ -147,9 +147,6 @@ function createSlidingTimeline(graphData) {
 
 //--------------------------------------------------------------------
 
-    let barHovered3 = false;
-    let textHovered3 = false;
-
     let margin3 = {top: 20, right: 20, bottom: 40, left: 60};
     let width3 = 1200 - margin3.left - margin3.right;
     let height3 = 500 - margin3.top - margin3.bottom;
@@ -248,14 +245,12 @@ function createSlidingTimeline(graphData) {
             ]
             return curve(pathData);
         })
-    addTextBox(width3, svg3, nodes, textHovered3, links, link);
+    addTextBox(width3, svg3, nodes, links, link);
 
     node3.on('mouseover', (event, d) => {
         let textArray = nodesInWindow ? nodesInWindow.map(d => d.transcript_text) : []
 
         svg3.selectAll('.node').attr('stroke', 'none');
-
-        barHovered3 = true;
 
         let associatedLinks = links.filter(link => link.source.transcript_text === d.transcript_text);
         associatedLinks = associatedLinks.filter(d => ['Default Inference', 'Default Rephrase', 'Default Conflict'].includes(d.text_additional))
@@ -295,12 +290,6 @@ function createSlidingTimeline(graphData) {
 
     node3.on('click', (event, d) => {
         let videoplayer = document.getElementById('videoPlayer')
-        /*nodesInWindow = nodes.filter(function (d) {
-            const updatedTime = d.start_time;
-            const barX = xScale(updatedTime);
-            const barWidth = xScale(d.end_time) - barX;
-            return isBarWithinMouseWindow(barX, barWidth, xScale(d.start_time), halfWindowSize);
-        });*/
         groupNodes(nodes, xScale, d.start_time)
         currentTime = (d.start_time.getTime() - nodes[0].start_time.getTime()) / 1000
         videoplayer.currentTime = currentTime
@@ -450,12 +439,6 @@ function computeBarWidth2(xScale, d, defaultXValues, antiScaleFactor) {
 }
 
 function updateDiagram(mouseX, xScale, node2, nodes, svg3, height3, yScale3, node3, link, curve, scaleFactor, width3, links) {
-    svg3.selectAll(".l").remove()
-    //console.log("1", nodesFarLeftOfWindow.map(d => d.transcript_text)[0], nodesFarLeftOfWindow.map(d => d.transcript_text)[nodesFarLeftOfWindow.length-1])
-    //console.log("2", nodesLeftOfWindow.map(d => d.transcript_text)[0], nodesLeftOfWindow.map(d => d.transcript_text)[nodesLeftOfWindow.length-1])
-    //console.log("3", nodesInWindow.map(d => d.transcript_text)[0], nodesInWindow.map(d => d.transcript_text)[nodesInWindow.length-1])
-    //console.log("4", nodesRightOfWindow.map(d => d.transcript_text)[0], nodesRightOfWindow.map(d => d.transcript_text)[nodesRightOfWindow.length-1])
-    //console.log("5", nodesFarRightOfWindow.map(d => d.transcript_text)[0], nodesFarRightOfWindow.map(d => d.transcript_text)[nodesFarRightOfWindow.length-1])
 
     const firstScaledNodeX = nodesInWindow.length !== 0 ? xScale(nodesInWindow[0].start_time) : 0;
     const firstScaledNodeXLeft = nodesLeftOfWindow.length !== 0 ? xScale(nodesLeftOfWindow[0].start_time) : 0;
@@ -484,36 +467,6 @@ function updateDiagram(mouseX, xScale, node2, nodes, svg3, height3, yScale3, nod
     const adaptedFirstXAreaAfter = adaptedFirstXFarRight + farRightLength
     const defaultXValues = [firstScaledNodeXFarLeft, firstScaledNodeXLeft, firstScaledNodeX, firstScaledNodeXRight, firstScaledNodeXFarRight, lastScaledNodeXFarRight]
     const adaptedXValues = [adaptedFirstXFarLeft, adaptedFirstXLeft, adaptedFirstX, adaptedFirstXRight, adaptedFirstXFarRight, adaptedFirstXAreaAfter]
-
-    svg3.append('line')
-        .attr('class', 'l')
-        .attr('x1', adaptedFirstXFarLeft)
-        .attr('y1', 0)
-        .attr('x2', adaptedFirstXFarLeft)
-        .attr('y2', 600)
-        .attr('stroke', 'blue')
-    svg3.append('line')
-        .attr('class', 'l')
-        .attr('x1', adaptedFirstXAreaAfter)
-        .attr('y1', 0)
-        .attr('x2', adaptedFirstXAreaAfter)
-        .attr('y2', 600)
-        .attr('stroke', 'blue')
-    svg3.append('line')
-        .attr('class', 'l')
-        .attr('x1', adaptedFirstXLeft)
-        .attr('y1', 0)
-        .attr('x2', adaptedFirstXLeft)
-        .attr('y2', 600)
-        .attr('stroke', 'green')
-    svg3.append('line')
-        .attr('class', 'l')
-        .attr('x1', adaptedFirstXFarRight)
-        .attr('y1', 0)
-        .attr('x2', adaptedFirstXFarRight)
-        .attr('y2', 600)
-        .attr('stroke', 'green')
-
 
     node2.attr('opacity', function (d) {
         const barX = xScale(d.start_time);
@@ -558,7 +511,7 @@ function updateDiagram(mouseX, xScale, node2, nodes, svg3, height3, yScale3, nod
             return sourceX >= adaptedFirstX && targetX <= adaptedFirstXRight ? 'visible' : 'hidden'
         })
     svg3.selectAll('.hover-box').remove()
-    addTextBox(width3, svg3, nodes, true, links, link);
+    addTextBox(width3, svg3, nodes, links, link);
 
     svg3.selectAll('.node').attr('stroke', 'none');
 
@@ -599,7 +552,7 @@ function textHoverAction(links, transcript_text, textArray, link, svg3, newText)
     newText.style('font-weight', 'bold');
 }
 
-function addTextBox(width3, svg3, nodes, textHovered3, links, link) {
+function addTextBox(width3, svg3, nodes, links, link) {
     let yPosition = 0
     let xPosition = width3 + 10;
     let hoverBox = svg3.append('g').attr('class', 'hover-box');
@@ -683,7 +636,6 @@ function addTextBox(width3, svg3, nodes, textHovered3, links, link) {
             previousX += newText.node().getComputedTextLength()
         }
         newText.on("mouseover", function () {
-            textHovered3 = true;
             textHoverAction(links, transcript_text, textArray, link, svg3, newText);
         }).on('mouseout', function () {
             textArray.forEach((t, i) => {
@@ -694,7 +646,9 @@ function addTextBox(width3, svg3, nodes, textHovered3, links, link) {
             svg3.selectAll('.node').attr('stroke', 'none');
         })
     })
-    background.attr('height', (yValue - prevBoxy + 1.2) + "em")
+    if (background !== null) {
+        background.attr('height', (yValue - prevBoxy + 1.2) + "em")
+    }
 
     let bbox = hoverBox.node().getBBox();
     hoverBox.insert('rect', 'text')
@@ -707,10 +661,6 @@ function addTextBox(width3, svg3, nodes, textHovered3, links, link) {
         .style('fill', '#282c34')
         .style('stroke', 'white')
         .style('cursor', 'pointer')
-        .on('mouseover', function () {
-            textHovered3 = true;
-        })
-    return textHovered3;
 }
 
 function findNodesToShowText(nodes, xScale) {
