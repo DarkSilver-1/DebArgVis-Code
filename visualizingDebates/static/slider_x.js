@@ -634,7 +634,7 @@ function addTextBox(width3, svg3, nodes, textHovered3, links, link) {
         textArray = nodes.map(d => d.transcript_text)
     }
     let fontSizeInPixels = parseFloat(d3.select('body').style('font-size'));
-    let defaultX = width3 + 10
+    let defaultX = width3 + 25
     let maxNumOfLetters = 100
     let previousX = defaultX;
     let yValue = 1.2
@@ -651,12 +651,12 @@ function addTextBox(width3, svg3, nodes, textHovered3, links, link) {
             if (previousSpeaker !== null) {
                 yValue += 2.4
             }
-            hoverBox.append('text').text(speaker).attr('y', yValue + "em").attr('fill', "white").attr('x', defaultX).style('font-weight', 'bold')
+            hoverBox.append('text').text(speaker).attr('y', yValue + "em").attr('fill', "white").attr('x', defaultX-10).style('font-weight', 'bold')
             if (background !== null) {
                 let backgroundHeight = yValue - prevBoxy;
                 background.attr('height', (backgroundHeight - 1.5) + "em")
             }
-            background = hoverBox.insert('rect').attr('x', defaultX).attr('y', (yValue + 0.5) + "em").attr('width', textBoxWidth).style('fill', colorScale(speaker)).attr('opacity', 0.2)
+            background = hoverBox.insert('rect').attr('x', defaultX-5).attr('y', (yValue + 0.5) + "em").attr('width', textBoxWidth).style('fill', colorScale(speaker)).attr('opacity', 0.2)
             prevBoxy = yValue + 1.0
             previousX = defaultX
             yValue += 1.4
