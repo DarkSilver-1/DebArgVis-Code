@@ -21,16 +21,17 @@ function groupNodes(nodes, xScale, mouseX) {
     nodesFarRightOfWindow = [];
     nodes.forEach(function (d) {
         const barX = xScale(d.start_time);
-        if (barX >= mouseX - 3 * halfWindowSize && barX < mouseX - 2 * halfWindowSize) {
-            nodesFarLeftOfWindow.push(d)
-        } else if (barX >= mouseX - 2 * halfWindowSize && barX < mouseX - halfWindowSize) {
-            nodesLeftOfWindow.push(d)
-        } else if (barX < mouseX + 2 * halfWindowSize && barX >= mouseX + halfWindowSize) {
-            nodesRightOfWindow.push(d)
-        } else if (barX < mouseX + 3 * halfWindowSize && barX >= mouseX + 2 * halfWindowSize) {
-            nodesFarRightOfWindow.push(d)
-        } else if (barX < mouseX + halfWindowSize && barX >= mouseX - halfWindowSize) {
+        const barWidth = xScale(d.end_time) - barX
+        if (barX <= mouseX + halfWindowSize && barX + barWidth >= mouseX - halfWindowSize) {
             nodesInWindow.push(d)
+        } else if (barX + barWidth >= mouseX - 3 * halfWindowSize && barX < mouseX - 2 * halfWindowSize) {
+            nodesFarLeftOfWindow.push(d)
+        } else if (barX + barWidth >= mouseX - 2 * halfWindowSize && barX < mouseX - halfWindowSize) {
+            nodesLeftOfWindow.push(d)
+        } else if (barX < mouseX + 2 * halfWindowSize && barX + barWidth >= mouseX + halfWindowSize) {
+            nodesRightOfWindow.push(d)
+        } else if (barX < mouseX + 3 * halfWindowSize && barX + barWidth >= mouseX + 2 * halfWindowSize) {
+            nodesFarRightOfWindow.push(d)
         }
     })
 }
@@ -359,23 +360,23 @@ function determineXValue(xScale, d, mouseX, adaptedXBeforeWindow, firstScaledNod
     }
 }
 
-function determineXValue2(xScale, d, mouseX, adaptedXBeforeWindow, firstScaledNodeX, antiScaleFactor, adaptedXAfterWindow, lastScaledNodeX, firstScaledNodeXSmaller, firstScaledNodeXSmallest, lastScaledNodeXSmaller, lastScaledNodeXSmallest, adaptedXBeforeSmallWindow2, adaptedXBeforeSmallestWindow2) {
+function determineXValue2(xScale, d, mouseX, defaultXValues, adaptedXValues, antiScaleFactor) {
     const barX = xScale(d.start_time);
-    const barWidth = xScale(d.end_time || d.start_time) - barX;
-
-    // Check if the bar is within the mouse window
-    if (barX <= mouseX + halfWindowSize && barX + barWidth >= mouseX - halfWindowSize) {
-        return adaptedXBeforeWindow + adaptedXBeforeSmallWindow2 + adaptedXBeforeSmallestWindow2 + (xScale(d.start_time) - firstScaledNodeX) * scaleFactor;
-    } else if (barX <= mouseX + 2 * halfWindowSize && barX + barWidth >= mouseX - 2 * halfWindowSize) {
-        return adaptedXBeforeWindow + adaptedXBeforeSmallestWindow2 + (xScale(d.start_time) - firstScaledNodeXSmaller) * smallerScaleFactor;
-    } else if (barX <= mouseX + 3 * halfWindowSize && barX + barWidth >= mouseX - 3 * halfWindowSize) {
-        return adaptedXBeforeWindow + (xScale(d.start_time) - firstScaledNodeXSmallest) * smallestScaleFactor
+    const barWidth = xScale(d.end_time) - barX;
+    if (barX < defaultXValues[0]) {
+        return barX * antiScaleFactor
+    } else if (barX + barWidth >= defaultXValues[0] && barX < defaultXValues[1]) {
+        return adaptedXValues[0] + (barX - defaultXValues[0]) * smallestScaleFactor
+    } else if (barX + barWidth >= defaultXValues[1] && barX < defaultXValues[2]) {
+        return adaptedXValues[1] + (barX - defaultXValues[1]) * smallerScaleFactor
+    } else if (barX <= defaultXValues[3] && barX + barWidth >= defaultXValues[2]) {
+        return adaptedXValues[2] + (barX - defaultXValues[2]) * scaleFactor
+    } else if (barX < defaultXValues[4] && barX + barWidth >= defaultXValues[3]) {
+        return adaptedXValues[3] + (barX - defaultXValues[3]) * smallerScaleFactor
+    } else if (barX < defaultXValues[5] && barX + barWidth >= defaultXValues[4]) {
+        return adaptedXValues[4] + (barX - defaultXValues[4]) * smallestScaleFactor
     } else {
-        if (barX < mouseX - 3 * halfWindowSize) {
-            return barX * antiScaleFactor;
-        } else {
-            return adaptedXAfterWindow + (barX - lastScaledNodeX) * antiScaleFactor
-        }
+        return adaptedXValues[5] + (barX - defaultXValues[5]) * antiScaleFactor
     }
 }
 
@@ -451,27 +452,79 @@ function computeBarWidth(xScale, d, mouseX, antiScaleFactor) {
     }
 }
 
+function computeBarWidth2(xScale, d, defaultXValues, antiScaleFactor) {
+    const barX = xScale(d.start_time);
+    const barWidth = xScale(d.end_time) - barX;
+    if (barX < defaultXValues[0]) {
+        return barWidth * antiScaleFactor
+    } else if (barX + barWidth >= defaultXValues[0] && barX < defaultXValues[1]) {
+        return barWidth * smallestScaleFactor
+    } else if (barX + barWidth >= defaultXValues[1] && barX < defaultXValues[2]) {
+        return barWidth * smallerScaleFactor
+    } else if (barX <= defaultXValues[3] && barX + barWidth >= defaultXValues[2]) {
+        return barWidth * scaleFactor
+    } else if (barX < defaultXValues[4] && barX + barWidth >= defaultXValues[3]) {
+        return barWidth * smallerScaleFactor
+    } else if (barX < defaultXValues[5] && barX + barWidth >= defaultXValues[4]) {
+        return barWidth * smallestScaleFactor
+    } else {
+        return barWidth * antiScaleFactor
+    }
+}
+
 function isBarWithinMouseWindow(barX, barWidth, mouseX, halfWindowSize) {
     return barX <= mouseX + halfWindowSize && barX + barWidth >= mouseX - halfWindowSize;
 }
 
 function updateDiagram(mouseX, xScale, node2, nodes, svg3, height3, yScale3, node3, link, curve, scaleFactor, width3, links) {
-    const lastScaledNodeX = nodesInWindow.length !== 0 ? xScale(d3.max(nodesInWindow, d => d.end_time)) : 0;
-    //const lastScaledNodeX2 = nodesInWindow.length !== 0 ? nodesInWindow.slice(-1) : 0;
-    console.log(lastScaledNodeX === lastScaledNodeX2)
-    console.log(lastScaledNodeX)
-    console.log(lastScaledNodeX2)
+    const firstScaledNodeX = nodesInWindow.length !== 0 ? xScale(nodesInWindow[0].start_time) : 0;
+    const lastScaledNodeX = nodesInWindow.length !== 0 ? xScale(nodesInWindow[nodesInWindow.length - 1].end_time) : 0;
 
-    const firstScaledNodeX = nodesInWindow.length !== 0 ? xScale(d3.min(nodesInWindow, d => d.start_time)) : 0;
-    node2.attr('opacity', function (d) {
-        const barX = xScale(d.start_time);
-        //const barWidth = xScale(d.end_time) - barX;
-        return barX < lastScaledNodeX && barX >= firstScaledNodeX ? 1.0 : 0.2
-        //return isBarWithinMouseWindow(barX, barWidth, mouseX, halfWindowSize) ? 1.0 : 0.2;
-    });
+    const firstScaledNodeXLeft = nodesLeftOfWindow.length !== 0 ? xScale(nodesLeftOfWindow[0].start_time) : 0;
+    const lastScaledNodeXLeft = nodesLeftOfWindow.length !== 0 ? xScale(nodesLeftOfWindow[nodesLeftOfWindow.length - 1].end_time) : 0;
 
+    const firstScaledNodeXFarLeft = nodesFarLeftOfWindow.length !== 0 ? xScale(nodesFarLeftOfWindow[0].start_time) : 0;
+    const lastScaledNodeXFarLeft = nodesFarLeftOfWindow.length !== 0 ? xScale(nodesFarLeftOfWindow[nodesFarLeftOfWindow.length - 1].end_time) : 0;
+
+    const firstScaledNodeXRight = nodesRightOfWindow.length !== 0 ? xScale(nodesRightOfWindow[0].start_time) : 0;
+    const lastScaledNodeXRight = nodesRightOfWindow.length !== 0 ? xScale(nodesRightOfWindow[nodesRightOfWindow.length - 1].end_time) : 0;
+
+    const firstScaledNodeXFarRight = nodesFarRightOfWindow.length !== 0 ? xScale(nodesFarRightOfWindow[0].start_time) : 0;
+    const lastScaledNodeXFarRight = nodesFarRightOfWindow.length !== 0 ? xScale(nodesFarRightOfWindow[nodesFarRightOfWindow.length - 1].end_time) : 0;
+
+    const farLeftLength = (firstScaledNodeXLeft - firstScaledNodeXFarLeft) * smallestScaleFactor
+    const leftLength = (firstScaledNodeX - firstScaledNodeXLeft) * smallerScaleFactor
+    const windowLength = (firstScaledNodeXRight - firstScaledNodeX) * scaleFactor
+    const rightLength = (firstScaledNodeXFarRight - firstScaledNodeXRight) * smallerScaleFactor
+    const farRightLength = (lastScaledNodeXFarRight - firstScaledNodeXFarRight)
 
     const diagramLength = xScale(d3.max(nodes, d => d.end_time))
+    const unscaledAreaLength2 = diagramLength - (lastScaledNodeXFarRight - firstScaledNodeXFarLeft)
+    const antiScaledAreaLength2 = diagramLength - (farLeftLength + leftLength + windowLength + rightLength + farRightLength)
+    const antiScaleFactor2 = antiScaledAreaLength2 / unscaledAreaLength2
+    const antiScaledAreaLengthLeft = firstScaledNodeXFarLeft * antiScaleFactor2
+
+    const adaptedFirstXFarLeft = antiScaledAreaLengthLeft
+    const adaptedFirstXLeft = adaptedFirstXFarLeft + farLeftLength
+    const adaptedFirstX = adaptedFirstXLeft + leftLength
+    const adaptedFirstXRight = adaptedFirstX + windowLength
+    const adaptedFirstXFarRight = adaptedFirstXRight + rightLength
+    const adaptedFirstXAreaAfter = adaptedFirstXFarRight + farRightLength
+    const defaultXValues = [firstScaledNodeXFarLeft, firstScaledNodeXLeft, firstScaledNodeX, firstScaledNodeXRight, firstScaledNodeXFarRight, lastScaledNodeXFarRight]
+    const adaptedXValues = [adaptedFirstXFarLeft, adaptedFirstXLeft, adaptedFirstX, adaptedFirstXRight, adaptedFirstXFarRight, adaptedFirstXAreaAfter]
+
+    node2.attr('opacity', function (d) {
+        const barX = xScale(d.start_time);
+        return barX < lastScaledNodeX && barX >= firstScaledNodeX ? 1.0 : 0.2
+    });
+
+    /*console.log("1", nodesFarLeftOfWindow.map(d => d.transcript_text))
+    console.log("2", nodesLeftOfWindow.map(d => d.transcript_text))
+    console.log("3", nodesInWindow.map(d => d.transcript_text))
+    console.log("4", nodesRightOfWindow.map(d => d.transcript_text))
+    console.log("5", nodesFarRightOfWindow.map(d => d.transcript_text))*/
+
+    //const diagramLength = xScale(d3.max(nodes, d => d.end_time))
     const scaledAreaLength = ((lastScaledNodeX - firstScaledNodeX) * scaleFactor)
     const unscaledAreaLength = diagramLength - (lastScaledNodeX - firstScaledNodeX)
     const antiScaledAreaLength = diagramLength - scaledAreaLength
@@ -481,28 +534,35 @@ function updateDiagram(mouseX, xScale, node2, nodes, svg3, height3, yScale3, nod
     const adaptedXAfterWindow = firstScaledNodeX * antiScaleFactor + scaledAreaLength
 
     node3
-        .attr('transform', d => `translate(${determineXValue(xScale, d, mouseX, adaptedXBeforeWindow, firstScaledNodeX, antiScaleFactor, adaptedXAfterWindow, lastScaledNodeX)}, ${yScale3(d.speaker)})`)
+        //.attr('transform', d => `translate(${determineXValue(xScale, d, mouseX, adaptedXBeforeWindow, firstScaledNodeX, antiScaleFactor, adaptedXAfterWindow, lastScaledNodeX)}, ${yScale3(d.speaker)})`)
+        .attr('transform', d => `translate(${determineXValue2(xScale, d, mouseX, defaultXValues, adaptedXValues, antiScaleFactor2)}, ${yScale3(d.speaker)})`)
         .attr('opacity', function (d) {
             const barX = xScale(d.start_time);
-            const barWidth = xScale(d.end_time) - barX;
             return barX < lastScaledNodeX && barX >= firstScaledNodeX ? 1.0 : 0.2
-            //return isBarWithinMouseWindow(barX, barWidth, mouseX, halfWindowSize) ? 1.0 : 0.2;
         });
     node3.select('.line-connector')
-        .attr('x1', d => computeBarWidth(xScale, d, mouseX, antiScaleFactor) / 2)
-        .attr('x2', d => computeBarWidth(xScale, d, mouseX, antiScaleFactor) / 2);
+        //.attr('x1', d => computeBarWidth(xScale, d, mouseX, antiScaleFactor) / 2)
+        .attr('x1', d => computeBarWidth2(xScale, d, defaultXValues, antiScaleFactor) / 2)
+        //.attr('x2', d => computeBarWidth(xScale, d, mouseX, antiScaleFactor) / 2)
+        .attr('x2', d => computeBarWidth2(xScale, d, defaultXValues, antiScaleFactor) / 2)
     node3.select('.node')
-        .attr('width', d => computeBarWidth(xScale, d, mouseX, antiScaleFactor))
+        //.attr('width', d => computeBarWidth(xScale, d, mouseX, antiScaleFactor))
+        .attr('width', d => computeBarWidth2(xScale, d, defaultXValues, antiScaleFactor))
 
     link
         .attr('d', d => {
             let pathData
             let adapt_y = d.text_additional === "Default Conflict" ? yScale3.bandwidth() + 15 : -10
             let adapt_start_y = d.text_additional === "Default Conflict" ? yScale3.bandwidth() : 0
-            let barWidth1 = computeBarWidth(xScale, d.source, mouseX, antiScaleFactor)
-            let barWidth2 = computeBarWidth(xScale, d.target, mouseX, antiScaleFactor)
-            let xMid1 = (determineXValue(xScale, d.source, mouseX, adaptedXBeforeWindow, firstScaledNodeX, antiScaleFactor, adaptedXAfterWindow, lastScaledNodeX)) + barWidth1 / 2
-            let xMid2 = (determineXValue(xScale, d.target, mouseX, adaptedXBeforeWindow, firstScaledNodeX, antiScaleFactor, adaptedXAfterWindow, lastScaledNodeX)) + barWidth2 / 2
+            //let barWidth1 = computeBarWidth(xScale, d.source, mouseX, antiScaleFactor)
+            let barWidth1 = computeBarWidth2(xScale, d.source, defaultXValues, antiScaleFactor)
+            //let barWidth2 = computeBarWidth(xScale, d.target, mouseX, antiScaleFactor)
+            let barWidth2 = computeBarWidth2(xScale, d.target, defaultXValues, antiScaleFactor)
+            //let xMid1 = (determineXValue(xScale, d.source, mouseX, adaptedXBeforeWindow, firstScaledNodeX, antiScaleFactor, adaptedXAfterWindow, lastScaledNodeX)) + barWidth1 / 2
+            let xMid1 = (determineXValue2(xScale, d.source, mouseX, defaultXValues, adaptedXValues, antiScaleFactor2)) + barWidth1 / 2
+            //let xMid2 = (determineXValue(xScale, d.target, mouseX, adaptedXBeforeWindow, firstScaledNodeX, antiScaleFactor, adaptedXAfterWindow, lastScaledNodeX)) + barWidth2 / 2
+            let xMid2 = (determineXValue2(xScale, d.target, mouseX, defaultXValues, adaptedXValues, antiScaleFactor2)) + barWidth2 / 2
+            determineXValue2(xScale, d, mouseX, defaultXValues, adaptedXValues, antiScaleFactor2)
             let yMid1 = yScale3(d.source.speaker) + adapt_y;
             let yMid2 = yScale3(d.target.speaker) + adapt_y;
             pathData = [
@@ -514,9 +574,12 @@ function updateDiagram(mouseX, xScale, node2, nodes, svg3, height3, yScale3, nod
             return curve(pathData);
         })
         .attr('visibility', d => {
-            const sourceX = determineXValue(xScale, d.source, mouseX, adaptedXBeforeWindow, firstScaledNodeX, antiScaleFactor, adaptedXAfterWindow, lastScaledNodeX);
-            const targetX = determineXValue(xScale, d.target, mouseX, adaptedXBeforeWindow, firstScaledNodeX, antiScaleFactor, adaptedXAfterWindow, lastScaledNodeX);
-            return sourceX >= adaptedXBeforeWindow && targetX <= adaptedXAfterWindow ? 'visible' : 'hidden'
+            //const sourceX = determineXValue(xScale, d.source, mouseX, adaptedXBeforeWindow, firstScaledNodeX, antiScaleFactor, adaptedXAfterWindow, lastScaledNodeX);
+            //const targetX = determineXValue(xScale, d.target, mouseX, adaptedXBeforeWindow, firstScaledNodeX, antiScaleFactor, adaptedXAfterWindow, lastScaledNodeX);
+            const sourceX = determineXValue2(xScale, d.source, mouseX, defaultXValues, adaptedXValues, antiScaleFactor2);
+            const targetX = determineXValue2(xScale, d.target, mouseX, defaultXValues, adaptedXValues, antiScaleFactor2);
+            //return sourceX >= adaptedXBeforeWindow && targetX <= adaptedXAfterWindow ? 'visible' : 'hidden'
+            return sourceX >= adaptedFirstX && targetX <= adaptedFirstXRight ? 'visible' : 'hidden'
         })
     svg3.selectAll('.hover-box').remove()
     addTextBox(width3, svg3, nodes, true, links, link);
