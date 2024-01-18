@@ -137,7 +137,10 @@ function createSlidingTimeline(graphData) {
         mouseRectangle
             .attr('x', currentTimeVid - halfWindowSize)
             .attr('opacity', 0.5);
-        updateDiagram(currentTimeVid, xScale, node2, nodes, svg3, height3, yScale3, node3, link, curve, scaleFactor, width3, links);
+        if (!(prevNodesInWindow && (nodesInWindow[0] === prevNodesInWindow[0] && nodesInWindow[nodesInWindow.length - 1] === prevNodesInWindow[prevNodesInWindow.length - 1]))) {
+            updateDiagram(currentTimeVid, xScale, node2, nodes, svg3, height3, yScale3, node3, link, curve, scaleFactor, width3, links);
+            prevNodesInWindow = nodesInWindow
+        }
         currentTime = xScale(new Date(nodes[0].start_time.getTime() + videoplayer.currentTime * 1000))
     });
 
@@ -292,12 +295,13 @@ function createSlidingTimeline(graphData) {
 
     node3.on('click', (event, d) => {
         let videoplayer = document.getElementById('videoPlayer')
-        nodesInWindow = nodes.filter(function (d) {
+        /*nodesInWindow = nodes.filter(function (d) {
             const updatedTime = d.start_time;
             const barX = xScale(updatedTime);
             const barWidth = xScale(d.end_time) - barX;
             return isBarWithinMouseWindow(barX, barWidth, xScale(d.start_time), halfWindowSize);
-        });
+        });*/
+        groupNodes(nodes, xScale, d.start_time)
         currentTime = (d.start_time.getTime() - nodes[0].start_time.getTime()) / 1000
         videoplayer.currentTime = currentTime
         //videoplayer.play();
@@ -342,22 +346,6 @@ function createSlidingTimeline(graphData) {
         .append('svg:path')
         .attr('d', 'M0,-5L10,0L0,5')
         .attr('fill', 'green');
-}
-
-function determineXValue(xScale, d, mouseX, adaptedXBeforeWindow, firstScaledNodeX, antiScaleFactor, adaptedXAfterWindow, lastScaledNodeX) {
-    const barX = xScale(d.start_time);
-    const barWidth = xScale(d.end_time || d.start_time) - barX;
-
-    // Check if the bar is within the mouse window
-    if (barX <= mouseX + halfWindowSize && barX + barWidth >= mouseX - halfWindowSize) {
-        return adaptedXBeforeWindow + (barX - firstScaledNodeX) * scaleFactor;
-    } else {
-        if (barX < mouseX - halfWindowSize) {
-            return barX * antiScaleFactor;
-        } else {
-            return adaptedXAfterWindow + (barX - lastScaledNodeX) * antiScaleFactor
-        }
-    }
 }
 
 function determineXValue2(xScale, d, mouseX, defaultXValues, adaptedXValues, antiScaleFactor) {
@@ -441,17 +429,6 @@ function createNodes(svg, nodes, xScale, yScale, colorScale) {
         .style('fill', d => colorScale(d.speaker));
 }
 
-function computeBarWidth(xScale, d, mouseX, antiScaleFactor) {
-    const barWidth = xScale(d.end_time) - xScale(d.start_time);
-
-    // Check if the bar is within the mouse window
-    if (xScale(d.start_time) <= mouseX + halfWindowSize && xScale(d.start_time) + barWidth >= mouseX - halfWindowSize) {
-        return barWidth * scaleFactor;
-    } else {
-        return barWidth * antiScaleFactor > 0 ? barWidth * antiScaleFactor : 0;
-    }
-}
-
 function computeBarWidth2(xScale, d, defaultXValues, antiScaleFactor) {
     const barX = xScale(d.start_time);
     const barWidth = xScale(d.end_time) - barX;
@@ -461,7 +438,7 @@ function computeBarWidth2(xScale, d, defaultXValues, antiScaleFactor) {
         return barWidth * smallestScaleFactor
     } else if (barX + barWidth >= defaultXValues[1] && barX < defaultXValues[2]) {
         return barWidth * smallerScaleFactor
-    } else if (barX <= defaultXValues[3] && barX + barWidth >= defaultXValues[2]) {
+    } else if (barX < defaultXValues[3] && barX + barWidth >= defaultXValues[2]) {
         return barWidth * scaleFactor
     } else if (barX < defaultXValues[4] && barX + barWidth >= defaultXValues[3]) {
         return barWidth * smallerScaleFactor
@@ -472,23 +449,18 @@ function computeBarWidth2(xScale, d, defaultXValues, antiScaleFactor) {
     }
 }
 
-function isBarWithinMouseWindow(barX, barWidth, mouseX, halfWindowSize) {
-    return barX <= mouseX + halfWindowSize && barX + barWidth >= mouseX - halfWindowSize;
-}
-
 function updateDiagram(mouseX, xScale, node2, nodes, svg3, height3, yScale3, node3, link, curve, scaleFactor, width3, links) {
+    svg3.selectAll(".l").remove()
+    //console.log("1", nodesFarLeftOfWindow.map(d => d.transcript_text)[0], nodesFarLeftOfWindow.map(d => d.transcript_text)[nodesFarLeftOfWindow.length-1])
+    //console.log("2", nodesLeftOfWindow.map(d => d.transcript_text)[0], nodesLeftOfWindow.map(d => d.transcript_text)[nodesLeftOfWindow.length-1])
+    //console.log("3", nodesInWindow.map(d => d.transcript_text)[0], nodesInWindow.map(d => d.transcript_text)[nodesInWindow.length-1])
+    //console.log("4", nodesRightOfWindow.map(d => d.transcript_text)[0], nodesRightOfWindow.map(d => d.transcript_text)[nodesRightOfWindow.length-1])
+    //console.log("5", nodesFarRightOfWindow.map(d => d.transcript_text)[0], nodesFarRightOfWindow.map(d => d.transcript_text)[nodesFarRightOfWindow.length-1])
+
     const firstScaledNodeX = nodesInWindow.length !== 0 ? xScale(nodesInWindow[0].start_time) : 0;
-    const lastScaledNodeX = nodesInWindow.length !== 0 ? xScale(nodesInWindow[nodesInWindow.length - 1].end_time) : 0;
-
     const firstScaledNodeXLeft = nodesLeftOfWindow.length !== 0 ? xScale(nodesLeftOfWindow[0].start_time) : 0;
-    const lastScaledNodeXLeft = nodesLeftOfWindow.length !== 0 ? xScale(nodesLeftOfWindow[nodesLeftOfWindow.length - 1].end_time) : 0;
-
     const firstScaledNodeXFarLeft = nodesFarLeftOfWindow.length !== 0 ? xScale(nodesFarLeftOfWindow[0].start_time) : 0;
-    const lastScaledNodeXFarLeft = nodesFarLeftOfWindow.length !== 0 ? xScale(nodesFarLeftOfWindow[nodesFarLeftOfWindow.length - 1].end_time) : 0;
-
     const firstScaledNodeXRight = nodesRightOfWindow.length !== 0 ? xScale(nodesRightOfWindow[0].start_time) : 0;
-    const lastScaledNodeXRight = nodesRightOfWindow.length !== 0 ? xScale(nodesRightOfWindow[nodesRightOfWindow.length - 1].end_time) : 0;
-
     const firstScaledNodeXFarRight = nodesFarRightOfWindow.length !== 0 ? xScale(nodesFarRightOfWindow[0].start_time) : 0;
     const lastScaledNodeXFarRight = nodesFarRightOfWindow.length !== 0 ? xScale(nodesFarRightOfWindow[nodesFarRightOfWindow.length - 1].end_time) : 0;
 
@@ -496,7 +468,7 @@ function updateDiagram(mouseX, xScale, node2, nodes, svg3, height3, yScale3, nod
     const leftLength = (firstScaledNodeX - firstScaledNodeXLeft) * smallerScaleFactor
     const windowLength = (firstScaledNodeXRight - firstScaledNodeX) * scaleFactor
     const rightLength = (firstScaledNodeXFarRight - firstScaledNodeXRight) * smallerScaleFactor
-    const farRightLength = (lastScaledNodeXFarRight - firstScaledNodeXFarRight)
+    const farRightLength = (lastScaledNodeXFarRight - firstScaledNodeXFarRight) * smallestScaleFactor
 
     const diagramLength = xScale(d3.max(nodes, d => d.end_time))
     const unscaledAreaLength2 = diagramLength - (lastScaledNodeXFarRight - firstScaledNodeXFarLeft)
@@ -513,54 +485,61 @@ function updateDiagram(mouseX, xScale, node2, nodes, svg3, height3, yScale3, nod
     const defaultXValues = [firstScaledNodeXFarLeft, firstScaledNodeXLeft, firstScaledNodeX, firstScaledNodeXRight, firstScaledNodeXFarRight, lastScaledNodeXFarRight]
     const adaptedXValues = [adaptedFirstXFarLeft, adaptedFirstXLeft, adaptedFirstX, adaptedFirstXRight, adaptedFirstXFarRight, adaptedFirstXAreaAfter]
 
+    svg3.append('line')
+        .attr('class', 'l')
+        .attr('x1', adaptedFirstXFarLeft)
+        .attr('y1', 0)
+        .attr('x2', adaptedFirstXFarLeft)
+        .attr('y2', 600)
+        .attr('stroke', 'blue')
+    svg3.append('line')
+        .attr('class', 'l')
+        .attr('x1', adaptedFirstXAreaAfter)
+        .attr('y1', 0)
+        .attr('x2', adaptedFirstXAreaAfter)
+        .attr('y2', 600)
+        .attr('stroke', 'blue')
+    svg3.append('line')
+        .attr('class', 'l')
+        .attr('x1', adaptedFirstXLeft)
+        .attr('y1', 0)
+        .attr('x2', adaptedFirstXLeft)
+        .attr('y2', 600)
+        .attr('stroke', 'green')
+    svg3.append('line')
+        .attr('class', 'l')
+        .attr('x1', adaptedFirstXFarRight)
+        .attr('y1', 0)
+        .attr('x2', adaptedFirstXFarRight)
+        .attr('y2', 600)
+        .attr('stroke', 'green')
+
+
     node2.attr('opacity', function (d) {
         const barX = xScale(d.start_time);
-        return barX < lastScaledNodeX && barX >= firstScaledNodeX ? 1.0 : 0.2
+        return barX < firstScaledNodeXRight && barX >= firstScaledNodeX ? 1.0 : 0.2
     });
 
-    /*console.log("1", nodesFarLeftOfWindow.map(d => d.transcript_text))
-    console.log("2", nodesLeftOfWindow.map(d => d.transcript_text))
-    console.log("3", nodesInWindow.map(d => d.transcript_text))
-    console.log("4", nodesRightOfWindow.map(d => d.transcript_text))
-    console.log("5", nodesFarRightOfWindow.map(d => d.transcript_text))*/
-
-    //const diagramLength = xScale(d3.max(nodes, d => d.end_time))
-    const scaledAreaLength = ((lastScaledNodeX - firstScaledNodeX) * scaleFactor)
-    const unscaledAreaLength = diagramLength - (lastScaledNodeX - firstScaledNodeX)
-    const antiScaledAreaLength = diagramLength - scaledAreaLength
-    const antiScaleFactor = (antiScaledAreaLength) / unscaledAreaLength
-    const beforeAreaLength = firstScaledNodeX * antiScaleFactor
-    const adaptedXBeforeWindow = firstScaledNodeX - (firstScaledNodeX - beforeAreaLength)
-    const adaptedXAfterWindow = firstScaledNodeX * antiScaleFactor + scaledAreaLength
-
     node3
-        //.attr('transform', d => `translate(${determineXValue(xScale, d, mouseX, adaptedXBeforeWindow, firstScaledNodeX, antiScaleFactor, adaptedXAfterWindow, lastScaledNodeX)}, ${yScale3(d.speaker)})`)
         .attr('transform', d => `translate(${determineXValue2(xScale, d, mouseX, defaultXValues, adaptedXValues, antiScaleFactor2)}, ${yScale3(d.speaker)})`)
         .attr('opacity', function (d) {
             const barX = xScale(d.start_time);
-            return barX < lastScaledNodeX && barX >= firstScaledNodeX ? 1.0 : 0.2
+            return barX < firstScaledNodeXRight && barX >= firstScaledNodeX ? 1.0 : 0.2
         });
     node3.select('.line-connector')
-        //.attr('x1', d => computeBarWidth(xScale, d, mouseX, antiScaleFactor) / 2)
-        .attr('x1', d => computeBarWidth2(xScale, d, defaultXValues, antiScaleFactor) / 2)
-        //.attr('x2', d => computeBarWidth(xScale, d, mouseX, antiScaleFactor) / 2)
-        .attr('x2', d => computeBarWidth2(xScale, d, defaultXValues, antiScaleFactor) / 2)
+        .attr('x1', d => computeBarWidth2(xScale, d, defaultXValues, antiScaleFactor2) / 2)
+        .attr('x2', d => computeBarWidth2(xScale, d, defaultXValues, antiScaleFactor2) / 2)
     node3.select('.node')
-        //.attr('width', d => computeBarWidth(xScale, d, mouseX, antiScaleFactor))
-        .attr('width', d => computeBarWidth2(xScale, d, defaultXValues, antiScaleFactor))
+        .attr('width', d => computeBarWidth2(xScale, d, defaultXValues, antiScaleFactor2))
 
     link
         .attr('d', d => {
             let pathData
             let adapt_y = d.text_additional === "Default Conflict" ? yScale3.bandwidth() + 15 : -10
             let adapt_start_y = d.text_additional === "Default Conflict" ? yScale3.bandwidth() : 0
-            //let barWidth1 = computeBarWidth(xScale, d.source, mouseX, antiScaleFactor)
-            let barWidth1 = computeBarWidth2(xScale, d.source, defaultXValues, antiScaleFactor)
-            //let barWidth2 = computeBarWidth(xScale, d.target, mouseX, antiScaleFactor)
-            let barWidth2 = computeBarWidth2(xScale, d.target, defaultXValues, antiScaleFactor)
-            //let xMid1 = (determineXValue(xScale, d.source, mouseX, adaptedXBeforeWindow, firstScaledNodeX, antiScaleFactor, adaptedXAfterWindow, lastScaledNodeX)) + barWidth1 / 2
+            let barWidth1 = computeBarWidth2(xScale, d.source, defaultXValues, antiScaleFactor2)
+            let barWidth2 = computeBarWidth2(xScale, d.target, defaultXValues, antiScaleFactor2)
             let xMid1 = (determineXValue2(xScale, d.source, mouseX, defaultXValues, adaptedXValues, antiScaleFactor2)) + barWidth1 / 2
-            //let xMid2 = (determineXValue(xScale, d.target, mouseX, adaptedXBeforeWindow, firstScaledNodeX, antiScaleFactor, adaptedXAfterWindow, lastScaledNodeX)) + barWidth2 / 2
             let xMid2 = (determineXValue2(xScale, d.target, mouseX, defaultXValues, adaptedXValues, antiScaleFactor2)) + barWidth2 / 2
             determineXValue2(xScale, d, mouseX, defaultXValues, adaptedXValues, antiScaleFactor2)
             let yMid1 = yScale3(d.source.speaker) + adapt_y;
@@ -574,11 +553,8 @@ function updateDiagram(mouseX, xScale, node2, nodes, svg3, height3, yScale3, nod
             return curve(pathData);
         })
         .attr('visibility', d => {
-            //const sourceX = determineXValue(xScale, d.source, mouseX, adaptedXBeforeWindow, firstScaledNodeX, antiScaleFactor, adaptedXAfterWindow, lastScaledNodeX);
-            //const targetX = determineXValue(xScale, d.target, mouseX, adaptedXBeforeWindow, firstScaledNodeX, antiScaleFactor, adaptedXAfterWindow, lastScaledNodeX);
             const sourceX = determineXValue2(xScale, d.source, mouseX, defaultXValues, adaptedXValues, antiScaleFactor2);
             const targetX = determineXValue2(xScale, d.target, mouseX, defaultXValues, adaptedXValues, antiScaleFactor2);
-            //return sourceX >= adaptedXBeforeWindow && targetX <= adaptedXAfterWindow ? 'visible' : 'hidden'
             return sourceX >= adaptedFirstX && targetX <= adaptedFirstXRight ? 'visible' : 'hidden'
         })
     svg3.selectAll('.hover-box').remove()
@@ -633,7 +609,6 @@ function addTextBox(width3, svg3, nodes, textHovered3, links, link) {
     } else {
         textArray = nodes.map(d => d.transcript_text)
     }
-    let fontSizeInPixels = parseFloat(d3.select('body').style('font-size'));
     let defaultX = width3 + 25
     let maxNumOfLetters = 100
     let previousX = defaultX;
@@ -651,12 +626,12 @@ function addTextBox(width3, svg3, nodes, textHovered3, links, link) {
             if (previousSpeaker !== null) {
                 yValue += 2.4
             }
-            hoverBox.append('text').text(speaker).attr('y', yValue + "em").attr('fill', "white").attr('x', defaultX-10).style('font-weight', 'bold')
+            hoverBox.append('text').text(speaker).attr('y', yValue + "em").attr('fill', "white").attr('x', defaultX - 10).style('font-weight', 'bold')
             if (background !== null) {
                 let backgroundHeight = yValue - prevBoxy;
                 background.attr('height', (backgroundHeight - 1.5) + "em")
             }
-            background = hoverBox.insert('rect').attr('x', defaultX-5).attr('y', (yValue + 0.5) + "em").attr('width', textBoxWidth).style('fill', colorScale(speaker)).attr('opacity', 0.2)
+            background = hoverBox.insert('rect').attr('x', defaultX - 5).attr('y', (yValue + 0.5) + "em").attr('width', textBoxWidth).style('fill', colorScale(speaker)).attr('opacity', 0.2)
             prevBoxy = yValue + 1.0
             previousX = defaultX
             yValue += 1.4
