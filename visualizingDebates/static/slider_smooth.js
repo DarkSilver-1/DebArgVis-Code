@@ -579,12 +579,12 @@ function addTextBox(width3, svg3, nodes, links, link) {
             if (previousSpeaker !== null) {
                 yValue += 2.4
             }
-            hoverBox.append('text').text(speaker).attr('y', yValue + "em").attr('fill', "white").attr('x', defaultX - 10).style('font-weight', 'bold')
+            hoverBox.append('text').text(speaker).attr('y', yValue + "em").attr('fill', "white").attr('x', defaultX - 10).style('font-weight', 'bold').on("wheel", scrollText)
             if (background !== null) {
                 let backgroundHeight = yValue - prevBoxy;
                 background.attr('height', (backgroundHeight - 1.5) + "em")
             }
-            background = hoverBox.insert('rect').attr('x', defaultX - 5).attr('y', (yValue + 0.5) + "em").attr('width', textBoxWidth).style('fill', colorScale(speaker)).attr('opacity', 0.2)
+            background = hoverBox.insert('rect').attr('x', defaultX - 5).attr('y', (yValue + 0.5) + "em").attr('width', textBoxWidth).style('fill', colorScale(speaker)).attr('opacity', 0.2).on("wheel", scrollText);
             prevBoxy = yValue + 1.0
             previousX = defaultX
             yValue += 1.4
@@ -644,7 +644,7 @@ function addTextBox(width3, svg3, nodes, links, link) {
             });
             newText.style('font-weight', 'normal');
             svg3.selectAll('.node').attr('stroke', 'none');
-        })
+        }).on("wheel", scrollText)
     })
     if (background !== null) {
         background.attr('height', (yValue - prevBoxy + 1.2) + "em")
@@ -654,6 +654,7 @@ function addTextBox(width3, svg3, nodes, links, link) {
     hoverBox.insert('rect', 'text')
         .attr('class', ".hover-box")
         .attr('y', yPosition)
+        .attr('id', "hover-box")
         .attr('x', xPosition)
         .attr('width', Math.min(bbox.width + 10, 1200))
         .attr('height', Math.min(bbox.height + 10, 478))
@@ -661,6 +662,7 @@ function addTextBox(width3, svg3, nodes, links, link) {
         .style('fill', '#282c34')
         .style('stroke', 'white')
         .style('cursor', 'pointer')
+        .on("wheel", scrollText)
 }
 
 function findNodesToShowText(nodes, xScale) {
@@ -680,3 +682,27 @@ function findNodesToShowText(nodes, xScale) {
     return nodesToShowText;
 }
 
+function scrollText(event) {
+    event.preventDefault()
+    const hoverBox = d3.select(".hover-box");
+    const allTexts = hoverBox.selectAll('text');
+    const allRects = hoverBox.selectAll('rect');
+    const scroll = event.deltaY > 0 ? -1 : 1;
+    const lastText = allTexts.filter(':last-child');
+    const lastTextY = parseFloat(lastText.attr('y'));
+    const firstText = d3.select(allTexts.nodes()[0]);
+    const firstTextY = parseFloat(firstText.attr('y'));
+    if ((lastTextY > 27 || scroll === 1) && (firstTextY < 1 || scroll === -1)) {//TODO hardcoded
+        function updateElementY(selection) {
+            selection.each(function () {
+                if (d3.select(this).attr('id') !== 'hover-box') {
+                    const currentY = parseFloat(d3.select(this).attr("y"));
+                    const newY = currentY + scroll;
+                    d3.select(this).attr('y', newY + "em");
+                }
+            });
+        }
+        updateElementY(allTexts);
+        updateElementY(allRects);
+    }
+}
