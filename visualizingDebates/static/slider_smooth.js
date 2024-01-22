@@ -144,7 +144,6 @@ function createSlidingTimeline(graphData) {
         currentTime = xScale(new Date(nodes[0].start_time.getTime() + videoplayer.currentTime * 1000))
     });
 
-
 //--------------------------------------------------------------------
 
     let margin3 = {top: 20, right: 20, bottom: 40, left: 60};
