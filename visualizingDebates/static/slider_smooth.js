@@ -569,7 +569,8 @@ function addTextBox(width3, svg3, nodes, links, link) {
     let previousSpeaker = null
     let background = null
     let prevBoxy = 0
-    textArray.forEach(function (transcript_text, index) {
+    let small_margin = 5
+    textArray.filter(x => x !== "").forEach(function (transcript_text, index) {
         let prevCutIndex = 0
         let finished = false
         let node = nodes.find(node => node.transcript_text === transcript_text)
@@ -625,14 +626,15 @@ function addTextBox(width3, svg3, nodes, links, link) {
                     numberOfCharsInLine -= maxNumOfLetters
                 }
                 tspanPart.attr('x', previousX);
-                previousX += tspanPart.node().getComputedTextLength()
+                previousX += tspanPart.node().getComputedTextLength() + small_margin
                 finished = prevCutIndex === transcript_text.length
                 firstCut = false
             }
         } else {
             newText.attr('y', yValue + "em").attr('x', previousX).attr('id', `hovered-text-${index}`).attr('fill', "white").text(transcript_text)
             numberOfCharsInLine += transcript_text.length
-            previousX += newText.node().getComputedTextLength()
+            previousX += newText.node().getComputedTextLength() + small_margin
+
         }
         newText.on("mouseover", function () {
             textHoverAction(links, transcript_text, textArray, link, svg3, newText);

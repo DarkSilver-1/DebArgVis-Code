@@ -1,19 +1,20 @@
 import json
 import os
-from datetime import datetime
 import re
+from datetime import datetime
+
 import networkx as nx
 from dotenv import load_dotenv
 
 from ..logger import logging
 
 personIDMapping = {
-    '3866': "Claire Cooper",
-    '3812': 'Fiona Bruce',
-    '3862': 'Andy Burnham',
-    '3861': 'Chris Philip',
-    '3863': 'Helle Thorning-Schmidt',
-    '3864': 'James Graham',
+    '3730': "Caroline Lucas",
+    '3732': 'Fiona Bruce',
+    '3734': 'Paul Scully',
+    '3731': 'Emily Thornberry',
+    '3735': 'Tim Stanley',
+    '3733': 'Paul Polman',
     'Public': 'Public'
 }
 newTopicQuestionTimes = ["2020-05-21 22:52:01", "2020-05-21 23:08:18", "2020-05-21 23:31:20", "2020-05-21 23:43:08"]
@@ -30,12 +31,16 @@ def build_graph_x():
     graph = nx.MultiDiGraph()
     json_folder_path = os.getenv("FOLDER_PATH")
     transcript = extract_transcript()
+    imc_file_path = os.getenv("imc_file_path")
+    found_files = []
     for filename in os.listdir(json_folder_path):
         if filename.endswith('.json'):
             json_file_path = os.path.join(json_folder_path, filename)
             if os.path.getsize(json_file_path) != 0 and os.path.getsize(json_file_path) != 68 and os.path.getsize(
                     json_file_path) != 69:
-                extract_file(graph, json_file_path, transcript)
+                extract_file(graph, json_file_path, transcript, found_files)
+
+    extract_IMC(graph, imc_file_path)
     logging.info("Extracted the files")
     remove_isolated(graph)
     logging.info("Removed isolated nodes")
@@ -45,7 +50,30 @@ def build_graph_x():
     logging.info("Mapped back to transcript")
     complete_transcript_mapping(new_graph, transcript)
     logging.info("Filtered nodes")
+    delete_unmapped_nodes(new_graph)
     return new_graph
+
+
+def delete_unmapped_nodes(new_graph):
+    nodes_to_delete = []
+    for node, data in new_graph.nodes(data=True):
+        if data["transcript_text"] == "":
+            nodes_to_delete.append(node)
+    for node in nodes_to_delete:
+        new_graph.remove_node(node)
+
+
+def extract_IMC(graph, imc_file_path):
+    with open(imc_file_path, "r") as imc_file:
+        file_data = json.load(imc_file)
+        for node in file_data["nodes"]:
+            node_id = node["nodeID"]
+            node_type = node["type"]
+            text = node["text"]
+            if node_type != "L" and node_type != "I":
+                graph.add_node(node_id, text=text, type=node_type)
+    for edge in file_data["edges"]:
+        graph.add_edge(edge["fromID"], edge["toID"])
 
 
 def complete_transcript_mapping(graph, transcript):
@@ -70,14 +98,12 @@ def complete_transcript_mapping(graph, transcript):
                         if c == 0:
                             start = 0
                         else:
-                            start = transcript[part][part_index][3][node["statement_index"]][c-1][2]
+                            start = transcript[part][part_index][3][node["statement_index"]][c - 1][2]
                         last_statement = transcript[part][part_index][2][node["statement_index"]][start:statement[2]]
                     c += 1
             else:
                 last_statement = transcript[part][part_index][2][node["statement_index"]]
             while statement_index < node["statement_index"]:
-                if not graph.has_node(node["id"]):
-                    graph.add_node(node["id"])
                 if "transcript_text" in graph.nodes[node["id"]]:
                     graph.nodes[node["id"]]["transcript_text"] += transcript[part][part_index][2][statement_index]
                 else:
@@ -95,7 +121,7 @@ def complete_transcript_mapping(graph, transcript):
             if count == 0:
                 if not graph.has_node(node["id"]):
                     graph.add_node(node["id"])
-                graph.nodes[node["id"]]["transcript_text"] = "ERROR: UNMAPPED STATEMENT"
+                graph.nodes[node["id"]]["transcript_text"] = ""  # "ERROR: UNMAPPED STATEMENT"
 
             if count >= statement_number:
                 statement_index += 1
@@ -127,7 +153,18 @@ def extract_transcript():
     return transcript
 
 
-def extract_file(graph, json_file_path, transcript):
+def find_transcript_part(transcript, adapted_text, json_file_path, found_files):
+    for transcript_part in transcript:
+        if transcript_part not in found_files:
+            for line in transcript[transcript_part]:
+                for sentence in line[2]:
+                    if adapted_text in sentence.lower():
+                        found_files.append(transcript_part)
+                        return transcript_part
+    return 0
+
+
+def extract_file(graph, json_file_path, transcript, found_files):
     with open(json_file_path, 'r') as json_file:
         graph_data = json.load(json_file)
         part = 0
@@ -139,20 +176,18 @@ def extract_file(graph, json_file_path, transcript):
             matching_locution = next(
                 (locution for locution in graph_data["locutions"] if locution["nodeID"] == node_id), None)
             if matching_locution:
-                adapted_text = text.split(":", 1)[1].strip()
+                if ":" in text:
+                    adapted_text = text.split(":", 1)[1].strip()
+                else:
+                    continue
                 if len(adapted_text) > 5:  # yes and no should directly match
                     adapted_text = adapted_text.lower()
                 if part == 0:
-                    for transcript_part in transcript:
-                        for line in transcript[transcript_part]:
-                            for sentence in line[2]:
-                                if adapted_text in sentence.lower():
-                                    part = transcript_part
-                                    break
-
+                    part = find_transcript_part(transcript, adapted_text, json_file_path, found_files)
                 part_index = 0
                 statement_index = 0
                 index = 0
+                found = False
                 for line in transcript[part]:
                     inner_index = 0
                     for sentence in line[2]:
@@ -166,6 +201,7 @@ def extract_file(graph, json_file_path, transcript):
                                 line[3][inner_index] = [(adapted_text, first_char_index, last_char_index)]
                                 part_index = index
                                 statement_index = inner_index
+                                found = True
                                 break
                             else:
                                 distinct = True
@@ -181,11 +217,12 @@ def extract_file(graph, json_file_path, transcript):
                                         count += 1
                                     part_index = index
                                     statement_index = inner_index
+                                    found = True
                                     break
                         inner_index += 1
                     index += 1
-
-                add_node_with_locution(graph, node_id, adapted_text, node_type, matching_locution, json_file_path,
+                if found:
+                    add_node_with_locution(graph, node_id, adapted_text, node_type, matching_locution, json_file_path,
                                        part, part_index, statement_index, transcript)
             else:
                 graph.add_node(node_id, text=text, type=node_type, file=json_file_path)
@@ -217,7 +254,19 @@ def add_node_with_locution(graph, node_id, text, node_type, locution, filename, 
 
 
 def remove_isolated(graph):
-    nodes_to_remove = [node for node, data in graph.nodes(data=True) if data["type"] == "L" and graph.degree(node) == 0]
+    nodes_to_remove = [node for node, data in graph.nodes(data=True) if
+                       "type" not in data or data["type"] == "L" and graph.degree(node) == 0]
+
+    for n in graph.nodes:
+        for p in graph.predecessors(n):
+            for l in graph.predecessors(p):
+                predecessor = graph.nodes(data=True)[l]
+                if predecessor and predecessor["text"] == "Analysing":
+                    for m in graph.predecessors(l):
+                        if m not in nodes_to_remove:
+                            nodes_to_remove.append(m)
+                            nodes_to_remove.append(l)
+
     for node in nodes_to_remove:
         graph.remove_node(node)
 
@@ -226,7 +275,8 @@ def filter_date(graph, target_date):
     subgraph = nx.MultiDiGraph()
 
     for node, data in graph.nodes(data=True):
-        if "speaker" in data and data.get("type") == "L": # The first check is to check if there has even been a matching locution
+        if "speaker" in data and data.get(
+                "type") == "L":  # The first check is to check if there has even been a matching locution
             subgraph.add_node(node, **data)
 
     for from_node, to_node, data in graph.edges(data=True):
@@ -248,7 +298,7 @@ def create_node_id_mapping(graph):
             if l_nodes:
                 l_node = l_nodes.pop()
                 predecessors = set(graph.predecessors(l_node))
-                predecessor_ya_node = next((p for p in predecessors if graph.nodes[p]["type"] == "YA"), None)
+                predecessor_ya_node = next((p for p in predecessors if graph.nodes[p]["type"] == "YA" and graph.nodes[p]["text"] == "Asserting"), None)
                 if predecessor_ya_node:
                     predecessors = set(graph.predecessors(predecessor_ya_node))
                     predecessor_l_node = next((p for p in predecessors if graph.nodes[p]["type"] == "L"), None)
