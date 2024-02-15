@@ -1,6 +1,7 @@
 const scaleFactor = 8;
 const smallerScaleFactor = scaleFactor / 2;
 const smallestScaleFactor = scaleFactor / 4;
+let antiScaleFactor
 const halfWindowSize = 30;
 let currentTime = 0;
 let textBoxWidth = 1000
@@ -34,6 +35,149 @@ function groupNodes(nodes, xScale, mouseX) {
             nodesFarRightOfWindow.push(d)
         }
     })
+}
+
+function nodeHoverAction(svg3, links, d, link, event) {
+    let textArray = nodesInWindow ? nodesInWindow.map(d => d.transcript_text) : []
+
+    svg3.selectAll('.node').attr('stroke', 'none');
+
+    let associatedLinks = links.filter(link => link.source.transcript_text === d.transcript_text);
+    associatedLinks = associatedLinks.filter(d => ['Default Inference', 'Default Rephrase', 'Default Conflict'].includes(d.text_additional))
+
+    textArray.forEach((t) => {
+        link.attr('opacity', 0.2);
+        svg3.selectAll('.node').attr('stroke', 'none');
+        const isConnected = associatedLinks.some(link => link.target.transcript_text === t);
+        const linkColor = associatedLinks.find(link => link.target.transcript_text === t)?.text_additional;
+        const color = isConnected ? getLinkColor(linkColor) : 'white';
+        const hoveredTextElement = svg3.selectAll('.hover-box text').filter(function () {
+            return this.textContent === t;
+        });
+        hoveredTextElement
+            .style('fill', color)
+            .style('font-weight', 'normal');
+    });
+    const hoveredTextElement = svg3.selectAll('.hover-box text').filter(function () {
+        return this.textContent === d.transcript_text;
+    });
+    hoveredTextElement.style('font-weight', 'bold');
+
+    d3.select(event.currentTarget)
+        .selectAll('.node')
+        .attr('stroke', 'black')
+        .attr('stroke-width', 2);
+
+    link.filter(l => l.source === d)
+        .attr('stroke', d => {
+            return getLinkColor(d.text_additional)
+        })
+        .attr('marker-end', d => {
+            return getArrowHeadColor(d.text_additional)
+        }).attr('opacity', 1.0);
+}
+
+function createNodeGroup(svg3, nodes, xScale, yScale3, colorScale3, height3) {
+    let nodesToShowText = findNodesToShowText(nodes, xScale)
+    let node3 = svg3.selectAll('.node-group')
+        .data(nodes)
+        .enter()
+        .append("g")
+        .attr("class", "node-group")
+        .attr('transform', d => `translate(${xScale(d.start_time)}, ${yScale3(d.speaker)})`);
+    node3.append('rect')
+        .attr('class', 'node')
+        .attr('width', d => xScale(d.end_time) - xScale(d.start_time))
+        .attr('height', yScale3.bandwidth())
+        .style('fill', d => colorScale3(d.speaker));
+    node3.append('line')
+        .attr('class', 'additional-line')
+        .attr('x1', 0)
+        .attr('y1', yScale3.bandwidth())
+        .attr('x2', 0)
+        .attr('y2', d => height3 - yScale3(d.speaker) + 5)
+        .attr('stroke', 'gray')
+        .attr('stroke-dasharray', '5,5')
+        .attr('visibility', (d, i) => nodesToShowText[i] ? 'visible' : 'hidden');
+    node3.append('text')
+        .attr('class', 'bar-text')
+        .attr('x', 0)
+        .attr('y', d => height3 - yScale3(d.speaker) + 10)
+        .text(d => d3.timeFormat('%H:%M:%S')(d.start_time))
+        .attr('text-anchor', 'middle')
+        .attr('font-size', '10px')
+        .attr('visibility', (d, i) => nodesToShowText[i] ? 'visible' : 'hidden')
+        .attr('fill', 'white');
+    return node3;
+}
+
+function createLinks(svg3, links, yScale3, xScale, curve) {
+    let link = svg3.selectAll('.link')
+        .data(links.filter(d => ['Default Inference', 'Default Rephrase', 'Default Conflict'].includes(d.text_additional)))
+        .enter().append('path')
+        .attr('class', 'link')
+        .attr('fill', 'none')
+        .attr('marker-end', d => getArrowHeadColor(d.text_additional))
+        .attr('stroke', d => getLinkColor(d.text_additional))
+        .attr('stroke-width', 2)
+        .attr('d', d => {
+            let pathData
+            let adapt_y = d.text_additional === "Default Conflict" ? yScale3.bandwidth() + 15 : -10
+            let adapt_start_y = d.text_additional === "Default Conflict" ? yScale3.bandwidth() : 0
+            let xMid = (xScale(d.source.start_time) + xScale(d.target.start_time)) / 2;
+            let yMid1 = yScale3(d.source.speaker) + adapt_y;
+            let yMid2 = yScale3(d.target.speaker) + adapt_y;
+            pathData = [
+                [(xScale(d.source.start_time) + (xScale(d.source.end_time) - xScale(d.source.start_time)) / 2), yScale3(d.source.speaker) + adapt_start_y],
+                [xMid, yMid1],
+                [xMid, yMid2],
+                [(xScale(d.target.start_time) + (xScale(d.target.end_time) - xScale(d.target.start_time)) / 2), yScale3(d.target.speaker) + adapt_start_y]
+            ]
+            return curve(pathData);
+        })
+    return link;
+}
+
+function createArrowheadMarker(svg3) {
+    svg3.append('defs').append('marker')
+        .attr('class', 'arrowhead')
+        .attr('id', 'arrowhead-red')
+        .attr('viewBox', '-0 -5 10 10')
+        .attr('refX', 9)
+        .attr('refY', 0)
+        .attr('orient', 'auto')
+        .attr('markerWidth', 3)
+        .attr('markerHeight', 4)
+        .attr('xoverflow', 'visible')
+        .append('svg:path')
+        .attr('d', 'M0,-5L10,0L0,5')
+        .attr('fill', 'red');
+    svg3.append('defs').append('marker')
+        .attr('class', 'arrowhead')
+        .attr('id', 'arrowhead-violet')
+        .attr('viewBox', '0 -5 10 10')
+        .attr('refX', 9)
+        .attr('refY', 0)
+        .attr('orient', 'auto')
+        .attr('markerWidth', 3)
+        .attr('markerHeight', 4)
+        .attr('xoverflow', 'visible')
+        .append('svg:path')
+        .attr('d', 'M0,-5L10,0L0,5')
+        .attr('fill', 'violet');
+    svg3.append('defs').append('marker')
+        .attr('class', 'arrowhead')
+        .attr('id', 'arrowhead-green')
+        .attr('viewBox', '-0 -5 10 10')
+        .attr('refX', 9)
+        .attr('refY', 0)
+        .attr('orient', 'auto')
+        .attr('markerWidth', 3)
+        .attr('markerHeight', 4)
+        .attr('xoverflow', 'visible')
+        .append('svg:path')
+        .attr('d', 'M0,-5L10,0L0,5')
+        .attr('fill', 'green');
 }
 
 function createSlidingTimeline(graphData) {
@@ -175,116 +319,19 @@ function createSlidingTimeline(graphData) {
         .range(d3.schemeCategory10);
 
     d3.forceSimulation(nodes)
-        .force('link', d3.forceLink(links).id(d => d.id).distance(20))
-        .force('charge', d3.forceManyBody().strength(-50))
-        .force('center', d3.forceCenter(width3 / 2, height3 / 2));
+        .force('link', d3.forceLink(links).id(d => d.id).distance(30))
 
     let curve = d3.line()
         .curve(d3.curveBasis);
 
-    let nodesToShowText = findNodesToShowText(nodes, xScale)
+    let node3 = createNodeGroup(svg3, nodes, xScale, yScale3, colorScale3, height3);
 
-    let node3 = svg3.selectAll('.node-group')
-        .data(nodes)
-        .enter()
-        .append("g")
-        .attr("class", "node-group")
-        .attr('transform', d => `translate(${xScale(d.start_time)}, ${yScale3(d.speaker)})`);
-    /*node3.append('line')
-        .attr('class', 'line-connector')
-        .attr('x1', d => (xScale(d.end_time) - xScale(d.start_time)) / 2)
-        .attr('y1', -10)
-        .attr('x2', d => (xScale(d.end_time) - xScale(d.start_time)) / 2)
-        .attr('y2', yScale3.bandwidth() + 10)
-        .attr('stroke', d => colorScale3(d.speaker));*/
-    node3.append('rect')
-        .attr('class', 'node')
-        .attr('width', d => xScale(d.end_time) - xScale(d.start_time))
-        .attr('height', yScale3.bandwidth())
-        .style('fill', d => colorScale3(d.speaker));
-    node3.append('line')
-        .attr('class', 'additional-line')
-        .attr('x1', 0)
-        .attr('y1', yScale3.bandwidth())
-        .attr('x2', 0)
-        .attr('y2', d => height3 - yScale3(d.speaker) + 5)
-        .attr('stroke', 'gray')
-        .attr('stroke-dasharray', '5,5')
-        .attr('visibility', (d, i) => nodesToShowText[i] ? 'visible' : 'hidden');
-    node3.append('text')
-        .attr('class', 'bar-text')
-        .attr('x', 0)
-        .attr('y', d => height3 - yScale3(d.speaker) + 10)
-        .text(d => d3.timeFormat('%H:%M:%S')(d.start_time))
-        .attr('text-anchor', 'middle')
-        .attr('font-size', '10px')
-        .attr('visibility', (d, i) => nodesToShowText[i] ? 'visible' : 'hidden')
-        .attr('fill', 'white');
+    let link = createLinks(svg3, links, yScale3, xScale, curve);
 
-    let link = svg3.selectAll('.link')
-        .data(links.filter(d => ['Default Inference', 'Default Rephrase', 'Default Conflict'].includes(d.text_additional)))
-        .enter().append('path')
-        .attr('class', 'link')
-        .attr('fill', 'none')
-        .attr('marker-end', d => getArrowHeadColor(d.text_additional))
-        .attr('stroke', d => getLinkColor(d.text_additional))
-        .attr('stroke-width', 2)
-        .attr('d', d => {
-            let pathData
-            let adapt_y = d.text_additional === "Default Conflict" ? yScale3.bandwidth() + 15 : -10
-            let adapt_start_y = d.text_additional === "Default Conflict" ? yScale3.bandwidth() : 0
-            let xMid = (xScale(d.source.start_time) + xScale(d.target.start_time)) / 2;
-            let yMid1 = yScale3(d.source.speaker) + adapt_y;
-            let yMid2 = yScale3(d.target.speaker) + adapt_y;
-            pathData = [
-                [(xScale(d.source.start_time) + (xScale(d.source.end_time) - xScale(d.source.start_time)) / 2), yScale3(d.source.speaker) + adapt_start_y],
-                [xMid, yMid1],
-                [xMid, yMid2],
-                [(xScale(d.target.start_time) + (xScale(d.target.end_time) - xScale(d.target.start_time)) / 2), yScale3(d.target.speaker) + adapt_start_y]
-            ]
-            return curve(pathData);
-        })
     addTextBox(width3, svg3, nodes, links, link);
 
     node3.on('mouseover', (event, d) => {
-        let textArray = nodesInWindow ? nodesInWindow.map(d => d.transcript_text) : []
-
-        svg3.selectAll('.node').attr('stroke', 'none');
-
-        let associatedLinks = links.filter(link => link.source.transcript_text === d.transcript_text);
-        associatedLinks = associatedLinks.filter(d => ['Default Inference', 'Default Rephrase', 'Default Conflict'].includes(d.text_additional))
-
-        textArray.forEach((t) => {
-            link.attr('opacity', 0.2);
-            svg3.selectAll('.node').attr('stroke', 'none');
-            const isConnected = associatedLinks.some(link => link.target.transcript_text === t);
-            const linkColor = associatedLinks.find(link => link.target.transcript_text === t)?.text_additional;
-            const color = isConnected ? getLinkColor(linkColor) : 'white';
-            const hoveredTextElement = svg3.selectAll('.hover-box text').filter(function () {
-                return this.textContent === t;
-            });
-            hoveredTextElement
-                .style('fill', color)
-                .style('font-weight', 'normal');
-        });
-        const hoveredTextElement = svg3.selectAll('.hover-box text').filter(function () {
-            return this.textContent === d.transcript_text;
-        });
-        hoveredTextElement.style('font-weight', 'bold');
-
-        d3.select(event.currentTarget)
-            .selectAll('.node')
-            .attr('stroke', 'black')
-            .attr('stroke-width', 2);
-
-        // Highlight connected links
-        link.filter(l => l.source === d)
-            .attr('stroke', d => {
-                return getLinkColor(d.text_additional)
-            })
-            .attr('marker-end', d => {
-                return getArrowHeadColor(d.text_additional)
-            }).attr('opacity', 1.0);
+        nodeHoverAction(svg3, links, d, link, event);
     })
 
     node3.on('click', (event, d) => {
@@ -294,49 +341,10 @@ function createSlidingTimeline(graphData) {
         videoplayer.currentTime = currentTime
         //videoplayer.play();
     })
-
-    svg3.append('defs').append('marker')
-        .attr('class', 'arrowhead')
-        .attr('id', 'arrowhead-red')
-        .attr('viewBox', '-0 -5 10 10')
-        .attr('refX', 9)
-        .attr('refY', 0)
-        .attr('orient', 'auto')
-        .attr('markerWidth', 3)
-        .attr('markerHeight', 4)
-        .attr('xoverflow', 'visible')
-        .append('svg:path')
-        .attr('d', 'M0,-5L10,0L0,5')
-        .attr('fill', 'red');
-    svg3.append('defs').append('marker')
-        .attr('class', 'arrowhead')
-        .attr('id', 'arrowhead-violet')
-        .attr('viewBox', '0 -5 10 10')
-        .attr('refX', 9)
-        .attr('refY', 0)
-        .attr('orient', 'auto')
-        .attr('markerWidth', 3)
-        .attr('markerHeight', 4)
-        .attr('xoverflow', 'visible')
-        .append('svg:path')
-        .attr('d', 'M0,-5L10,0L0,5')
-        .attr('fill', 'violet');
-    svg3.append('defs').append('marker')
-        .attr('class', 'arrowhead')
-        .attr('id', 'arrowhead-green')
-        .attr('viewBox', '-0 -5 10 10')
-        .attr('refX', 9)
-        .attr('refY', 0)
-        .attr('orient', 'auto')
-        .attr('markerWidth', 3)
-        .attr('markerHeight', 4)
-        .attr('xoverflow', 'visible')
-        .append('svg:path')
-        .attr('d', 'M0,-5L10,0L0,5')
-        .attr('fill', 'green');
+    createArrowheadMarker(svg3);
 }
 
-function determineXValue2(xScale, d, mouseX, defaultXValues, adaptedXValues, antiScaleFactor) {
+function determineXValue2(xScale, d, mouseX, defaultXValues, adaptedXValues) {
     const barX = xScale(d.start_time);
     const barWidth = xScale(d.end_time) - barX;
     if (barX < defaultXValues[0]) {
@@ -417,7 +425,7 @@ function createNodes(svg, nodes, xScale, yScale, colorScale) {
         .style('fill', d => colorScale(d.speaker));
 }
 
-function computeBarWidth2(xScale, d, defaultXValues, antiScaleFactor) {
+function computeBarWidth2(xScale, d, defaultXValues) {
     const barX = xScale(d.start_time);
     const barWidth = xScale(d.end_time) - barX;
     if (barX < defaultXValues[0]) {
@@ -455,8 +463,8 @@ function updateDiagram(mouseX, xScale, node2, nodes, svg3, height3, yScale3, nod
     const diagramLength = xScale(d3.max(nodes, d => d.end_time))
     const unscaledAreaLength2 = diagramLength - (lastScaledNodeXFarRight - firstScaledNodeXFarLeft)
     const antiScaledAreaLength2 = diagramLength - (farLeftLength + leftLength + windowLength + rightLength + farRightLength)
-    const antiScaleFactor2 = antiScaledAreaLength2 / unscaledAreaLength2
-    const antiScaledAreaLengthLeft = firstScaledNodeXFarLeft * antiScaleFactor2
+    antiScaleFactor = antiScaledAreaLength2 / unscaledAreaLength2
+    const antiScaledAreaLengthLeft = firstScaledNodeXFarLeft * antiScaleFactor
 
     const adaptedFirstXFarLeft = antiScaledAreaLengthLeft
     const adaptedFirstXLeft = adaptedFirstXFarLeft + farLeftLength
@@ -473,27 +481,24 @@ function updateDiagram(mouseX, xScale, node2, nodes, svg3, height3, yScale3, nod
     });
 
     node3
-        .attr('transform', d => `translate(${determineXValue2(xScale, d, mouseX, defaultXValues, adaptedXValues, antiScaleFactor2)}, ${yScale3(d.speaker)})`)
+        .attr('transform', d => `translate(${determineXValue2(xScale, d, mouseX, defaultXValues, adaptedXValues)}, ${yScale3(d.speaker)})`)
         .attr('opacity', function (d) {
             const barX = xScale(d.start_time);
             return barX < firstScaledNodeXRight && barX >= firstScaledNodeX ? 1.0 : 0.2
         });
-    node3.select('.line-connector')
-        .attr('x1', d => computeBarWidth2(xScale, d, defaultXValues, antiScaleFactor2) / 2)
-        .attr('x2', d => computeBarWidth2(xScale, d, defaultXValues, antiScaleFactor2) / 2)
     node3.select('.node')
-        .attr('width', d => computeBarWidth2(xScale, d, defaultXValues, antiScaleFactor2))
+        .attr('width', d => computeBarWidth2(xScale, d, defaultXValues))
 
     link
         .attr('d', d => {
             let pathData
             let adapt_y = d.text_additional === "Default Conflict" ? yScale3.bandwidth() + 15 : -10
             let adapt_start_y = d.text_additional === "Default Conflict" ? yScale3.bandwidth() : 0
-            let barWidth1 = computeBarWidth2(xScale, d.source, defaultXValues, antiScaleFactor2)
-            let barWidth2 = computeBarWidth2(xScale, d.target, defaultXValues, antiScaleFactor2)
-            let xMid1 = (determineXValue2(xScale, d.source, mouseX, defaultXValues, adaptedXValues, antiScaleFactor2)) + barWidth1 / 2
-            let xMid2 = (determineXValue2(xScale, d.target, mouseX, defaultXValues, adaptedXValues, antiScaleFactor2)) + barWidth2 / 2
-            determineXValue2(xScale, d, mouseX, defaultXValues, adaptedXValues, antiScaleFactor2)
+            let barWidth1 = computeBarWidth2(xScale, d.source, defaultXValues)
+            let barWidth2 = computeBarWidth2(xScale, d.target, defaultXValues)
+            let xMid1 = (determineXValue2(xScale, d.source, mouseX, defaultXValues, adaptedXValues)) + barWidth1 / 2
+            let xMid2 = (determineXValue2(xScale, d.target, mouseX, defaultXValues, adaptedXValues)) + barWidth2 / 2
+            determineXValue2(xScale, d, mouseX, defaultXValues, adaptedXValues)
             let yMid1 = yScale3(d.source.speaker) + adapt_y;
             let yMid2 = yScale3(d.target.speaker) + adapt_y;
             pathData = [
@@ -505,8 +510,8 @@ function updateDiagram(mouseX, xScale, node2, nodes, svg3, height3, yScale3, nod
             return curve(pathData);
         })
         .attr('visibility', d => {
-            const sourceX = determineXValue2(xScale, d.source, mouseX, defaultXValues, adaptedXValues, antiScaleFactor2);
-            const targetX = determineXValue2(xScale, d.target, mouseX, defaultXValues, adaptedXValues, antiScaleFactor2);
+            const sourceX = determineXValue2(xScale, d.source, mouseX, defaultXValues, adaptedXValues);
+            const targetX = determineXValue2(xScale, d.target, mouseX, defaultXValues, adaptedXValues);
             return sourceX >= adaptedFirstX && targetX <= adaptedFirstXRight ? 'visible' : 'hidden'
         })
     svg3.selectAll('.hover-box').remove()
@@ -519,7 +524,8 @@ function updateDiagram(mouseX, xScale, node2, nodes, svg3, height3, yScale3, nod
         node3.attr('opacity', 1.0)
         link.attr('opacity', 1.0)
         link.attr('visibility', 'visible')
-        svg3.selectAll('.hover-box text').style('visibility', 'visible')
+        svg3.selectAll('.hover-box').remove()
+        addTextBox(width3, svg3, nodes, links, link)
     }
 }
 
@@ -556,7 +562,7 @@ function addTextBox(width3, svg3, nodes, links, link) {
     let xPosition = width3 + 10;
     let hoverBox = svg3.append('g').attr('class', 'hover-box');
     let textArray;
-    if (nodesInWindow) {
+    if (nodesInWindow && nodesInWindow.length > 0) {
         textArray = nodesInWindow.map(d => d.transcript_text)
     } else {
         textArray = nodes.map(d => d.transcript_text)
@@ -590,7 +596,6 @@ function addTextBox(width3, svg3, nodes, links, link) {
             yValue += 1.4
             numberOfCharsInLine = 0
             previousSpeaker = speaker
-
         }
 
         let newText = hoverBox.append('text');
