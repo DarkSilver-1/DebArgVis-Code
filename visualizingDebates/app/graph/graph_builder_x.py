@@ -22,7 +22,6 @@ newTopicQuestionTimes = ["2020-05-21 22:52:01", "2020-05-21 23:08:18", "2020-05-
 load_dotenv()
 datetime_format = os.getenv("DATETIME_FORMAT")
 date_format = os.getenv("DATE_FORMAT")
-replacement_date = os.getenv("REPLACEMENT_DATE")
 filtering_date = os.getenv("FILTER_DATE")
 transcript_path = os.getenv("TRANSCRIPT_PATH")
 
@@ -40,13 +39,13 @@ def build_graph_x():
                     json_file_path) != 69:
                 extract_file(graph, json_file_path, transcript, found_files)
 
-    extract_IMC(graph, imc_file_path)
+    extract_imc(graph, imc_file_path)
     logging.info("Extracted the files")
     remove_isolated(graph)
     logging.info("Removed isolated nodes")
     graph = collapse_graph(graph)
     logging.info("Collapsed the corresponding I and L nodes")
-    new_graph = filter_date(graph, datetime.strptime(filtering_date, date_format).date())
+    new_graph = filter_nodes_with_locution(graph)
     logging.info("Mapped back to transcript")
     complete_transcript_mapping(new_graph, transcript)
     logging.info("Filtered nodes")
@@ -63,7 +62,7 @@ def delete_unmapped_nodes(new_graph):
         new_graph.remove_node(node)
 
 
-def extract_IMC(graph, imc_file_path):
+def extract_imc(graph, imc_file_path):
     with open(imc_file_path, "r") as imc_file:
         file_data = json.load(imc_file)
         for node in file_data["nodes"]:
@@ -153,7 +152,7 @@ def extract_transcript():
     return transcript
 
 
-def find_transcript_part(transcript, adapted_text, json_file_path, found_files):
+def find_transcript_part(transcript, adapted_text, found_files):
     for transcript_part in transcript:
         if transcript_part not in found_files:
             for line in transcript[transcript_part]:
@@ -183,7 +182,7 @@ def extract_file(graph, json_file_path, transcript, found_files):
                 if len(adapted_text) > 5:  # yes and no should directly match
                     adapted_text = adapted_text.lower()
                 if part == 0:
-                    part = find_transcript_part(transcript, adapted_text, json_file_path, found_files)
+                    part = find_transcript_part(transcript, adapted_text, found_files)
                 part_index = 0
                 statement_index = 0
                 index = 0
@@ -222,35 +221,22 @@ def extract_file(graph, json_file_path, transcript, found_files):
                         inner_index += 1
                     index += 1
                 if found:
-                    add_node_with_locution(graph, node_id, adapted_text, node_type, matching_locution, json_file_path,
-                                       part, part_index, statement_index, transcript)
+                    add_node_with_locution(graph, node_id, adapted_text, node_type, matching_locution,
+                                           part, part_index, statement_index, transcript)
             else:
                 graph.add_node(node_id, text=text, type=node_type, file=json_file_path)
         for edge in graph_data["edges"]:
             graph.add_edge(edge["fromID"], edge["toID"])
 
 
-def add_node_with_locution(graph, node_id, text, node_type, locution, filename, transcript_part, part_index,
+def add_node_with_locution(graph, node_id, text, node_type, locution, transcript_part, part_index,
                            statement_index, transcript):
-    new_question = False
-    if locution.get("start"):
-        start_time = datetime.strptime(locution.get("start"), datetime_format)
-        if locution.get("start") in newTopicQuestionTimes:
-            new_question = True
-    else:
-        start_time = datetime.strptime(replacement_date, datetime_format)
     speaker = locution.get("personID")
     if speaker not in personIDMapping:
         speaker = "Public"
-
-    if new_question:
-        graph.add_node(node_id, text=text, type=node_type, start=start_time, speaker=personIDMapping[speaker],
-                       newQuestion=new_question, file=filename, part=transcript_part, part_index=part_index,
-                       statement_index=statement_index, part_time=transcript[transcript_part][part_index][0])
-    else:
-        graph.add_node(node_id, text=text, type=node_type, start=start_time, speaker=personIDMapping[speaker],
-                       file=filename, part=transcript_part, part_index=part_index, statement_index=statement_index,
-                       part_time=transcript[transcript_part][part_index][0])
+    graph.add_node(node_id, text=text, type=node_type, speaker=personIDMapping[speaker],
+                   part=transcript_part, part_index=part_index, statement_index=statement_index,
+                   part_time=transcript[transcript_part][part_index][0])
 
 
 def remove_isolated(graph):
@@ -271,7 +257,7 @@ def remove_isolated(graph):
         graph.remove_node(node)
 
 
-def filter_date(graph, target_date):
+def filter_nodes_with_locution(graph):
     subgraph = nx.MultiDiGraph()
 
     for node, data in graph.nodes(data=True):
@@ -289,7 +275,6 @@ def create_node_id_mapping(graph):
     node_id_mapping = {}
     i_nodes = [n for n in graph.nodes if graph.nodes[n]["type"] == "I"]
     for i_node in i_nodes:
-        # node_id_mapping[i_node] = []
         predecessors = set(graph.predecessors(i_node))
         ya_nodes = {n for n in predecessors if graph.nodes[n]["type"] == "YA"}
         while ya_nodes:
@@ -298,7 +283,9 @@ def create_node_id_mapping(graph):
             if l_nodes:
                 l_node = l_nodes.pop()
                 predecessors = set(graph.predecessors(l_node))
-                predecessor_ya_node = next((p for p in predecessors if graph.nodes[p]["type"] == "YA" and graph.nodes[p]["text"] == "Asserting"), None)
+                predecessor_ya_node = next((p for p in predecessors if
+                                            graph.nodes[p]["type"] == "YA" and graph.nodes[p]["text"] == "Asserting"),
+                                           None)
                 if predecessor_ya_node:
                     predecessors = set(graph.predecessors(predecessor_ya_node))
                     predecessor_l_node = next((p for p in predecessors if graph.nodes[p]["type"] == "L"), None)
@@ -315,8 +302,7 @@ def collapse_graph(graph):
     edges_to_add = []
 
     for i_node in node_id_mapping:
-        new_graph.add_node(node_id_mapping[i_node], **graph.nodes[node_id_mapping[i_node]],
-                           paraphrasedtext=graph.nodes[i_node]["text"])
+        new_graph.add_node(node_id_mapping[i_node], **graph.nodes[node_id_mapping[i_node]])
         for edge in graph.out_edges(i_node):
             source, target = edge
             ya_neighbors = {n for n in graph.predecessors(target) if graph.nodes[n]["type"] == "YA"}
