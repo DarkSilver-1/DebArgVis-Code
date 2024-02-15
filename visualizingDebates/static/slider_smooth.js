@@ -450,9 +450,9 @@ function updateDiagram(mouseX, xScale, node2, nodes, svg3, height3, yScale3, nod
     const firstScaledNodeX = nodesInWindow.length !== 0 ? xScale(nodesInWindow[0].start_time) : 0;
     const firstScaledNodeXLeft = nodesLeftOfWindow.length !== 0 ? xScale(nodesLeftOfWindow[0].start_time) : 0;
     const firstScaledNodeXFarLeft = nodesFarLeftOfWindow.length !== 0 ? xScale(nodesFarLeftOfWindow[0].start_time) : 0;
-    const firstScaledNodeXRight = nodesRightOfWindow.length !== 0 ? xScale(nodesRightOfWindow[0].start_time) : 0;
-    const firstScaledNodeXFarRight = nodesFarRightOfWindow.length !== 0 ? xScale(nodesFarRightOfWindow[0].start_time) : 0;
-    const lastScaledNodeXFarRight = nodesFarRightOfWindow.length !== 0 ? xScale(nodesFarRightOfWindow[nodesFarRightOfWindow.length - 1].end_time) : 0;
+    const firstScaledNodeXRight = nodesRightOfWindow.length !== 0 ? xScale(nodesRightOfWindow[0].start_time) : xScale(nodes[nodes.length-1].end_time);
+    const firstScaledNodeXFarRight = nodesFarRightOfWindow.length !== 0 ? xScale(nodesFarRightOfWindow[0].start_time) : xScale(nodes[nodes.length-1].end_time);
+    const lastScaledNodeXFarRight = nodesFarRightOfWindow.length !== 0 ? xScale(nodesFarRightOfWindow[nodesFarRightOfWindow.length - 1].end_time) : xScale(nodes[nodes.length-1].end_time);
 
     const farLeftLength = (firstScaledNodeXLeft - firstScaledNodeXFarLeft) * smallestScaleFactor
     const leftLength = (firstScaledNodeX - firstScaledNodeXLeft) * smallerScaleFactor
@@ -474,6 +474,12 @@ function updateDiagram(mouseX, xScale, node2, nodes, svg3, height3, yScale3, nod
     const adaptedFirstXAreaAfter = adaptedFirstXFarRight + farRightLength
     const defaultXValues = [firstScaledNodeXFarLeft, firstScaledNodeXLeft, firstScaledNodeX, firstScaledNodeXRight, firstScaledNodeXFarRight, lastScaledNodeXFarRight]
     const adaptedXValues = [adaptedFirstXFarLeft, adaptedFirstXLeft, adaptedFirstX, adaptedFirstXRight, adaptedFirstXFarRight, adaptedFirstXAreaAfter]
+
+    console.log(defaultXValues)
+    console.log(adaptedXValues)
+    console.log(firstScaledNodeXRight)
+    console.log(firstScaledNodeXFarRight)
+    console.log()
 
     node2.attr('opacity', function (d) {
         const barX = xScale(d.start_time);
