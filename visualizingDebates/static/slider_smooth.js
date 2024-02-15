@@ -13,6 +13,7 @@ let nodesFarLeftOfWindow = [];
 let nodesLeftOfWindow = [];
 let nodesRightOfWindow = [];
 let nodesFarRightOfWindow = [];
+let xScale = null
 
 
 function createSlidingTimeline(graphData) {
@@ -40,7 +41,7 @@ function createSlidingTimeline(graphData) {
         .range([height2, 0])
         .padding(0.1);
 
-    let xScale = d3.scaleTime()
+    xScale = d3.scaleTime()
         .domain([d3.min(nodes, function (d) {
             return d.start_time;
         }), d3.max(nodes, function (d) {
@@ -59,7 +60,7 @@ function createSlidingTimeline(graphData) {
 
     let colorScale2 = createColorScale(speakers2);
 
-    let node2 = createNodes(svg2, nodes, xScale, yScale2, colorScale2);
+    let node2 = createNodes(svg2, nodes, yScale2, colorScale2);
 
     let mouseRectangle = svg2.append('rect')
         .attr('class', 'mouse-rectangle')
@@ -90,10 +91,10 @@ function createSlidingTimeline(graphData) {
                 .attr('x', mouseX - halfWindowSize)
                 .attr('opacity', 0.5);
 
-            groupNodes(nodes, xScale, mouseX);
+            groupNodes(nodes, mouseX);
 
             if (!(prevNodesInWindow && (nodesInWindow[0] === prevNodesInWindow[0] && nodesInWindow[nodesInWindow.length - 1] === prevNodesInWindow[prevNodesInWindow.length - 1]))) {
-                updateDiagram(mouseX, xScale, node2, nodes, svg3, height3, yScale3, node3, link, curve, scaleFactor, width3, links);
+                updateDiagram(mouseX, node2, nodes, svg3, height3, yScale3, node3, link, curve, scaleFactor, width3, links);
             }
             prevNodesInWindow = nodesInWindow
         }
@@ -111,12 +112,12 @@ function createSlidingTimeline(graphData) {
     videoplayer.addEventListener('timeupdate', function () {
         const currentTimeVid = xScale(new Date(nodes[0].start_time.getTime() + videoplayer.currentTime * 1000))
 
-        groupNodes(nodes, xScale, currentTimeVid)
+        groupNodes(nodes, currentTimeVid)
         mouseRectangle
             .attr('x', currentTimeVid - halfWindowSize)
             .attr('opacity', 0.5);
         if (!(prevNodesInWindow && (nodesInWindow[0] === prevNodesInWindow[0] && nodesInWindow[nodesInWindow.length - 1] === prevNodesInWindow[prevNodesInWindow.length - 1]))) {
-            updateDiagram(currentTimeVid, xScale, node2, nodes, svg3, height3, yScale3, node3, link, curve, scaleFactor, width3, links);
+            updateDiagram(currentTimeVid, node2, nodes, svg3, height3, yScale3, node3, link, curve, scaleFactor, width3, links);
             prevNodesInWindow = nodesInWindow
         }
         currentTime = xScale(new Date(nodes[0].start_time.getTime() + videoplayer.currentTime * 1000))
@@ -158,9 +159,9 @@ function createSlidingTimeline(graphData) {
     let curve = d3.line()
         .curve(d3.curveBasis);
 
-    let node3 = createNodeGroup(svg3, nodes, xScale, yScale3, colorScale3, height3);
+    let node3 = createNodeGroup(svg3, nodes, yScale3, colorScale3, height3);
 
-    let link = createLinks(svg3, links, yScale3, xScale, curve);
+    let link = createLinks(svg3, links, yScale3, curve);
 
     addTextBox(width3, svg3, nodes, links, link);
 
@@ -178,7 +179,7 @@ function createSlidingTimeline(graphData) {
 
     node3.on('click', (event, d) => {
         let videoplayer = document.getElementById('videoPlayer')
-        groupNodes(nodes, xScale, d.start_time)
+        groupNodes(nodes, d.start_time)
         currentTime = (d.start_time.getTime() - nodes[0].start_time.getTime()) / 1000
         videoplayer.currentTime = currentTime
         //videoplayer.play();
@@ -186,7 +187,7 @@ function createSlidingTimeline(graphData) {
     createArrowheadMarker(svg3);
 }
 
-function groupNodes(nodes, xScale, mouseX) {
+function groupNodes(nodes, mouseX) {
     nodesInWindow = []
     nodesFarLeftOfWindow = [];
     nodesLeftOfWindow = [];
@@ -254,8 +255,8 @@ function nodeHoverAction(svg3, links, d, link, event, nodes) {
         }).attr('opacity', 1.0);
 }
 
-function createNodeGroup(svg3, nodes, xScale, yScale3, colorScale3, height3) {
-    let nodesToShowText = findNodesToShowText(nodes, xScale)
+function createNodeGroup(svg3, nodes, yScale3, colorScale3, height3) {
+    let nodesToShowText = findNodesToShowText(nodes)
     let node3 = svg3.selectAll('.node-group')
         .data(nodes)
         .enter()
@@ -288,8 +289,8 @@ function createNodeGroup(svg3, nodes, xScale, yScale3, colorScale3, height3) {
     return node3;
 }
 
-function createLinks(svg3, links, yScale3, xScale, curve) {
-    let link = svg3.selectAll('.link')
+function createLinks(svg3, links, yScale3, curve) {
+    return svg3.selectAll('.link')
         .data(links.filter(d => ['Default Inference', 'Default Rephrase', 'Default Conflict'].includes(d.text_additional)))
         .enter().append('path')
         .attr('class', 'link')
@@ -312,7 +313,6 @@ function createLinks(svg3, links, yScale3, xScale, curve) {
             ]
             return curve(pathData);
         })
-    return link;
 }
 
 function createArrowheadMarker(svg3) {
@@ -357,7 +357,7 @@ function createArrowheadMarker(svg3) {
         .attr('fill', 'green');
 }
 
-function determineXValue2(xScale, d, mouseX, defaultXValues, adaptedXValues) {
+function determineXValue2(d, mouseX, defaultXValues, adaptedXValues) {
     const barX = xScale(d.start_time);
     const barWidth = xScale(d.end_time) - barX;
     if (barX < defaultXValues[0]) {
@@ -426,7 +426,7 @@ function createColorScale(domain) {
     return d3.scaleOrdinal().domain(domain).range(d3.schemeCategory10);
 }
 
-function createNodes(svg, nodes, xScale, yScale, colorScale) {
+function createNodes(svg, nodes, yScale, colorScale) {
     return svg.selectAll('.node')
         .data(nodes)
         .enter().append('rect')
@@ -438,7 +438,7 @@ function createNodes(svg, nodes, xScale, yScale, colorScale) {
         .style('fill', d => colorScale(d.speaker));
 }
 
-function computeBarWidth2(xScale, d, defaultXValues) {
+function computeBarWidth2(d, defaultXValues) {
     const barX = xScale(d.start_time);
     const barWidth = xScale(d.end_time) - barX;
     if (barX < defaultXValues[0]) {
@@ -458,7 +458,7 @@ function computeBarWidth2(xScale, d, defaultXValues) {
     }
 }
 
-function updateDiagram(mouseX, xScale, node2, nodes, svg3, height3, yScale3, node3, link, curve, scaleFactor, width3, links) {
+function updateDiagram(mouseX, node2, nodes, svg3, height3, yScale3, node3, link, curve, scaleFactor, width3, links) {
 
     const firstScaledNodeX = nodesInWindow.length !== 0 ? xScale(nodesInWindow[0].start_time) : 0;
     const firstScaledNodeXLeft = nodesLeftOfWindow.length !== 0 ? xScale(nodesLeftOfWindow[0].start_time) : 0;
@@ -477,9 +477,8 @@ function updateDiagram(mouseX, xScale, node2, nodes, svg3, height3, yScale3, nod
     const unscaledAreaLength2 = diagramLength - (lastScaledNodeXFarRight - firstScaledNodeXFarLeft)
     const antiScaledAreaLength2 = diagramLength - (farLeftLength + leftLength + windowLength + rightLength + farRightLength)
     antiScaleFactor = antiScaledAreaLength2 / unscaledAreaLength2
-    const antiScaledAreaLengthLeft = firstScaledNodeXFarLeft * antiScaleFactor
 
-    const adaptedFirstXFarLeft = antiScaledAreaLengthLeft
+    const adaptedFirstXFarLeft = firstScaledNodeXFarLeft * antiScaleFactor
     const adaptedFirstXLeft = adaptedFirstXFarLeft + farLeftLength
     const adaptedFirstX = adaptedFirstXLeft + leftLength
     const adaptedFirstXRight = adaptedFirstX + windowLength
@@ -494,24 +493,24 @@ function updateDiagram(mouseX, xScale, node2, nodes, svg3, height3, yScale3, nod
     });
 
     node3
-        .attr('transform', d => `translate(${determineXValue2(xScale, d, mouseX, defaultXValues, adaptedXValues)}, ${yScale3(d.speaker)})`)
+        .attr('transform', d => `translate(${determineXValue2(d, mouseX, defaultXValues, adaptedXValues)}, ${yScale3(d.speaker)})`)
         .attr('opacity', function (d) {
             const barX = xScale(d.start_time);
             return barX < firstScaledNodeXRight && barX >= firstScaledNodeX ? 1.0 : 0.2
         });
     node3.select('.node')
-        .attr('width', d => computeBarWidth2(xScale, d, defaultXValues))
+        .attr('width', d => computeBarWidth2(d, defaultXValues))
 
     link
         .attr('d', d => {
             let pathData
             let adapt_y = d.text_additional === "Default Conflict" ? yScale3.bandwidth() + 15 : -10
             let adapt_start_y = d.text_additional === "Default Conflict" ? yScale3.bandwidth() : 0
-            let barWidth1 = computeBarWidth2(xScale, d.source, defaultXValues)
-            let barWidth2 = computeBarWidth2(xScale, d.target, defaultXValues)
-            let xMid1 = (determineXValue2(xScale, d.source, mouseX, defaultXValues, adaptedXValues)) + barWidth1 / 2
-            let xMid2 = (determineXValue2(xScale, d.target, mouseX, defaultXValues, adaptedXValues)) + barWidth2 / 2
-            determineXValue2(xScale, d, mouseX, defaultXValues, adaptedXValues)
+            let barWidth1 = computeBarWidth2(d.source, defaultXValues)
+            let barWidth2 = computeBarWidth2(d.target, defaultXValues)
+            let xMid1 = (determineXValue2(d.source, mouseX, defaultXValues, adaptedXValues)) + barWidth1 / 2
+            let xMid2 = (determineXValue2(d.target, mouseX, defaultXValues, adaptedXValues)) + barWidth2 / 2
+            determineXValue2(d, mouseX, defaultXValues, adaptedXValues)
             let yMid1 = yScale3(d.source.speaker) + adapt_y;
             let yMid2 = yScale3(d.target.speaker) + adapt_y;
             pathData = [
@@ -692,7 +691,7 @@ function addTextBox(width3, svg3, nodes, links, link) {
         .on("wheel", scrollText)
 }
 
-function findNodesToShowText(nodes, xScale) {
+function findNodesToShowText(nodes) {
     const nodesToShowText = [];
     let lastNodeX = 0;
 
