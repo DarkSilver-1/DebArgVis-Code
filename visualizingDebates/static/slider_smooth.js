@@ -14,6 +14,170 @@ let nodesLeftOfWindow = [];
 let nodesRightOfWindow = [];
 let nodesFarRightOfWindow = [];
 
+
+function createSlidingTimeline(graphData) {
+    console.log(graphData)
+
+    let nodes = graphData.nodes;
+    let links = graphData.links;
+
+    let timeFormat2 = d3.timeFormat('%H:%M:%S');
+
+    let margin2 = {top: 20, right: 20, bottom: 40, left: 60};
+    let width2 = 1200 - margin2.left - margin2.right;
+    let height2 = 150 - margin2.top - margin2.bottom;
+
+    parseTimeData(nodes);
+
+    let svg2 = createSVG('#slider', width2, height2, margin2);
+
+    let speakers2 = Array.from(new Set(nodes.map(function (d) {
+        return d.speaker;
+    })));
+
+    let yScale2 = d3.scaleBand()
+        .domain(speakers2)
+        .range([height2, 0])
+        .padding(0.1);
+
+    let xScale = d3.scaleTime()
+        .domain([d3.min(nodes, function (d) {
+            return d.start_time;
+        }), d3.max(nodes, function (d) {
+            return d.end_time;
+        }),])
+        .range([0, width2]);
+
+    let xAxis2 = d3.axisBottom(xScale).tickFormat(timeFormat2);
+    svg2.append('g')
+        .attr('transform', 'translate(0,' + height2 + ')')
+        .call(xAxis2);
+
+    let yAxis2 = d3.axisLeft(yScale2);
+    svg2.append('g')
+        .call(yAxis2);
+
+    let colorScale2 = createColorScale(speakers2);
+
+    let node2 = createNodes(svg2, nodes, xScale, yScale2, colorScale2);
+
+    let mouseRectangle = svg2.append('rect')
+        .attr('class', 'mouse-rectangle')
+        .attr('width', 2 * halfWindowSize)
+        .attr('height', height2)
+        .attr('fill', 'transparent')
+        .attr('opacity', 1)
+        .attr('x', -2 * halfWindowSize)
+        .attr('stroke', 'white')
+        .attr('stroke-width', 2);
+
+    let isDragging = false;
+
+    svg2.on('mousedown', function () {
+        isDragging = true;
+    });
+    d3.select('body').on('mouseup', function () {
+        if (isDragging) {
+            isDragging = false;
+        }
+    });
+
+    svg2.on('mousemove', function (event) {
+        if (isDragging) {
+            videoplayer.pause()
+            const mouseX = d3.pointer(event)[0];
+            mouseRectangle
+                .attr('x', mouseX - halfWindowSize)
+                .attr('opacity', 0.5);
+
+            groupNodes(nodes, xScale, mouseX);
+
+            if (!(prevNodesInWindow && (nodesInWindow[0] === prevNodesInWindow[0] && nodesInWindow[nodesInWindow.length - 1] === prevNodesInWindow[prevNodesInWindow.length - 1]))) {
+                updateDiagram(mouseX, xScale, node2, nodes, svg3, height3, yScale3, node3, link, curve, scaleFactor, width3, links);
+            }
+            prevNodesInWindow = nodesInWindow
+        }
+    })
+    svg2.selectAll('.question-line')
+        .data(nodes)
+        .enter().append('line')
+        .attr('class', 'new-question-line')
+        .attr('x1', d => xScale(d.start_time))
+        .attr('x2', d => xScale(d.start_time))
+        .attr('y1', d => d.newQuestion ? 0 : -1000)
+        .attr('y2', d => d.newQuestion ? height2 : -1000)
+        .style('stroke', 'red');
+    let videoplayer = document.getElementById('videoPlayer')
+    videoplayer.addEventListener('timeupdate', function () {
+        const currentTimeVid = xScale(new Date(nodes[0].start_time.getTime() + videoplayer.currentTime * 1000))
+
+        groupNodes(nodes, xScale, currentTimeVid)
+        mouseRectangle
+            .attr('x', currentTimeVid - halfWindowSize)
+            .attr('opacity', 0.5);
+        if (!(prevNodesInWindow && (nodesInWindow[0] === prevNodesInWindow[0] && nodesInWindow[nodesInWindow.length - 1] === prevNodesInWindow[prevNodesInWindow.length - 1]))) {
+            updateDiagram(currentTimeVid, xScale, node2, nodes, svg3, height3, yScale3, node3, link, curve, scaleFactor, width3, links);
+            prevNodesInWindow = nodesInWindow
+        }
+        currentTime = xScale(new Date(nodes[0].start_time.getTime() + videoplayer.currentTime * 1000))
+    });
+
+//--------------------------------------------------------------------
+
+    let margin3 = {top: 20, right: 20, bottom: 40, left: 60};
+    let width3 = 1200 - margin3.left - margin3.right;
+    let height3 = 500 - margin3.top - margin3.bottom;
+
+    let svg3 = createSVG('#time', 2500 + margin3.left + margin3.right, height3, margin3);
+
+    let speakers3 = Array.from(new Set(nodes.map(function (d) {
+        return d.speaker;
+    })));
+
+    let yScale3 = d3.scaleBand()
+        .domain(speakers3)
+        .range([height3, 0])
+        .padding(0.1);
+
+    let xAxis3 = d3.axisBottom(xScale).ticks(0);
+    svg3.append('g')
+        .attr('transform', 'translate(0,' + height3 + ')')
+        .call(xAxis3);
+
+    let yAxis3 = d3.axisLeft(yScale3);
+    svg3.append('g')
+        .call(yAxis3);
+
+    let colorScale3 = d3.scaleOrdinal()
+        .domain(speakers3)
+        .range(d3.schemeCategory10);
+
+    d3.forceSimulation(nodes)
+        .force('link', d3.forceLink(links).id(d => d.id).distance(30))
+
+    let curve = d3.line()
+        .curve(d3.curveBasis);
+
+    let node3 = createNodeGroup(svg3, nodes, xScale, yScale3, colorScale3, height3);
+
+    let link = createLinks(svg3, links, yScale3, xScale, curve);
+
+    addTextBox(width3, svg3, nodes, links, link);
+
+    node3.on('mouseover', (event, d) => {
+        nodeHoverAction(svg3, links, d, link, event, nodes);
+    })
+
+    node3.on('click', (event, d) => {
+        let videoplayer = document.getElementById('videoPlayer')
+        groupNodes(nodes, xScale, d.start_time)
+        currentTime = (d.start_time.getTime() - nodes[0].start_time.getTime()) / 1000
+        videoplayer.currentTime = currentTime
+        //videoplayer.play();
+    })
+    createArrowheadMarker(svg3);
+}
+
 function groupNodes(nodes, xScale, mouseX) {
     nodesInWindow = []
     nodesFarLeftOfWindow = [];
@@ -37,17 +201,21 @@ function groupNodes(nodes, xScale, mouseX) {
     })
 }
 
-function nodeHoverAction(svg3, links, d, link, event) {
-    let textArray = nodesInWindow ? nodesInWindow.map(d => d.transcript_text) : []
-
+function nodeHoverAction(svg3, links, d, link, event, nodes) {
     svg3.selectAll('.node').attr('stroke', 'none');
+    link.attr('opacity', 0.2)
+    svg3.selectAll('.hover-box text').style('font-weight', 'normal')
+    let textArray
+    if (nodesInWindow && nodesInWindow.length > 0) {
+        textArray = nodesInWindow.map(d => d.transcript_text)
+    } else {
+        textArray = nodes.map(d => d.transcript_text)
+    }
 
     let associatedLinks = links.filter(link => link.source.transcript_text === d.transcript_text);
     associatedLinks = associatedLinks.filter(d => ['Default Inference', 'Default Rephrase', 'Default Conflict'].includes(d.text_additional))
 
     textArray.forEach((t) => {
-        link.attr('opacity', 0.2);
-        svg3.selectAll('.node').attr('stroke', 'none');
         const isConnected = associatedLinks.some(link => link.target.transcript_text === t);
         const linkColor = associatedLinks.find(link => link.target.transcript_text === t)?.text_additional;
         const color = isConnected ? getLinkColor(linkColor) : 'white';
@@ -61,6 +229,7 @@ function nodeHoverAction(svg3, links, d, link, event) {
     const hoveredTextElement = svg3.selectAll('.hover-box text').filter(function () {
         return this.textContent === d.transcript_text;
     });
+
     hoveredTextElement.style('font-weight', 'bold');
 
     d3.select(event.currentTarget)
@@ -180,170 +349,6 @@ function createArrowheadMarker(svg3) {
         .attr('fill', 'green');
 }
 
-function createSlidingTimeline(graphData) {
-    console.log(graphData)
-
-    let nodes = graphData.nodes;
-    let links = graphData.links;
-
-    let timeFormat2 = d3.timeFormat('%H:%M:%S');
-
-    let margin2 = {top: 20, right: 20, bottom: 40, left: 60};
-    let width2 = 1200 - margin2.left - margin2.right;
-    let height2 = 150 - margin2.top - margin2.bottom;
-
-    parseTimeData(nodes);
-
-    let svg2 = createSVG('#slider', width2, height2, margin2);
-
-    let speakers2 = Array.from(new Set(nodes.map(function (d) {
-        return d.speaker;
-    })));
-
-    let yScale2 = d3.scaleBand()
-        .domain(speakers2)
-        .range([height2, 0])
-        .padding(0.1);
-
-    let xScale = d3.scaleTime()
-        .domain([d3.min(nodes, function (d) {
-            return d.start_time;
-        }), d3.max(nodes, function (d) {
-            return d.end_time;
-        }),])
-        .range([0, width2]);
-
-    let xAxis2 = d3.axisBottom(xScale).tickFormat(timeFormat2);
-    svg2.append('g')
-        .attr('transform', 'translate(0,' + height2 + ')')
-        .call(xAxis2);
-
-    let yAxis2 = d3.axisLeft(yScale2);
-    svg2.append('g')
-        .call(yAxis2);
-
-    let colorScale2 = createColorScale(speakers2);
-
-    let node2 = createNodes(svg2, nodes, xScale, yScale2, colorScale2);
-
-    let mouseRectangle = svg2.append('rect')
-        .attr('class', 'mouse-rectangle')
-        .attr('width', 2 * halfWindowSize)
-        .attr('height', height2)
-        .attr('fill', 'transparent')
-        .attr('opacity', 1)
-        .attr('x', -2 * halfWindowSize)
-        .attr('stroke', 'white')
-        .attr('stroke-width', 2);
-
-    let isDragging = false;
-
-    svg2.on('mousedown', function () {
-        isDragging = true;
-    });
-    d3.select('body').on('mouseup', function () {
-        if (isDragging) {
-            isDragging = false;
-        }
-    });
-
-    svg2.on('mousemove', function (event) {
-            if (isDragging) {
-                videoplayer.pause()
-                const mouseX = d3.pointer(event)[0];
-                mouseRectangle
-                    .attr('x', mouseX - halfWindowSize)
-                    .attr('opacity', 0.5);
-
-                groupNodes(nodes, xScale, mouseX);
-
-                if (!(prevNodesInWindow && (nodesInWindow[0] === prevNodesInWindow[0] && nodesInWindow[nodesInWindow.length - 1] === prevNodesInWindow[prevNodesInWindow.length - 1]))) {
-                    updateDiagram(mouseX, xScale, node2, nodes, svg3, height3, yScale3, node3, link, curve, scaleFactor, width3, links);
-                }
-                prevNodesInWindow = nodesInWindow
-            }
-        }
-    )
-    svg2.selectAll('.question-line')
-        .data(nodes)
-        .enter().append('line')
-        .attr('class', 'new-question-line')
-        .attr('x1', d => xScale(d.start_time))
-        .attr('x2', d => xScale(d.start_time))
-        .attr('y1', d => d.newQuestion ? 0 : -1000)
-        .attr('y2', d => d.newQuestion ? height2 : -1000)
-        .style('stroke', 'red');
-    let videoplayer = document.getElementById('videoPlayer')
-    videoplayer.addEventListener('timeupdate', function () {
-        const currentTimeVid = xScale(new Date(nodes[0].start_time.getTime() + videoplayer.currentTime * 1000))
-
-        groupNodes(nodes, xScale, currentTimeVid)
-        mouseRectangle
-            .attr('x', currentTimeVid - halfWindowSize)
-            .attr('opacity', 0.5);
-        if (!(prevNodesInWindow && (nodesInWindow[0] === prevNodesInWindow[0] && nodesInWindow[nodesInWindow.length - 1] === prevNodesInWindow[prevNodesInWindow.length - 1]))) {
-            updateDiagram(currentTimeVid, xScale, node2, nodes, svg3, height3, yScale3, node3, link, curve, scaleFactor, width3, links);
-            prevNodesInWindow = nodesInWindow
-        }
-        currentTime = xScale(new Date(nodes[0].start_time.getTime() + videoplayer.currentTime * 1000))
-    });
-
-//--------------------------------------------------------------------
-
-    let margin3 = {top: 20, right: 20, bottom: 40, left: 60};
-    let width3 = 1200 - margin3.left - margin3.right;
-    let height3 = 500 - margin3.top - margin3.bottom;
-
-    let svg3 = createSVG('#time', 2500 + margin3.left + margin3.right, height3, margin3);
-
-    let speakers3 = Array.from(new Set(nodes.map(function (d) {
-        return d.speaker;
-    })));
-
-    let yScale3 = d3.scaleBand()
-        .domain(speakers3)
-        .range([height3, 0])
-        .padding(0.1);
-
-    let xAxis3 = d3.axisBottom(xScale).ticks(0);
-    svg3.append('g')
-        .attr('transform', 'translate(0,' + height3 + ')')
-        .call(xAxis3);
-
-    let yAxis3 = d3.axisLeft(yScale3);
-    svg3.append('g')
-        .call(yAxis3);
-
-    let colorScale3 = d3.scaleOrdinal()
-        .domain(speakers3)
-        .range(d3.schemeCategory10);
-
-    d3.forceSimulation(nodes)
-        .force('link', d3.forceLink(links).id(d => d.id).distance(30))
-
-    let curve = d3.line()
-        .curve(d3.curveBasis);
-
-    let node3 = createNodeGroup(svg3, nodes, xScale, yScale3, colorScale3, height3);
-
-    let link = createLinks(svg3, links, yScale3, xScale, curve);
-
-    addTextBox(width3, svg3, nodes, links, link);
-
-    node3.on('mouseover', (event, d) => {
-        nodeHoverAction(svg3, links, d, link, event);
-    })
-
-    node3.on('click', (event, d) => {
-        let videoplayer = document.getElementById('videoPlayer')
-        groupNodes(nodes, xScale, d.start_time)
-        currentTime = (d.start_time.getTime() - nodes[0].start_time.getTime()) / 1000
-        videoplayer.currentTime = currentTime
-        //videoplayer.play();
-    })
-    createArrowheadMarker(svg3);
-}
-
 function determineXValue2(xScale, d, mouseX, defaultXValues, adaptedXValues) {
     const barX = xScale(d.start_time);
     const barWidth = xScale(d.end_time) - barX;
@@ -450,9 +455,9 @@ function updateDiagram(mouseX, xScale, node2, nodes, svg3, height3, yScale3, nod
     const firstScaledNodeX = nodesInWindow.length !== 0 ? xScale(nodesInWindow[0].start_time) : 0;
     const firstScaledNodeXLeft = nodesLeftOfWindow.length !== 0 ? xScale(nodesLeftOfWindow[0].start_time) : 0;
     const firstScaledNodeXFarLeft = nodesFarLeftOfWindow.length !== 0 ? xScale(nodesFarLeftOfWindow[0].start_time) : 0;
-    const firstScaledNodeXRight = nodesRightOfWindow.length !== 0 ? xScale(nodesRightOfWindow[0].start_time) : xScale(nodes[nodes.length-1].end_time);
-    const firstScaledNodeXFarRight = nodesFarRightOfWindow.length !== 0 ? xScale(nodesFarRightOfWindow[0].start_time) : xScale(nodes[nodes.length-1].end_time);
-    const lastScaledNodeXFarRight = nodesFarRightOfWindow.length !== 0 ? xScale(nodesFarRightOfWindow[nodesFarRightOfWindow.length - 1].end_time) : xScale(nodes[nodes.length-1].end_time);
+    const firstScaledNodeXRight = nodesRightOfWindow.length !== 0 ? xScale(nodesRightOfWindow[0].start_time) : xScale(nodes[nodes.length - 1].end_time);
+    const firstScaledNodeXFarRight = nodesFarRightOfWindow.length !== 0 ? xScale(nodesFarRightOfWindow[0].start_time) : xScale(nodes[nodes.length - 1].end_time);
+    const lastScaledNodeXFarRight = nodesFarRightOfWindow.length !== 0 ? xScale(nodesFarRightOfWindow[nodesFarRightOfWindow.length - 1].end_time) : xScale(nodes[nodes.length - 1].end_time);
 
     const farLeftLength = (firstScaledNodeXLeft - firstScaledNodeXFarLeft) * smallestScaleFactor
     const leftLength = (firstScaledNodeX - firstScaledNodeXLeft) * smallerScaleFactor
@@ -714,6 +719,7 @@ function scrollText(event) {
                 }
             });
         }
+
         updateElementY(allTexts);
         updateElementY(allRects);
     }
