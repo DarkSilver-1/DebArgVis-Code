@@ -166,6 +166,14 @@ function createSlidingTimeline(graphData) {
 
     node3.on('mouseover', (event, d) => {
         nodeHoverAction(svg3, links, d, link, event, nodes);
+    }).on('mouseout', function () {
+        if (nodesInWindow && nodesInWindow.length > 0) {
+            link.filter(l => nodesInWindow.includes(l.source)).attr('opacity', 1.0)
+            link.filter(l => nodesRightOfWindow.includes(l.source) || nodesLeftOfWindow.includes(l.source)).attr('opacity', 0.3)
+            link.filter(l => nodesFarRightOfWindow.includes(l.source) || nodesFarLeftOfWindow.includes(l.source)).attr('opacity', 0.15)
+        } else {
+            link.attr('opacity', 1.0)
+        }
     })
 
     node3.on('click', (event, d) => {
@@ -203,7 +211,7 @@ function groupNodes(nodes, xScale, mouseX) {
 
 function nodeHoverAction(svg3, links, d, link, event, nodes) {
     svg3.selectAll('.node').attr('stroke', 'none');
-    link.attr('opacity', 0.2)
+    nodesInWindow && nodesInWindow.length > 0 ? link.filter(l => nodesInWindow.includes(l.source)).attr('opacity', 0.4) : link.attr('opacity', 0.4)
     svg3.selectAll('.hover-box text').style('font-weight', 'normal')
     let textArray
     if (nodesInWindow && nodesInWindow.length > 0) {
@@ -480,12 +488,6 @@ function updateDiagram(mouseX, xScale, node2, nodes, svg3, height3, yScale3, nod
     const defaultXValues = [firstScaledNodeXFarLeft, firstScaledNodeXLeft, firstScaledNodeX, firstScaledNodeXRight, firstScaledNodeXFarRight, lastScaledNodeXFarRight]
     const adaptedXValues = [adaptedFirstXFarLeft, adaptedFirstXLeft, adaptedFirstX, adaptedFirstXRight, adaptedFirstXFarRight, adaptedFirstXAreaAfter]
 
-    console.log(defaultXValues)
-    console.log(adaptedXValues)
-    console.log(firstScaledNodeXRight)
-    console.log(firstScaledNodeXFarRight)
-    console.log()
-
     node2.attr('opacity', function (d) {
         const barX = xScale(d.start_time);
         return barX < firstScaledNodeXRight && barX >= firstScaledNodeX ? 1.0 : 0.2
@@ -520,10 +522,17 @@ function updateDiagram(mouseX, xScale, node2, nodes, svg3, height3, yScale3, nod
             ];
             return curve(pathData);
         })
-        .attr('visibility', d => {
-            const sourceX = determineXValue2(xScale, d.source, mouseX, defaultXValues, adaptedXValues);
-            const targetX = determineXValue2(xScale, d.target, mouseX, defaultXValues, adaptedXValues);
-            return sourceX >= adaptedFirstX && targetX <= adaptedFirstXRight ? 'visible' : 'hidden'
+        .attr('opacity', d => {
+            let xValue = xScale(d.source.start_time)
+            if ((xValue >= defaultXValues[0] && xValue < defaultXValues[1]) || (xValue < defaultXValues[5] && xValue >= defaultXValues[4])) {
+                return 0.15
+            } else if ((xValue >= defaultXValues[1] && xValue < defaultXValues[2]) || (xValue < defaultXValues[4] && xValue >= defaultXValues[3])) {
+                return 0.3
+            } else if (xValue <= defaultXValues[3] && xValue >= defaultXValues[2]) {
+                return 1.0
+            } else {
+                return 0
+            }
         })
     svg3.selectAll('.hover-box').remove()
     addTextBox(width3, svg3, nodes, links, link);
@@ -543,7 +552,7 @@ function updateDiagram(mouseX, xScale, node2, nodes, svg3, height3, yScale3, nod
 function textHoverAction(links, transcript_text, textArray, link, svg3, newText) {
     let associatedLinks = links.filter(link => link.source.transcript_text === transcript_text);
     associatedLinks = associatedLinks.filter(d => ['Default Inference', 'Default Rephrase', 'Default Conflict'].includes(d.text_additional))
-    link.attr('opacity', 0.2);
+    nodesInWindow && nodesInWindow.length > 0 ? link.filter(l => nodesInWindow.includes(l.source)).attr('opacity', 0.3) : link.attr('opacity', 0.3)
     svg3.selectAll('.node').attr('stroke', 'none');
     textArray.forEach((t, i) => {
         const linkColor = associatedLinks.find(link => link.target.transcript_text === t)?.text_additional;
@@ -661,6 +670,7 @@ function addTextBox(width3, svg3, nodes, links, link) {
             });
             newText.style('font-weight', 'normal');
             svg3.selectAll('.node').attr('stroke', 'none');
+            nodesInWindow && nodesInWindow.length > 0 ? link.filter(l => nodesInWindow.includes(l.source)).attr('opacity', 1.0) : link.attr('opacity', 1.0)
         }).on("wheel", scrollText)
     })
     if (background !== null) {
