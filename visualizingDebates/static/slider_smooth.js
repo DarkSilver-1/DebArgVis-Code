@@ -27,6 +27,13 @@ let svg5 = null
 function createSlidingTimeline(graphData) {
     console.log(graphData)
 
+    const data = [
+      ['apple', 'banana', 'orange', 'grape', 'kiwi'],
+      ['cat', 'dog', 'bird', 'fish', 'rabbit'],
+      ['cat', 'dog', 'bird', 'fish', 'rabbit'],
+      ['red', 'blue', 'green', 'yellow', 'purple']
+    ];
+
     let nodes = graphData.nodes;
     let links = graphData.links;
 
@@ -39,6 +46,8 @@ function createSlidingTimeline(graphData) {
     parseTimeData(nodes);
 
     let svg2 = createSVG('#slider', width2, height2, margin2);
+
+
 
     let speakers2 = Array.from(new Set(nodes.map(function (d) {
         return d.speaker;
@@ -139,7 +148,7 @@ function createSlidingTimeline(graphData) {
 
     let svg3 = createSVG('#time', width3, height3, margin3);
     svg4 = createSVG('#transcript', screenWidth/2, 1/3*screenHeight, margin3);
-    svg5 = createSVG('#topicBubbles', screenWidth/4, 1/3*screenHeight, margin3);
+    svg5 = createSVG('#topicBubbles', screenWidth/3, 1/3*screenHeight, margin3);
 
     let speakers3 = Array.from(new Set(nodes.map(function (d) {
         return d.speaker;
@@ -198,6 +207,7 @@ function createSlidingTimeline(graphData) {
         //videoplayer.play();
     })
     createArrowheadMarker(svg3);
+    createTopicBubbles(data)
 }
 
 function groupNodes(nodes, mouseX) {
@@ -763,4 +773,73 @@ function scrollText(event) {
         updateElementY(allTexts);
         updateElementY(allRects);
     }
+}
+
+function createTopicBubbles(topicData){
+
+    const calculateBubblePositions = (numBubbles, rectWidth, rectHeight) => {
+      const bubblePositions = [];
+      const aspectRatio = rectWidth / rectHeight;
+      const cols = Math.ceil(Math.sqrt(numBubbles * aspectRatio));
+      const rows = Math.ceil(numBubbles / cols);
+      const colWidth = rectWidth / cols;
+      const rowHeight = rectHeight / rows;
+      const shiftAmount = colWidth / 2;
+
+      const minDimension = Math.min(colWidth, rowHeight);
+      const idealRadius = minDimension / 2;
+
+      for (let i = 0; i < rows; i++) {
+        for (let j = 0; j < cols && bubblePositions.length < numBubbles; j++) {
+          let x = (j + 0.5) * colWidth;
+          const y = (i + 0.5) * rowHeight;
+          // Shift every second row
+          if (i % 2 === 1) {
+            x += shiftAmount;
+          }
+          bubblePositions.push({ x, y, r: idealRadius });
+        }
+      }
+
+      return bubblePositions;
+    };
+
+    const backgroundWidth = screenWidth/4;
+    const backgroundHeight = 1/3*screenHeight;
+    svg5.append('rect')
+      .attr('x', 0)
+      .attr('y', 0)
+      .attr('width', backgroundWidth)
+      .attr('height', backgroundHeight)
+      .attr('class', 'background-rectangle');
+
+    const generateBubble = (words, position) => {
+      const bubble = svg5.append('g')
+        .attr('transform', `translate(${position.x},${position.y})`);
+
+      // Draw circle around words
+      bubble.append('circle')
+        .attr('class', 'bubble')
+        .attr('r', position.r)
+        .attr('fill', 'steelblue')
+        .attr('stroke', 'white');
+
+      // Add words to bubble
+      bubble.selectAll('.word')
+        .data(words)
+        .enter().append('text')
+        .attr('class', 'word')
+        .attr('x', (d, i) => Math.cos(i / words.length * 2 * Math.PI) * (position.r - 10))
+        .attr('y', (d, i) => Math.sin(i / words.length * 2 * Math.PI) * (position.r - 10))
+        .attr('text-anchor', 'middle')
+        .attr('alignment-baseline', 'middle')
+        .text(d => d);
+    };
+
+    const numBubbles = topicData.length;
+    const bubblePositions = calculateBubblePositions(numBubbles, backgroundWidth, backgroundHeight);
+
+    topicData.forEach((list, i) => {
+      generateBubble(list, bubblePositions[i]);
+    });
 }
