@@ -45,7 +45,7 @@ def build_graph_x():
     logging.info("Removed isolated nodes")
     graph = collapse_graph(graph)
     logging.info("Collapsed the corresponding I and L nodes")
-    new_graph = filter_nodes_with_locution(graph)
+    new_graph = graph #filter_nodes_with_locution(graph)
     logging.info("Mapped back to transcript")
     complete_transcript_mapping(new_graph, transcript)
     logging.info("Filtered nodes")
@@ -120,7 +120,8 @@ def complete_transcript_mapping(graph, transcript):
             if count == 0:
                 if not graph.has_node(node["id"]):
                     graph.add_node(node["id"])
-                graph.nodes[node["id"]]["transcript_text"] = ""  # "ERROR: UNMAPPED STATEMENT"
+                graph.nodes[node["id"]]["transcript_text"] = ""
+                logging.error("Unmapped Statement: " + last_statement)
 
             if count >= statement_number:
                 statement_index += 1
@@ -223,6 +224,8 @@ def extract_file(graph, json_file_path, transcript, found_files):
                 if found:
                     add_node_with_locution(graph, node_id, adapted_text, node_type, matching_locution,
                                            part, part_index, statement_index, transcript)
+                else:
+                    logging.error("Statement could not be found in the transcript: " + adapted_text)
             else:
                 graph.add_node(node_id, text=text, type=node_type, file=json_file_path)
         for edge in graph_data["edges"]:
@@ -291,8 +294,12 @@ def create_node_id_mapping(graph):
                     predecessor_l_node = next((p for p in predecessors if graph.nodes[p]["type"] == "L"), None)
                     if predecessor_l_node:
                         node_id_mapping[i_node] = predecessor_l_node
+                    else:
+                        logging.error("Missing L node in quotation")
                 else:
                     node_id_mapping[i_node] = l_node
+            else:
+                logging.error("Missing L node")
     return node_id_mapping
 
 
