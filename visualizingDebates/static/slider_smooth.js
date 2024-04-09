@@ -7,7 +7,7 @@ let screenWidth = window.screen.width;
 let screenHeight = window.screen.height;
 
 let currentTime = 0;
-let textBoxWidth = screenWidth/2
+let textBoxWidth = screenWidth / 2
 let colorScale = null
 
 let prevNodesInWindow = null
@@ -22,19 +22,31 @@ let svg4 = null
 let svg5 = null
 
 
-
+function nodeUnhoverAction(link, svg3) {
+    if (nodesInWindow && nodesInWindow.length > 0) {
+        link.filter(l => nodesInWindow.includes(l.source)).attr('opacity', 1.0)
+        link.filter(l => nodesRightOfWindow.includes(l.source) || nodesLeftOfWindow.includes(l.source)).attr('opacity', 0.3)
+        link.filter(l => nodesFarRightOfWindow.includes(l.source) || nodesFarLeftOfWindow.includes(l.source)).attr('opacity', 0.15)
+        svg3.selectAll('.node-group').filter(n => !nodesInWindow.includes(n)).attr('opacity', 0.2);
+        d3.selectAll('.node-text').remove()
+    } else {
+        link.attr('opacity', 1.0)
+    }
+    svg3.selectAll('.node-text').remove()
+}
 
 function createSlidingTimeline(graphData) {
     console.log(graphData)
 
-    const data = [
-      ['apple', 'banana', 'orange', 'grape', 'kiwi'],
-      ['cat', 'dog', 'bird', 'fish', 'rabbit'],
-      ['cat', 'dog', 'bird', 'fish', 'rabbit'],
-      ['cat', 'dog', 'bird', 'fish', 'rabbit'],
-      ['cat', 'dog', 'bird', 'fish', 'rabbit'],
-      ['cat', 'dog', 'bird', 'fish', 'rabbit'],
-      ['red', 'blue', 'green', 'yellow', 'purple']
+    const topicData = [
+        ['government', 'don', 'called', 'way', 'tim', 'money', 'people'],
+        ['going', 'owen', 'committee', 'paterson', 'way', 'tim', 'prime'],
+        ['people', 'world', 'way', 'companies', 'think', 'going', 'want'],
+        ['blah', 'paul', 'question', 'people', 'need', 'going', 'money'],
+        ['people', 'need', 'cost', 'think', 'time', 'issue', 'electric'],
+        ['process', 'people', 'know', 'answer', 'offensive', 'like', 'term'],
+        ['time', 'mps', 'people', 'make', 'change', 'sure', 'going'],
+        ['say', 'time', 'looking', 'just', 'process', 'case', '20']
     ];
 
     let nodes = graphData.nodes;
@@ -44,12 +56,11 @@ function createSlidingTimeline(graphData) {
 
     let margin2 = {top: 20, right: 20, bottom: 40, left: 60};
     let width2 = screenWidth - margin2.left - margin2.right;
-    let height2 = screenHeight/8 - margin2.top - margin2.bottom;
+    let height2 = screenHeight / 8 - margin2.top - margin2.bottom;
 
     parseTimeData(nodes);
 
     let svg2 = createSVG('#slider', width2, height2, margin2);
-
 
 
     let speakers2 = Array.from(new Set(nodes.map(function (d) {
@@ -147,11 +158,11 @@ function createSlidingTimeline(graphData) {
 
     let margin3 = {top: 20, right: 20, bottom: 40, left: 60};
     let width3 = screenWidth;
-    let height3 = screenHeight/3 - margin3.top - margin3.bottom;
+    let height3 = screenHeight / 3 - margin3.top - margin3.bottom;
 
     let svg3 = createSVG('#time', width3, height3, margin3);
-    svg4 = createSVG('#transcript', screenWidth/2, 1/3*screenHeight, margin3);
-    svg5 = createSVG('#topicBubbles', screenWidth/3, 1/3*screenHeight, margin3);
+    svg4 = createSVG('#transcript', screenWidth / 2, 1 / 3 * screenHeight, margin3);
+    svg5 = createSVG('#topicBubbles', screenWidth / 3, 1 / 3 * screenHeight, margin3);
 
     let speakers3 = Array.from(new Set(nodes.map(function (d) {
         return d.speaker;
@@ -190,16 +201,7 @@ function createSlidingTimeline(graphData) {
     node3.on('mouseover', (event, d) => {
         nodeHoverAction(svg3, links, d, link, event, nodes);
     }).on('mouseout', function () {
-        if (nodesInWindow && nodesInWindow.length > 0) {
-            link.filter(l => nodesInWindow.includes(l.source)).attr('opacity', 1.0)
-            link.filter(l => nodesRightOfWindow.includes(l.source) || nodesLeftOfWindow.includes(l.source)).attr('opacity', 0.3)
-            link.filter(l => nodesFarRightOfWindow.includes(l.source) || nodesFarLeftOfWindow.includes(l.source)).attr('opacity', 0.15)
-            svg3.selectAll('.node-group').filter(n => !nodesInWindow.includes(n)).attr('opacity', 0.2);
-            d3.selectAll('.node-text').remove()
-        } else {
-            link.attr('opacity', 1.0)
-        }
-        svg3.selectAll('.node-text').remove()
+        nodeUnhoverAction(link, svg3);
     })
 
     node3.on('click', (event, d) => {
@@ -210,7 +212,7 @@ function createSlidingTimeline(graphData) {
         //videoplayer.play();
     })
     createArrowheadMarker(svg3);
-    createTopicBubbles(data)
+    createTopicBubbles(link, links, nodes, svg3, topicData, node3)
 }
 
 function groupNodes(nodes, mouseX) {
@@ -652,7 +654,7 @@ function addTextBox(width3, svg3, nodes, links, link) {
                 let backgroundHeight = yValue - prevBoxy;
                 background.attr('height', (backgroundHeight - 1.5) + "em")
             }
-            background = hoverBox.insert('rect').attr('x', defaultX - 5).attr('y', (yValue + 0.5) + "em").attr('width', textBoxWidth-20).style('fill', colorScale(speaker)).attr('opacity', 0.2).on("wheel", scrollText);
+            background = hoverBox.insert('rect').attr('x', defaultX - 5).attr('y', (yValue + 0.5) + "em").attr('width', textBoxWidth - 20).style('fill', colorScale(speaker)).attr('opacity', 0.2).on("wheel", scrollText);
             prevBoxy = yValue + 1.0
             previousX = defaultX
             yValue += 1.4
@@ -726,8 +728,8 @@ function addTextBox(width3, svg3, nodes, links, link) {
         .attr('y', -20)
         .attr('id', "hover-box")
         .attr('x', 0)
-        .attr('width', screenWidth/2 + 20)
-        .attr('height', 1/3*screenHeight + 60)
+        .attr('width', screenWidth / 2 + 20)
+        .attr('height', 1 / 3 * screenHeight + 60)
         .style('overflow-y', 'auto')
         .style('fill', '#282c34')
         .style('stroke', 'white')
@@ -778,71 +780,100 @@ function scrollText(event) {
     }
 }
 
-function createTopicBubbles(topicData){
+function createTopicBubbles(link, links, nodes, svg3, topicData, nodes3) {
 
     const calculateBubblePositions = (numBubbles, rectWidth, rectHeight) => {
-      const bubblePositions = [];
-      const aspectRatio = rectWidth / rectHeight;
-      const cols = Math.ceil(Math.sqrt(numBubbles * aspectRatio));
-      const rows = Math.ceil(numBubbles / cols);
-      const colWidth = rectWidth / cols;
-      const rowHeight = rectHeight / rows;
-      const shiftAmount = colWidth / 2;
+        const bubblePositions = [];
+        const aspectRatio = rectWidth / rectHeight;
+        const cols = Math.ceil(Math.sqrt(numBubbles * aspectRatio));
+        const rows = Math.ceil(numBubbles / cols);
+        const colWidth = rectWidth / cols;
+        const rowHeight = rectHeight / rows;
+        const shiftAmount = colWidth / 2;
 
-      const minDimension = Math.min(colWidth, rowHeight);
-      const idealRadius = minDimension / 2;
+        const minDimension = Math.min(colWidth, rowHeight);
+        const idealRadius = minDimension / 2;
 
-      for (let i = 0; i < rows; i++) {
-        for (let j = 0; j < cols && bubblePositions.length < numBubbles; j++) {
-          let x = (j + 0.5) * colWidth;
-          const y = (i + 0.5) * rowHeight;
-          // Shift every second row
-          if (i % 2 === 1) {
-            x += shiftAmount;
-          }
-          bubblePositions.push({ x, y, r: idealRadius });
+        for (let i = 0; i < rows; i++) {
+            for (let j = 0; j < cols && bubblePositions.length < numBubbles; j++) {
+                let x = (j + 0.5) * colWidth;
+                const y = (i + 0.5) * rowHeight;
+                if (i % 2 === 1) {
+                    x += shiftAmount;
+                }
+                bubblePositions.push({x, y, r: idealRadius});
+            }
         }
-      }
 
-      return bubblePositions;
+        return bubblePositions;
     };
 
-    const backgroundWidth = screenWidth/6;
-    const backgroundHeight = 1/3*screenHeight;
+    const backgroundWidth = screenWidth / 6;
+    const backgroundHeight = 1 / 3 * screenHeight;
     svg5.append('rect')
-      .attr('x', 0)
-      .attr('y', 0)
-      .attr('width', backgroundWidth)
-      .attr('height', backgroundHeight)
-      .attr('class', 'background-rectangle');
+        .attr('x', 0)
+        .attr('y', 0)
+        .attr('width', backgroundWidth)
+        .attr('height', backgroundHeight)
+        .attr('class', 'background-rectangle')
+        .attr('fill', "#282c34");
 
     const generateBubble = (words, position) => {
-      const bubble = svg5.append('g')
-        .attr('transform', `translate(${position.x},${position.y})`);
 
-      // Draw circle around words
-      bubble.append('circle')
-        .attr('class', 'bubble')
-        .attr('r', position.r)
-        .attr('fill', 'steelblue')
-        .attr('stroke', 'white');
+        const bubble = svg5.append('g')
+            .attr('transform', `translate(${position.x},${position.y})`);
 
-      // Add words to bubble
-      bubble.selectAll('.word')
-        .data(words)
-        .enter().append('text')
-        .attr('class', 'word')
-        .attr('x', (d, i) => Math.cos(i / words.length * 2 * Math.PI) * (position.r - 10))
-        .attr('y', (d, i) => Math.sin(i / words.length * 2 * Math.PI) * (position.r - 10))
-        .attr('text-anchor', 'middle')
-        .attr('alignment-baseline', 'middle')
-        .text(d => d);
+        bubble.append('circle')
+            .attr('class', 'bubble')
+            .attr('r', position.r)
+            .attr('fill', '#282c34')
+            .attr('stroke', '#b794f4')
+            //.on('mouseover', (event) => highlightTopics(event, links, link, nodes, svg3, words, nodes3))
+            .on("mouseout", function () {
+                const word = d3.select(this).text();
+                unHighlightTopics(word);
+            });
+
+        bubble.selectAll('.word')
+            .data(words)
+            .enter().append('text')
+            .attr('class', 'word')
+            .attr('x', (d, i) => Math.cos(i / words.length * 2 * Math.PI) * (position.r - 10))
+            .attr('y', (d, i) => Math.sin(i / words.length * 2 * Math.PI) * (position.r - 10))
+            .attr('text-anchor', 'middle')
+            .attr('alignment-baseline', 'middle')
+            .attr("fill", "white")
+            .text(d => d)
+            .on('mouseover', function (event) {
+                const word = d3.select(this).text();
+                highlightTopic(event, word, links, link, nodes, svg3, nodes3);
+            })
+            .on("mouseout", function () {
+                const word = d3.select(this).text();
+                unHighlightTopic(word);
+            })
+
     };
 
     const numBubbles = topicData.length;
     const bubblePositions = calculateBubblePositions(numBubbles, backgroundWidth, backgroundHeight);
 
     topicData.forEach((list, i) => {
-      generateBubble(list, bubblePositions[i]);
+        generateBubble(list, bubblePositions[i]);
     });
+}
+
+function highlightTopic(event, topic, links, link, nodes, svg3, nodes3) {
+
+}
+
+function highlightTopics(event, links, link, nodes, svg3, topicList, nodes3) {
+    topicList.forEach(topic => highlightTopic(event, topic, links, link, nodes, svg3, nodes3))
+}
+
+function unHighlightTopics(topicList){
+    topicList.forEach(topic => unHighlightTopic(topic))
+}
+function unHighlightTopic(topic){
+
 }
