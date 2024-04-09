@@ -31,6 +31,9 @@ function createSlidingTimeline(graphData) {
       ['apple', 'banana', 'orange', 'grape', 'kiwi'],
       ['cat', 'dog', 'bird', 'fish', 'rabbit'],
       ['cat', 'dog', 'bird', 'fish', 'rabbit'],
+      ['cat', 'dog', 'bird', 'fish', 'rabbit'],
+      ['cat', 'dog', 'bird', 'fish', 'rabbit'],
+      ['cat', 'dog', 'bird', 'fish', 'rabbit'],
       ['red', 'blue', 'green', 'yellow', 'purple']
     ];
 
@@ -804,7 +807,7 @@ function createTopicBubbles(topicData){
       return bubblePositions;
     };
 
-    const backgroundWidth = screenWidth/4;
+    const backgroundWidth = screenWidth/6;
     const backgroundHeight = 1/3*screenHeight;
     svg5.append('rect')
       .attr('x', 0)
