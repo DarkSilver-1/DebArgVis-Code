@@ -231,16 +231,6 @@ function appendNodeText(outsideNodes) {
         .style("fill", "white")
         .attr("text-anchor", "middle")
         .attr('dy', yScale.bandwidth() + 15)
-        .each(function () {
-            var bbox = this.getBBox();
-            d3.select(this.parentNode)
-                .insert("rect", ":first-child")
-                .attr("x", bbox.x - 3)
-                .attr("y", bbox.y - 2)
-                .attr("width", bbox.width + 6)
-                .attr("height", bbox.height + 4)
-                .style("fill", "#282c34");
-        })
 }
 
 function nodeHoverAction(svg3, links, d, link, event, nodes) {
