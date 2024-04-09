@@ -3,8 +3,11 @@ const smallerScaleFactor = scaleFactor / 2;
 const smallestScaleFactor = scaleFactor / 4;
 let antiScaleFactor
 const halfWindowSize = 30;
+let screenWidth = window.screen.width;
+let screenHeight = window.screen.height;
+
 let currentTime = 0;
-let textBoxWidth = 1000
+let textBoxWidth = screenWidth/2
 let colorScale = null
 
 let prevNodesInWindow = null
@@ -15,6 +18,9 @@ let nodesRightOfWindow = [];
 let nodesFarRightOfWindow = [];
 let xScale = null
 let yScale = null
+let svg4 = null
+
+
 
 
 function createSlidingTimeline(graphData) {
@@ -26,8 +32,8 @@ function createSlidingTimeline(graphData) {
     let timeFormat2 = d3.timeFormat('%H:%M:%S');
 
     let margin2 = {top: 20, right: 20, bottom: 40, left: 60};
-    let width2 = 1200 - margin2.left - margin2.right;
-    let height2 = 150 - margin2.top - margin2.bottom;
+    let width2 = screenWidth - margin2.left - margin2.right;
+    let height2 = screenHeight/8 - margin2.top - margin2.bottom;
 
     parseTimeData(nodes);
 
@@ -127,10 +133,12 @@ function createSlidingTimeline(graphData) {
 //--------------------------------------------------------------------
 
     let margin3 = {top: 20, right: 20, bottom: 40, left: 60};
-    let width3 = 1200 - margin3.left - margin3.right;
-    let height3 = 500 - margin3.top - margin3.bottom;
+    let width3 = screenWidth;
+    let height3 = screenHeight/3 - margin3.top - margin3.bottom;
 
-    let svg3 = createSVG('#time', 2500 + margin3.left + margin3.right, height3, margin3);
+    let svg3 = createSVG('#time', width3, height3, margin3);
+    svg4 = createSVG('#transcript', screenWidth/2, 1/3*screenHeight, margin3);
+    svg5 = createSVG('#topicBubbles', 500 + margin3.left + margin3.right, 1/3*screenHeight, margin3);
 
     let speakers3 = Array.from(new Set(nodes.map(function (d) {
         return d.speaker;
@@ -236,7 +244,8 @@ function appendNodeText(outsideNodes) {
 function nodeHoverAction(svg3, links, d, link, event, nodes) {
     svg3.selectAll('.node').attr('stroke', 'none');
     nodesInWindow && nodesInWindow.length > 0 ? link.filter(l => nodesInWindow.includes(l.source)).attr('opacity', 0.4) : link.attr('opacity', 0.4)
-    svg3.selectAll('.hover-box text').style('font-weight', 'normal')
+    //svg3.selectAll('.hover-box text').style('font-weight', 'normal')
+    svg4.selectAll('.hover-box text').style('font-weight', 'normal')
     let textArray
     if (nodesInWindow && nodesInWindow.length > 0) {
         textArray = nodesInWindow.map(d => d.transcript_text)
@@ -251,14 +260,16 @@ function nodeHoverAction(svg3, links, d, link, event, nodes) {
         const isConnected = associatedLinks.some(link => link.target.transcript_text === t);
         const linkColor = associatedLinks.find(link => link.target.transcript_text === t)?.text_additional;
         const color = isConnected ? getLinkColor(linkColor) : 'white';
-        const hoveredTextElement = svg3.selectAll('.hover-box text').filter(function () {
+        //const hoveredTextElement = svg3.selectAll('.hover-box text').filter(function () {
+        const hoveredTextElement = svg4.selectAll('.hover-box text').filter(function () {
             return this.textContent === t;
         });
         hoveredTextElement
             .style('fill', color)
             .style('font-weight', 'normal');
     });
-    const hoveredTextElement = svg3.selectAll('.hover-box text').filter(function () {
+    //const hoveredTextElement = svg3.selectAll('.hover-box text').filter(function () {
+    const hoveredTextElement = svg4.selectAll('.hover-box text').filter(function () {
         return this.textContent === d.transcript_text;
     });
 
@@ -560,6 +571,8 @@ function updateDiagram(mouseX, node2, nodes, svg3, height3, yScale, node3, link,
             }
         })
     svg3.selectAll('.hover-box').remove()
+    svg4.selectAll('.hover-box').remove()
+
     addTextBox(width3, svg3, nodes, links, link);
 
     svg3.selectAll('.node').attr('stroke', 'none');
@@ -570,6 +583,7 @@ function updateDiagram(mouseX, node2, nodes, svg3, height3, yScale, node3, link,
         link.attr('opacity', 1.0)
         link.attr('visibility', 'visible')
         svg3.selectAll('.hover-box').remove()
+        svg4.selectAll('.hover-box').remove()
         addTextBox(width3, svg3, nodes, links, link)
     }
 }
@@ -583,7 +597,8 @@ function textHoverAction(links, transcript_text, textArray, link, svg3, newText)
         const linkColor = associatedLinks.find(link => link.target.transcript_text === t)?.text_additional;
         const color = getLinkColor(linkColor)
         if (color !== "white") {
-            svg3.select(`#hovered-text-${i}`).style('fill', color);
+            //svg3.select(`#hovered-text-${i}`).style('fill', color);
+            svg4.select(`#hovered-text-${i}`).style('fill', color);
         }
     });
     link.filter(l => l.source.transcript_text === transcript_text)
@@ -596,7 +611,8 @@ function textHoverAction(links, transcript_text, textArray, link, svg3, newText)
         .attr('stroke-width', 2);
     textArray.forEach((t, i) => {
         if (t !== transcript_text) {
-            svg3.select(`#hovered-text-${i}`).style('font-weight', 'normal');
+            //svg3.select(`#hovered-text-${i}`).style('font-weight', 'normal');
+            svg4.select(`#hovered-text-${i}`).style('font-weight', 'normal');
         }
     });
     newText.style('font-weight', 'bold');
@@ -606,19 +622,20 @@ function textHoverAction(links, transcript_text, textArray, link, svg3, newText)
 }
 
 function addTextBox(width3, svg3, nodes, links, link) {
-    let yPosition = 0
-    let xPosition = width3 + 10;
-    let hoverBox = svg3.append('g').attr('class', 'hover-box');
+    let yPosition = 0 //TODO
+    let xPosition = 0;
+    //let hoverBox = svg3.append('g').attr('class', 'hover-box');
+    let hoverBox = svg4.append('g').attr('class', 'hover-box');
     let textArray;
     if (nodesInWindow && nodesInWindow.length > 0) {
         textArray = nodesInWindow.map(d => d.transcript_text)
     } else {
         textArray = nodes.map(d => d.transcript_text)
     }
-    let defaultX = width3 + 25
-    let maxNumOfLetters = 100
+    let defaultX = 25//width3 + 25 //TODO
+    let maxNumOfLetters = 125
     let previousX = defaultX;
-    let yValue = 1.2
+    let yValue = 1.2 //TODO
     let numberOfCharsInLine = 0;
     let previousSpeaker = null
     let background = null
@@ -638,7 +655,7 @@ function addTextBox(width3, svg3, nodes, links, link) {
                 let backgroundHeight = yValue - prevBoxy;
                 background.attr('height', (backgroundHeight - 1.5) + "em")
             }
-            background = hoverBox.insert('rect').attr('x', defaultX - 5).attr('y', (yValue + 0.5) + "em").attr('width', textBoxWidth).style('fill', colorScale(speaker)).attr('opacity', 0.2).on("wheel", scrollText);
+            background = hoverBox.insert('rect').attr('x', defaultX - 5).attr('y', (yValue + 0.5) + "em").attr('width', textBoxWidth-20).style('fill', colorScale(speaker)).attr('opacity', 0.2).on("wheel", scrollText);
             prevBoxy = yValue + 1.0
             previousX = defaultX
             yValue += 1.4
@@ -693,7 +710,8 @@ function addTextBox(width3, svg3, nodes, links, link) {
             textHoverAction(links, transcript_text, textArray, link, svg3, newText);
         }).on('mouseout', function () {
             textArray.forEach((t, i) => {
-                svg3.select(`#hovered-text-${i}`)
+                //svg3.select(`#hovered-text-${i}`)
+                svg4.select(`#hovered-text-${i}`)
                     .style('fill', 'white');
             });
             newText.style('font-weight', 'normal');
@@ -707,14 +725,13 @@ function addTextBox(width3, svg3, nodes, links, link) {
         background.attr('height', (yValue - prevBoxy + 1.2) + "em")
     }
 
-    let bbox = hoverBox.node().getBBox();
     hoverBox.insert('rect', 'text')
         .attr('class', ".hover-box")
-        .attr('y', yPosition)
+        .attr('y', -20)
         .attr('id', "hover-box")
-        .attr('x', xPosition)
-        .attr('width', Math.min(bbox.width + 10, 1200))
-        .attr('height', Math.min(bbox.height + 10, 478))
+        .attr('x', 0)
+        .attr('width', screenWidth/2 + 20)
+        .attr('height', 1/3*screenHeight + 60)
         .style('overflow-y', 'auto')
         .style('fill', '#282c34')
         .style('stroke', 'white')
@@ -749,7 +766,7 @@ function scrollText(event) {
     const lastTextY = parseFloat(lastText.attr('y'));
     const firstText = d3.select(allTexts.nodes()[0]);
     const firstTextY = parseFloat(firstText.attr('y'));
-    if ((lastTextY > 27 || scroll === 1) && (firstTextY < 1 || scroll === -1)) {//TODO hardcoded
+    if ((lastTextY > 15 || scroll === 1) && (firstTextY < 1 || scroll === -1)) {//TODO hardcoded
         function updateElementY(selection) {
             selection.each(function () {
                 if (d3.select(this).attr('id') !== 'hover-box') {
