@@ -766,7 +766,7 @@ function scrollText(event) {
     const lastTextY = parseFloat(lastText.attr('y'));
     const firstText = d3.select(allTexts.nodes()[0]);
     const firstTextY = parseFloat(firstText.attr('y'));
-    if ((lastTextY > 15 || scroll === 1) && (firstTextY < 1 || scroll === -1)) {//TODO hardcoded
+    if ((lastTextY > 23 || scroll === 1) && (firstTextY < 1 || scroll === -1)) {//TODO hardcoded
         function updateElementY(selection) {
             selection.each(function () {
                 if (d3.select(this).attr('id') !== 'hover-box') {
