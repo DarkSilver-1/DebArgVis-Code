@@ -19,6 +19,7 @@ let nodesFarRightOfWindow = [];
 let xScale = null
 let yScale = null
 let svg4 = null
+let svg5 = null
 
 
 
@@ -138,7 +139,7 @@ function createSlidingTimeline(graphData) {
 
     let svg3 = createSVG('#time', width3, height3, margin3);
     svg4 = createSVG('#transcript', screenWidth/2, 1/3*screenHeight, margin3);
-    svg5 = createSVG('#topicBubbles', 500 + margin3.left + margin3.right, 1/3*screenHeight, margin3);
+    svg5 = createSVG('#topicBubbles', screenWidth/4, 1/3*screenHeight, margin3);
 
     let speakers3 = Array.from(new Set(nodes.map(function (d) {
         return d.speaker;
@@ -186,6 +187,7 @@ function createSlidingTimeline(graphData) {
         } else {
             link.attr('opacity', 1.0)
         }
+        svg3.selectAll('.node-text').remove()
     })
 
     node3.on('click', (event, d) => {
@@ -223,8 +225,8 @@ function groupNodes(nodes, mouseX) {
 
 function appendNodeText(outsideNodes) {
     outsideNodes.attr('opacity', 1.0)
-    /*outsideNodes.append("text")
-        .attr("class", '.node-text')
+    outsideNodes.append("text")
+        .attr("class", 'node-text')
         .text(node => node.text)
         .style("fill", "white")
         .attr("text-anchor", "middle")
@@ -238,13 +240,12 @@ function appendNodeText(outsideNodes) {
                 .attr("width", bbox.width + 6)
                 .attr("height", bbox.height + 4)
                 .style("fill", "#282c34");
-        })*/
+        })
 }
 
 function nodeHoverAction(svg3, links, d, link, event, nodes) {
     svg3.selectAll('.node').attr('stroke', 'none');
     nodesInWindow && nodesInWindow.length > 0 ? link.filter(l => nodesInWindow.includes(l.source)).attr('opacity', 0.4) : link.attr('opacity', 0.4)
-    //svg3.selectAll('.hover-box text').style('font-weight', 'normal')
     svg4.selectAll('.hover-box text').style('font-weight', 'normal')
     let textArray
     if (nodesInWindow && nodesInWindow.length > 0) {
@@ -260,7 +261,6 @@ function nodeHoverAction(svg3, links, d, link, event, nodes) {
         const isConnected = associatedLinks.some(link => link.target.transcript_text === t);
         const linkColor = associatedLinks.find(link => link.target.transcript_text === t)?.text_additional;
         const color = isConnected ? getLinkColor(linkColor) : 'white';
-        //const hoveredTextElement = svg3.selectAll('.hover-box text').filter(function () {
         const hoveredTextElement = svg4.selectAll('.hover-box text').filter(function () {
             return this.textContent === t;
         });
@@ -268,7 +268,6 @@ function nodeHoverAction(svg3, links, d, link, event, nodes) {
             .style('fill', color)
             .style('font-weight', 'normal');
     });
-    //const hoveredTextElement = svg3.selectAll('.hover-box text').filter(function () {
     const hoveredTextElement = svg4.selectAll('.hover-box text').filter(function () {
         return this.textContent === d.transcript_text;
     });
@@ -597,7 +596,6 @@ function textHoverAction(links, transcript_text, textArray, link, svg3, newText)
         const linkColor = associatedLinks.find(link => link.target.transcript_text === t)?.text_additional;
         const color = getLinkColor(linkColor)
         if (color !== "white") {
-            //svg3.select(`#hovered-text-${i}`).style('fill', color);
             svg4.select(`#hovered-text-${i}`).style('fill', color);
         }
     });
@@ -611,7 +609,6 @@ function textHoverAction(links, transcript_text, textArray, link, svg3, newText)
         .attr('stroke-width', 2);
     textArray.forEach((t, i) => {
         if (t !== transcript_text) {
-            //svg3.select(`#hovered-text-${i}`).style('font-weight', 'normal');
             svg4.select(`#hovered-text-${i}`).style('font-weight', 'normal');
         }
     });
@@ -622,9 +619,6 @@ function textHoverAction(links, transcript_text, textArray, link, svg3, newText)
 }
 
 function addTextBox(width3, svg3, nodes, links, link) {
-    let yPosition = 0 //TODO
-    let xPosition = 0;
-    //let hoverBox = svg3.append('g').attr('class', 'hover-box');
     let hoverBox = svg4.append('g').attr('class', 'hover-box');
     let textArray;
     if (nodesInWindow && nodesInWindow.length > 0) {
@@ -632,10 +626,10 @@ function addTextBox(width3, svg3, nodes, links, link) {
     } else {
         textArray = nodes.map(d => d.transcript_text)
     }
-    let defaultX = 25//width3 + 25 //TODO
+    let defaultX = 25
     let maxNumOfLetters = 125
     let previousX = defaultX;
-    let yValue = 1.2 //TODO
+    let yValue = 1.2
     let numberOfCharsInLine = 0;
     let previousSpeaker = null
     let background = null
@@ -710,7 +704,6 @@ function addTextBox(width3, svg3, nodes, links, link) {
             textHoverAction(links, transcript_text, textArray, link, svg3, newText);
         }).on('mouseout', function () {
             textArray.forEach((t, i) => {
-                //svg3.select(`#hovered-text-${i}`)
                 svg4.select(`#hovered-text-${i}`)
                     .style('fill', 'white');
             });
