@@ -8,15 +8,6 @@ from dotenv import load_dotenv
 
 from ..logger import logging
 
-personIDMapping = {
-    '3730': "Caroline Lucas",
-    '3732': 'Fiona Bruce',
-    '3734': 'Paul Scully',
-    '3731': 'Emily Thornberry',
-    '3735': 'Tim Stanley',
-    '3733': 'Paul Polman',
-    'Public': 'Public'
-}
 newTopicQuestionTimes = ["2020-05-21 22:52:01", "2020-05-21 23:08:18", "2020-05-21 23:31:20", "2020-05-21 23:43:08"]
 
 load_dotenv()
@@ -29,6 +20,8 @@ transcript_path = os.getenv("TRANSCRIPT_PATH")
 def build_graph_x():
     graph = nx.MultiDiGraph()
     json_folder_path = os.getenv("FOLDER_PATH")
+    speaker_file_path = os.getenv("SPEAKER_FILE_PATH")
+    personIDMapping = extract_speaker_file(speaker_file_path)
     transcript = extract_transcript()
     imc_file_path = os.getenv("imc_file_path")
     found_files = []
@@ -37,7 +30,7 @@ def build_graph_x():
             json_file_path = os.path.join(json_folder_path, filename)
             if os.path.getsize(json_file_path) != 0 and os.path.getsize(json_file_path) != 68 and os.path.getsize(
                     json_file_path) != 69:
-                extract_file(graph, json_file_path, transcript, found_files)
+                extract_file(graph, json_file_path, transcript, found_files, personIDMapping)
 
     extract_imc(graph, imc_file_path)
     logging.info("Extracted the files")
@@ -164,7 +157,7 @@ def find_transcript_part(transcript, adapted_text, found_files):
     return 0
 
 
-def extract_file(graph, json_file_path, transcript, found_files):
+def extract_file(graph, json_file_path, transcript, found_files, personIDMapping):
     with open(json_file_path, 'r') as json_file:
         graph_data = json.load(json_file)
         part = 0
@@ -223,7 +216,7 @@ def extract_file(graph, json_file_path, transcript, found_files):
                     index += 1
                 if found:
                     add_node_with_locution(graph, node_id, adapted_text, node_type, matching_locution,
-                                           part, part_index, statement_index, transcript)
+                                           part, part_index, statement_index, transcript, personIDMapping)
                 else:
                     logging.error("Statement could not be found in the transcript: " + adapted_text)
             else:
@@ -233,7 +226,7 @@ def extract_file(graph, json_file_path, transcript, found_files):
 
 
 def add_node_with_locution(graph, node_id, text, node_type, locution, transcript_part, part_index,
-                           statement_index, transcript):
+                           statement_index, transcript, personIDMapping):
     speaker = locution.get("personID")
     if speaker not in personIDMapping:
         speaker = "Public"
@@ -334,3 +327,16 @@ def populate_graph(edges_to_add, new_graph):
     for edge in edges_to_add:
         s, t, text, conn_type = edge
         new_graph.add_edge(s, t, text_additional=text, conn_type=conn_type)
+
+
+def extract_speaker_file(speaker_file_path):
+    personIDMapping = {}
+    with open(speaker_file_path, 'r') as file:
+        lines = file.readlines()
+        for line in lines:
+            parts = line.strip().split()
+            person_id = parts[0]
+            speaker = ' '.join(parts[1:])
+            personIDMapping[person_id] = speaker
+    return personIDMapping
+
