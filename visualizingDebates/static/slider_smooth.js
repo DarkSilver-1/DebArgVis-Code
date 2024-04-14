@@ -871,6 +871,12 @@ function highlightTopics(topicList, nodes3, radius, hoveredElement) {
         let node = d3.select(this);
         node.selectAll(".node").attr("stroke", "#b794f4").attr("stroke-width", "2px")
     });
+    let textElements = svg4.selectAll('.hover-box text').filter(function(){
+        return topicList.some(topic => this.textContent.includes(topic));
+    });
+    textElements.each(function() {
+        d3.select(this).style("fill", '#b794f4')
+    });
     hoveredElement
         .transition()
         .attr('r', radius * 1.2)
@@ -885,6 +891,12 @@ function unHighlightTopics(topicList, nodes3, radius, hoveredElement) {
         let node = d3.select(this);
         node.selectAll(".node").attr("stroke", "none")
     });
+    let textElements = svg4.selectAll('.hover-box text').filter(function(){
+        return topicList.some(topic => this.textContent.includes(topic));
+    });
+    textElements.each(function() {
+        d3.select(this).style("fill", 'white')
+    });
     hoveredElement
         .transition()
         .attr('r', radius)
@@ -897,6 +909,11 @@ function highlightTopic(nodes3, radius, hoveredElement) {
         let node = d3.select(this);
         node.selectAll(".node").attr("stroke", "#b794f4").attr("stroke-width", "2px")
     });
+    let textElements = svg4.selectAll('.hover-box text').filter(function() {return this.textContent.includes(hoveredElement.text())});
+    console.log(textElements)
+    textElements.each(function() {
+        d3.select(this).style("fill", '#b794f4')
+    });
     hoveredElement
         .transition()
         .attr('r', radius * 1.2)
@@ -908,6 +925,10 @@ function unHighlightTopic(nodes3, radius, hoveredElement) {
     filteredNodes.each(function () {
         let node = d3.select(this);
         node.selectAll(".node").attr("stroke", "none")
+    });
+    let textElements = svg4.selectAll('.hover-box text').filter(function() {return this.textContent.includes(hoveredElement.text())});
+    textElements.each(function() {
+        d3.select(this).style("fill", 'white')
     });
     hoveredElement
         .transition()
