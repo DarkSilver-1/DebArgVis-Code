@@ -33,7 +33,7 @@ function nodeUnhoverAction(link, svg3) {
         link.attr('opacity', 1.0)
     }
     svg3.selectAll('.node-text').remove()
-}
+}//Interaction
 
 function createSlidingTimeline(graphData) {
     console.log(graphData)
@@ -139,6 +139,7 @@ function createSlidingTimeline(graphData) {
         .attr('y1', d => d.newQuestion ? 0 : -1000)
         .attr('y2', d => d.newQuestion ? height2 : -1000)
         .style('stroke', 'red');
+
     let videoplayer = document.getElementById('videoPlayer')
     videoplayer.addEventListener('timeupdate', function () {
         const currentTimeVid = xScale(new Date(nodes[0].start_time.getTime() + videoplayer.currentTime * 1000))
@@ -213,7 +214,7 @@ function createSlidingTimeline(graphData) {
     })
     createArrowheadMarker(svg3);
     createTopicBubbles(link, links, nodes, svg3, topicData, node3)
-}
+}//Timeline + Slider + videoplayer
 
 function groupNodes(nodes, mouseX) {
     nodesInWindow = []
@@ -259,8 +260,7 @@ function nodeHoverAction(svg3, links, d, link, event, nodes) {
         textArray = nodes.map(d => d.transcript_text)
     }
 
-    let associatedLinks = links.filter(link => link.source.transcript_text === d.transcript_text);
-    associatedLinks = associatedLinks.filter(d => ['Default Inference', 'Default Rephrase', 'Default Conflict'].includes(d.text_additional))
+    let associatedLinks = links.filter(link => link.source === d);
 
     textArray.forEach((t) => {
         const isConnected = associatedLinks.some(link => link.target.transcript_text === t);
@@ -789,9 +789,11 @@ function createTopicBubbles(link, links, nodes, svg3, topicData, nodes3) {
         const rows = Math.ceil(numBubbles / cols);
         const colWidth = rectWidth / cols;
         const rowHeight = rectHeight / rows;
-        const shiftAmount = colWidth / 2;
+
 
         const minDimension = Math.min(colWidth, rowHeight);
+        const shiftAmount = minDimension / 2;
+
         const idealRadius = minDimension / 2;
 
         for (let i = 0; i < rows; i++) {
@@ -825,14 +827,15 @@ function createTopicBubbles(link, links, nodes, svg3, topicData, nodes3) {
 
         bubble.append('circle')
             .attr('class', 'bubble')
-            .attr('r', position.r)
-            .attr('fill', '#282c34')
+            .attr('r', position.r - 2)
+            .attr('fill', 'transparent')
             .attr('stroke', '#b794f4')
-            //.on('mouseover', (event) => highlightTopics(event, links, link, nodes, svg3, words, nodes3))
+            .on('mouseover', function () {
+                highlightTopics(words, nodes3, position.r, d3.select(this))
+            })
             .on("mouseout", function () {
-                const word = d3.select(this).text();
-                unHighlightTopics(word);
-            });
+                unHighlightTopics(words, nodes3, position.r, d3.select(this))
+            })
 
         bubble.selectAll('.word')
             .data(words)
@@ -844,15 +847,12 @@ function createTopicBubbles(link, links, nodes, svg3, topicData, nodes3) {
             .attr('alignment-baseline', 'middle')
             .attr("fill", "white")
             .text(d => d)
-            .on('mouseover', function (event) {
-                const word = d3.select(this).text();
-                highlightTopic(event, word, links, link, nodes, svg3, nodes3);
+            .on('mouseover', function () {
+                highlightTopic(nodes3, position.r, d3.select(this))
             })
             .on("mouseout", function () {
-                const word = d3.select(this).text();
-                unHighlightTopic(word);
+                unHighlightTopic(nodes3, position.r, d3.select(this))
             })
-
     };
 
     const numBubbles = topicData.length;
@@ -863,17 +863,54 @@ function createTopicBubbles(link, links, nodes, svg3, topicData, nodes3) {
     });
 }
 
-function highlightTopic(event, topic, links, link, nodes, svg3, nodes3) {
+function highlightTopics(topicList, nodes3, radius, hoveredElement) {
+    const filteredNodes = nodes3.filter(node => {
+        return topicList.some(topic => node.text.includes(topic));
+    });
+    filteredNodes.each(function () {
+        let node = d3.select(this);
+        node.selectAll(".node").attr("stroke", "#b794f4").attr("stroke-width", "2px")
+    });
+    hoveredElement
+        .transition()
+        .attr('r', radius * 1.2)
+        .attr('fill', '#b794f4');
+}//Interaction
 
-}
+function unHighlightTopics(topicList, nodes3, radius, hoveredElement) {
+    const filteredNodes = nodes3.filter(node => {
+        return topicList.some(topic => node.text.includes(topic));
+    });
+    filteredNodes.each(function () {
+        let node = d3.select(this);
+        node.selectAll(".node").attr("stroke", "none")
+    });
+    hoveredElement
+        .transition()
+        .attr('r', radius)
+        .attr('fill', 'transparent');
+}//Interaction
 
-function highlightTopics(event, links, link, nodes, svg3, topicList, nodes3) {
-    topicList.forEach(topic => highlightTopic(event, topic, links, link, nodes, svg3, nodes3))
-}
+function highlightTopic(nodes3, radius, hoveredElement) {
+    const filteredNodes = nodes3.filter(node => node.text.includes(hoveredElement.text()));
+    filteredNodes.each(function () {
+        let node = d3.select(this);
+        node.selectAll(".node").attr("stroke", "#b794f4").attr("stroke-width", "2px")
+    });
+    hoveredElement
+        .transition()
+        .attr('r', radius * 1.2)
+        .attr('fill', '#b794f4');
+}//Interaction
 
-function unHighlightTopics(topicList){
-    topicList.forEach(topic => unHighlightTopic(topic))
-}
-function unHighlightTopic(topic){
-
-}
+function unHighlightTopic(nodes3, radius, hoveredElement) {
+    const filteredNodes = nodes3.filter(node => node.text.includes(hoveredElement.text()));
+    filteredNodes.each(function () {
+        let node = d3.select(this);
+        node.selectAll(".node").attr("stroke", "none")
+    });
+    hoveredElement
+        .transition()
+        .attr('r', radius)
+        .attr('fill', 'white');
+}//Interaction
