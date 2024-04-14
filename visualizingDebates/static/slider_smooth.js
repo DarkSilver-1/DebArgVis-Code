@@ -20,6 +20,7 @@ let xScale = null
 let yScale = null
 let svg4 = null
 let svg5 = null
+let radius
 
 
 function nodeUnhoverAction(link, svg3) {
@@ -33,6 +34,8 @@ function nodeUnhoverAction(link, svg3) {
         link.attr('opacity', 1.0)
     }
     svg3.selectAll('.node-text').remove()
+
+    svg5.selectAll(".bubble").transition().attr("fill", "transparent").attr('r', radius)
 }//Interaction
 
 function createSlidingTimeline(graphData) {
@@ -295,6 +298,18 @@ function nodeHoverAction(svg3, links, d, link, event, nodes) {
     let outside_links_start_values = target_links.filter(l => nodesInWindow && nodesInWindow.includes(l.source) && !nodesInWindow.includes(l.target)).data().map(l => l.target.start_time)
     let outside_nodes = svg3.selectAll('.node-group').filter(n => outside_links_start_values.includes(n.start_time));
     appendNodeText(outside_nodes)
+
+    const textBubbles = svg5.selectAll(".topic-bubble")
+    textBubbles.each(function() {
+        const bubble = d3.select(this);
+        const bubbleTexts = bubble.selectAll(".word")
+        bubbleTexts.each(function() {
+            const text = d3.select(this)
+            if (hoveredTextElement.text().includes(text.text())){
+                bubble.selectAll(".bubble").transition().attr("fill", "#b794f4").attr('r', radius * 1.2)
+            }
+        })
+    })
 }
 
 function createNodeGroup(svg3, nodes, yScale, colorScale3, height3) {
@@ -621,6 +636,18 @@ function textHoverAction(links, transcript_text, textArray, link, svg3, newText)
     let outside_links_start_values = link.filter(l => l.source.transcript_text === transcript_text).filter(l => nodesInWindow && nodesInWindow.includes(l.source) && !nodesInWindow.includes(l.target)).data().map(l => l.target.start_time)
     let outside_nodes = svg3.selectAll('.node-group').filter(n => outside_links_start_values.includes(n.start_time));
     appendNodeText(outside_nodes)
+
+    const textBubbles = svg5.selectAll(".topic-bubble")
+    textBubbles.each(function() {
+        const bubble = d3.select(this);
+        const bubbleTexts = bubble.selectAll(".word")
+        bubbleTexts.each(function() {
+            const text = d3.select(this)
+            if (newText.text().includes(text.text())){
+                bubble.selectAll(".bubble").transition().attr("fill", "#b794f4").attr('r', radius * 1.2)
+            }
+        })
+    })
 }
 
 function addTextBox(width3, svg3, nodes, links, link) {
@@ -717,6 +744,7 @@ function addTextBox(width3, svg3, nodes, links, link) {
             nodesInWindow && nodesInWindow.length > 0 ? svg3.selectAll('.node-group').filter(n => !nodesInWindow.includes(n)).attr('opacity', 0.2) : null;
             nodesInWindow && nodesInWindow.length > 0 ? link.filter(l => nodesInWindow.includes(l.source)).attr('opacity', 1.0) : link.attr('opacity', 1.0)
             d3.selectAll('.node-text').remove()
+            svg5.selectAll(".bubble").transition().attr("fill", "transparent").attr('r', radius)
         }).on("wheel", scrollText)
     })
     if (background !== null) {
@@ -793,8 +821,7 @@ function createTopicBubbles(link, links, nodes, svg3, topicData, nodes3) {
 
         const minDimension = Math.min(colWidth, rowHeight);
         const shiftAmount = minDimension / 2;
-
-        const idealRadius = minDimension / 2;
+        radius = minDimension / 2;
 
         for (let i = 0; i < rows; i++) {
             for (let j = 0; j < cols && bubblePositions.length < numBubbles; j++) {
@@ -803,7 +830,7 @@ function createTopicBubbles(link, links, nodes, svg3, topicData, nodes3) {
                 if (i % 2 === 1) {
                     x += shiftAmount;
                 }
-                bubblePositions.push({x, y, r: idealRadius});
+                bubblePositions.push({x, y, r: radius});
             }
         }
 
@@ -823,7 +850,8 @@ function createTopicBubbles(link, links, nodes, svg3, topicData, nodes3) {
     const generateBubble = (words, position) => {
 
         const bubble = svg5.append('g')
-            .attr('transform', `translate(${position.x},${position.y})`);
+            .attr('transform', `translate(${position.x},${position.y})`)
+            .attr('class', 'topic-bubble');
 
         bubble.append('circle')
             .attr('class', 'bubble')
@@ -910,7 +938,6 @@ function highlightTopic(nodes3, radius, hoveredElement) {
         node.selectAll(".node").attr("stroke", "#b794f4").attr("stroke-width", "2px")
     });
     let textElements = svg4.selectAll('.hover-box text').filter(function() {return this.textContent.includes(hoveredElement.text())});
-    console.log(textElements)
     textElements.each(function() {
         d3.select(this).style("fill", '#b794f4')
     });
