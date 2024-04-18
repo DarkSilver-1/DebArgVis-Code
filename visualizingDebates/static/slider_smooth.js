@@ -909,7 +909,7 @@ function highlightTopics(topicList, nodes3, radius, hoveredElement) {
         .transition()
         .attr('r', radius * 1.2)
         .attr('fill', '#b794f4');
-}//Interaction
+}
 
 function unHighlightTopics(topicList, nodes3, radius, hoveredElement) {
     const filteredNodes = nodes3.filter(node => {
@@ -929,7 +929,7 @@ function unHighlightTopics(topicList, nodes3, radius, hoveredElement) {
         .transition()
         .attr('r', radius)
         .attr('fill', 'transparent');
-}//Interaction
+}
 
 function highlightTopic(nodes3, radius, hoveredElement) {
     const filteredNodes = nodes3.filter(node => node.text.includes(hoveredElement.text()));
@@ -942,10 +942,8 @@ function highlightTopic(nodes3, radius, hoveredElement) {
         d3.select(this).style("fill", '#b794f4')
     });
     hoveredElement
-        .transition()
-        .attr('r', radius * 1.2)
         .attr('fill', '#b794f4');
-}//Interaction
+}
 
 function unHighlightTopic(nodes3, radius, hoveredElement) {
     const filteredNodes = nodes3.filter(node => node.text.includes(hoveredElement.text()));
@@ -958,7 +956,5 @@ function unHighlightTopic(nodes3, radius, hoveredElement) {
         d3.select(this).style("fill", 'white')
     });
     hoveredElement
-        .transition()
-        .attr('r', radius)
         .attr('fill', 'white');
-}//Interaction
+}

@@ -24,7 +24,11 @@ def extract_documents():
 
 def extract_topics():
     documents = extract_documents()
-    vectorizer = CountVectorizer(stop_words='english')
+    custom_stop_words = ["blah", "go", "do", "don", "going"]
+    stop_words = 'english'
+    stop_words_list = list(CountVectorizer(stop_words=stop_words).get_stop_words())
+    stop_words_list += custom_stop_words
+    vectorizer = CountVectorizer(stop_words=stop_words_list)
     x = vectorizer.fit_transform(documents)
     num_topics = 10
     lda = LatentDirichletAllocation(n_components=num_topics, random_state=42)
@@ -37,7 +41,3 @@ def extract_topics():
 
 
 topics = extract_topics()
-for topic_num in topics:
-    print(topic_num)
-    print(topics[topic_num])
-    print()
