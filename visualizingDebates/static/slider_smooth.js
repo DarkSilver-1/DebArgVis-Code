@@ -40,17 +40,7 @@ function nodeUnhoverAction(link, svg3) {
 
 function createSlidingTimeline(graphData) {
 
-    const topicData = [
-        ['government', 'don', 'called', 'way', 'tim', 'money', 'people'],
-        ['going', 'owen', 'committee', 'paterson', 'way', 'tim', 'prime'],
-        ['people', 'world', 'way', 'companies', 'think', 'going', 'want'],
-        ['blah', 'paul', 'question', 'people', 'need', 'going', 'money'],
-        ['people', 'need', 'cost', 'think', 'time', 'issue', 'electric'],
-        ['process', 'people', 'know', 'answer', 'offensive', 'like', 'term'],
-        ['time', 'mps', 'people', 'make', 'change', 'sure', 'going'],
-        ['say', 'time', 'looking', 'just', 'process', 'case', '20']
-    ];
-    const topicData1 = graphData["topics"];console.log(topicData1)
+    const topicData = Object.values(graphData["topics"]);
     const nodes = graphData.nodes;
     const links = graphData.links;
 

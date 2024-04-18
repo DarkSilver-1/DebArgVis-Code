@@ -30,7 +30,7 @@ def extract_topics():
     stop_words_list += custom_stop_words
     vectorizer = CountVectorizer(stop_words=stop_words_list)
     x = vectorizer.fit_transform(documents)
-    num_topics = 10
+    num_topics = 9
     lda = LatentDirichletAllocation(n_components=num_topics, random_state=42)
     lda.fit(x)
     feature_names = vectorizer.get_feature_names_out()
