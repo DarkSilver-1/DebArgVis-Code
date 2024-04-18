@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from starlette.responses import HTMLResponse
-from app.graph import graph_data, graph_data_old
+from app.graph import graph_data, topics, graph_data_old
 import uvicorn
 
 app = FastAPI()

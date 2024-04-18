@@ -39,7 +39,6 @@ function nodeUnhoverAction(link, svg3) {
 }//Interaction
 
 function createSlidingTimeline(graphData) {
-    console.log(graphData)
 
     const topicData = [
         ['government', 'don', 'called', 'way', 'tim', 'money', 'people'],
@@ -51,9 +50,9 @@ function createSlidingTimeline(graphData) {
         ['time', 'mps', 'people', 'make', 'change', 'sure', 'going'],
         ['say', 'time', 'looking', 'just', 'process', 'case', '20']
     ];
-
-    let nodes = graphData.nodes;
-    let links = graphData.links;
+    const topicData1 = graphData["topics"];console.log(topicData1)
+    const nodes = graphData.nodes;
+    const links = graphData.links;
 
     let timeFormat2 = d3.timeFormat('%H:%M:%S');
 
