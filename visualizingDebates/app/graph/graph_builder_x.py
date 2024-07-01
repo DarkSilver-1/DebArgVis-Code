@@ -32,6 +32,9 @@ def build_graph_x():
                     json_file_path) != 69:
                 extract_file(graph, json_file_path, transcript, found_files, personIDMapping)
 
+    build_graph_new()
+    transform_data(graph)
+
     extract_imc(graph, imc_file_path)
     logging.info("Extracted the files")
     remove_isolated(graph)
@@ -41,10 +44,116 @@ def build_graph_x():
     new_graph = graph #filter_nodes_with_locution(graph)
     logging.info("Mapped back to transcript")
     complete_transcript_mapping(new_graph, transcript)
+    #complete_transcript_mapping2(new_graph, transcript)
     logging.info("Filtered nodes")
     delete_unmapped_nodes(new_graph)
     return new_graph
 
+def build_graph_new():
+    graph2 = nx.MultiDiGraph()
+    json_folder_path = os.getenv("FOLDER_PATH")
+    imc_file_path = os.getenv("imc_file_path")
+    for filename in os.listdir(json_folder_path):
+        if filename.endswith('.json'):
+            json_file_path = os.path.join(json_folder_path, filename)
+            if os.path.getsize(json_file_path) != 0 and os.path.getsize(json_file_path) != 68 and os.path.getsize(
+                    json_file_path) != 69:
+                extract_file_simple(graph2, json_file_path)
+    extract_imc_file(graph2, imc_file_path)
+    remove_unnecessary_nodes(graph2)
+    graph2 = collapse_graph_new(graph2)
+    print(graph2)
+    return graph2
+
+def transform_data(graph):
+    #find_chronological_order()
+    #distribute_transcript()
+    #compute_timestamps
+    pass
+
+
+
+def extract_file_simple(graph, json_file_path):
+    with open(json_file_path, "r") as json_file:
+        file_data = json.load(json_file)
+        for node in file_data["nodes"]:
+            node_id = node["nodeID"]
+            node_type = node["type"]
+            text = node["text"]
+            if node_type != "TA" and text != "Analysing":
+                graph.add_node(node_id, text=text, type=node_type)
+        for edge in file_data["edges"]:
+            graph.add_edge(edge["fromID"], edge["toID"])
+
+def extract_imc_file(graph, imc_file_path):
+    with open(imc_file_path, "r") as imc_file:
+        file_data = json.load(imc_file)
+        for node in file_data["nodes"]:
+            node_id = node["nodeID"]
+            node_type = node["type"]
+            text = node["text"]
+            if node_type != "L" and node_type != "I" and node_type != "TA" and text != "Analysing":
+                graph.add_node(node_id, text=text, type=node_type)
+    for edge in file_data["edges"]:
+        graph.add_edge(edge["fromID"], edge["toID"])
+
+
+def remove_unnecessary_nodes(graph):
+    nodes_to_remove = []
+    for node, data in graph.nodes(data=True):
+        if graph.degree(node) == 0 or "type" not in data:
+            nodes_to_remove.append(node)
+    for node in nodes_to_remove:
+        graph.remove_node(node)
+
+
+def create_locution_proposition_mapping(graph):
+    node_id_mapping = {}
+    locutions = [n for n in graph.nodes if graph.nodes[n]["type"] == "L"] #and not set(graph.predecessors(n))] #only use l nodes without predecessor (i.e. actual locutions instead of quoted ones)
+    for locution in locutions:
+        predecessor = set(graph.predecessors(locution))
+        if predecessor and graph.nodes[predecessor.pop()]["text"] == "Asserting":
+            continue
+        successors = set(graph.successors(locution))
+        for successor in successors:
+            target_node = set(graph.successors(successor)).pop()
+            node_type = graph.nodes[target_node]["type"]
+            if node_type == "I":
+                node_id_mapping[target_node] = locution
+            elif node_type == "L":
+                quote_successor = set(graph.successors(target_node)).pop()
+                quote_target_node = set(graph.successors(quote_successor)).pop()
+                node_type = graph.nodes[quote_target_node]["type"]
+                if node_type == "I":
+                    node_id_mapping[quote_target_node] = locution
+    return node_id_mapping
+
+
+def collapse_graph_new(graph):
+    collapsed_graph = nx.MultiDiGraph()
+    node_id_mapping = create_locution_proposition_mapping(graph)
+    edges_to_add = []
+
+    for i_node in node_id_mapping:
+        collapsed_graph.add_node(node_id_mapping[i_node], **graph.nodes[node_id_mapping[i_node]])
+        for edge in graph.out_edges(i_node):
+            source, target = edge
+            ya_neighbors = {n for n in graph.predecessors(target) if graph.nodes[n]["type"] == "YA"}
+            conn_type = ""
+            if ya_neighbors:
+                conn_type = graph.nodes[ya_neighbors.pop()]["text"]
+            for e in graph.out_edges(target):
+                s, t = e
+                if graph.nodes[t]["type"] == "L":
+                    logging.error("Forbidden edge in graph")
+                else:
+                    if t not in node_id_mapping:
+                        logging.error("Accessing not mapped node")
+                    else:
+                        edges_to_add.append(
+                            (node_id_mapping[i_node], node_id_mapping[t], graph.nodes[s]["text"], conn_type))
+    populate_graph(edges_to_add, collapsed_graph)
+    return collapsed_graph
 
 def delete_unmapped_nodes(new_graph):
     nodes_to_delete = []
@@ -119,6 +228,64 @@ def complete_transcript_mapping(graph, transcript):
             if count >= statement_number:
                 statement_index += 1
                 count = 0
+
+def complete_transcript_mapping2(graph, transcript):
+    graph_data = nx.node_link_data(graph)
+    graph_data["nodes"] = sorted(graph_data["nodes"], key=lambda x: (x["part"], x["part_index"], x["statement_index"]))
+    result = []
+    part = 1
+    part_index = 0
+    statement_index = 0
+    count = 0
+    previous_node = None
+    for node in graph_data["nodes"]:
+        current_text = ""
+        if node["part"] != part or node["part_index"] != part_index:
+            if previous_node and previous_node["statement_index"] < len(transcript[part][part_index][2]) - 1:
+                while statement_index <= len(transcript[part][part_index][2]) - 1:
+                    graph.nodes[previous_node["id"]]["transcript_text"] += transcript[part][part_index][2][statement_index]
+                    statement_index += 1
+                #print(graph.nodes[previous_node["id"]]["transcript_text"])
+            part = node["part"]
+            part_index = node["part_index"]
+            statement_index = 0
+        if node["part"] == part and node["part_index"] == part_index:
+            statement_number = len(transcript[part][part_index][3][node["statement_index"]])
+            last_statement = ""
+            if statement_number > 1:
+                c = 0
+                for statement in transcript[part][part_index][3][node["statement_index"]]:
+                    if statement[0] == node["text"].lower():
+                        if c == 0:
+                            start = 0
+                        else:
+                            start = transcript[part][part_index][3][node["statement_index"]][c - 1][2]
+                        last_statement = transcript[part][part_index][2][node["statement_index"]][start:statement[2]]
+                    c += 1
+            else:
+                last_statement = transcript[part][part_index][2][node["statement_index"]]
+            while statement_index < node["statement_index"]:
+                current_text += transcript[part][part_index][2][statement_index]
+                statement_index += 1
+                count += 1
+
+            if statement_index == node["statement_index"]:
+                current_text += last_statement
+                count += 1
+
+            if count == 0:
+                if not graph.has_node(node["id"]):
+                    graph.add_node(node["id"])
+                current_text = ""
+                #print("Unmapped Statement: " + last_statement)
+
+            previous_node = node
+            if count >= statement_number:
+                statement_index += 1
+                count = 0
+            result.append(current_text)
+    for r in graph_data["nodes"]:
+        print(r["transcript_text"])
 
 
 def extract_transcript():
