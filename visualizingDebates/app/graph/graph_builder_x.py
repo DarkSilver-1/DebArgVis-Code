@@ -60,6 +60,7 @@ def build_graph_new():
     graph_data = nx.node_link_data(graph2)
     transcript = extract_transcript()
     graph_data = find_chronological_order(graph_data, transcript)
+    graph_data = distribute_transcript(graph_data, transcript)
 
     print(len(graph_data["nodes"]))
 
@@ -67,7 +68,6 @@ def build_graph_new():
         print(n)
 
     return graph2
-
 
 
 def create_file_part_mapping():
@@ -103,53 +103,57 @@ def find_chronological_order(graph_data, transcript):
         part = node["part"]
 
         adapted_text = node_text.split(":", 1)[1].strip()
-        part_index = 0
-        statement_index = 0
-        index = 0
-        found = False
-        for line in transcript[int(part)]:
-            inner_index = 0
-            for sentence in line[2]:
-                compare_text = sentence
-                if adapted_text in compare_text:
-                    first_char_index = compare_text.find(adapted_text)
-                    last_char_index = first_char_index + len(adapted_text)
-                    if len(line[3][inner_index]) == 0:
-                        line[3][inner_index] = [(adapted_text, first_char_index, last_char_index)]
-                        part_index = index
-                        statement_index = inner_index
-                        found = True
-                        break
-                    else:
-                        distinct = True
-                        for match in line[3][inner_index]:
-                            if match[2] > first_char_index and match[1] < last_char_index:
-                                distinct = False
-                        if distinct:
-                            line[3][inner_index].append((adapted_text, first_char_index, last_char_index))
-                            line[3][inner_index] = sorted(line[3][inner_index], key=lambda x: match[1])
-                            count = 0
-                            for match in line[3][inner_index]:
-                                match = (match[0], match[1], match[2], count)
-                                count += 1
-                            part_index = index
-                            statement_index = inner_index
-                            found = True
-                            break
-                inner_index += 1
-            index += 1
-        if found:
+        part_index, statement_index = find_transcript_position(adapted_text, part, transcript)
+
+        if part_index != -1:
             node["part_index"] = part_index
             node["statement_index"] = statement_index
         else:
             graph_data["nodes"].remove(node)
-            print("Statement could not be found in the transcript: " + adapted_text)
     return graph_data
 
 
+def find_transcript_position(adapted_text, part, transcript):
+    part_index = -1
+    statement_index = 0
+    index = 0
+    for line in transcript[int(part)]:
+        inner_index = 0
+        for sentence in line[2]:
+            compare_text = sentence
+            if adapted_text in compare_text:
+                first_char_index = compare_text.find(adapted_text)
+                last_char_index = first_char_index + len(adapted_text)
+                if len(line[3][inner_index]) == 0:
+                    line[3][inner_index] = [(adapted_text, first_char_index, last_char_index)]
+                    part_index = index
+                    statement_index = inner_index
+                    break
+                else:
+                    distinct = True
+                    for match in line[3][inner_index]:
+                        if match[2] > first_char_index and match[1] < last_char_index:
+                            distinct = False
+                    if distinct:
+                        line[3][inner_index].append((adapted_text, first_char_index, last_char_index))
+                        line[3][inner_index] = sorted(line[3][inner_index], key=lambda x: match[1])
+                        count = 0
+                        for match in line[3][inner_index]:
+                            match = (match[0], match[1], match[2], count)
+                            count += 1
+                        part_index = index
+                        statement_index = inner_index
+                        break
+            inner_index += 1
+        index += 1
+    return part_index, statement_index
 
-def distribute_transcript():
-    #compute_timestamps
+def distribute_transcript(graph_data, transcript):
+
+    return graph_data
+
+
+def compute_timestamps():
     pass
 
 
