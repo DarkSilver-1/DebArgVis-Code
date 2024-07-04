@@ -20,8 +20,7 @@ transcript_path = os.getenv("TRANSCRIPT_PATH")
 def build_graph_x():
     graph = nx.MultiDiGraph()
     json_folder_path = os.getenv("FOLDER_PATH")
-    speaker_file_path = os.getenv("SPEAKER_FILE_PATH")
-    personIDMapping = extract_speaker_file(speaker_file_path)
+    personIDMapping = extract_speaker_file()
     transcript = extract_transcript()
     imc_file_path = os.getenv("imc_file_path")
     found_files = []
@@ -33,7 +32,7 @@ def build_graph_x():
                 extract_file(graph, json_file_path, transcript, found_files, personIDMapping)
 
     build_graph_new()
-    transform_data(graph)
+
 
     extract_imc(graph, imc_file_path)
     logging.info("Extracted the files")
@@ -44,36 +43,117 @@ def build_graph_x():
     new_graph = graph #filter_nodes_with_locution(graph)
     logging.info("Mapped back to transcript")
     complete_transcript_mapping(new_graph, transcript)
-    #complete_transcript_mapping2(new_graph, transcript)
+    # complete_transcript_mapping2(new_graph, transcript)
     logging.info("Filtered nodes")
     delete_unmapped_nodes(new_graph)
     return new_graph
 
+
 def build_graph_new():
     graph2 = nx.MultiDiGraph()
+    # person_id_mapping = extract_speaker_file()
+    graph2 = extract_files(graph2)
+    graph2 = remove_unnecessary_nodes(graph2)
+    graph2 = collapse_graph_new(graph2)
+    print(graph2)
+
+    graph_data = nx.node_link_data(graph2)
+    transcript = extract_transcript()
+    graph_data = find_chronological_order(graph_data, transcript)
+
+    print(len(graph_data["nodes"]))
+
+    for n in graph_data["nodes"]:
+        print(n)
+
+    return graph2
+
+
+
+def create_file_part_mapping():
+    file_part_map_path = os.getenv("FILE_PART_MAP_PATH")
+    file_part_mapping = {}
+    with open(file_part_map_path, 'r') as file:
+        lines = file.readlines()
+        for line in lines:
+            parts = line.strip().split()
+            file = parts[0]
+            part = parts[1]
+            file_part_mapping[file] = part
+    return file_part_mapping
+
+
+def extract_files(graph2):
     json_folder_path = os.getenv("FOLDER_PATH")
     imc_file_path = os.getenv("imc_file_path")
+    file_part_mapping = create_file_part_mapping()
     for filename in os.listdir(json_folder_path):
         if filename.endswith('.json'):
             json_file_path = os.path.join(json_folder_path, filename)
             if os.path.getsize(json_file_path) != 0 and os.path.getsize(json_file_path) != 68 and os.path.getsize(
                     json_file_path) != 69:
-                extract_file_simple(graph2, json_file_path)
+                extract_file_simple(graph2, json_file_path, file_part_mapping)
     extract_imc_file(graph2, imc_file_path)
-    remove_unnecessary_nodes(graph2)
-    graph2 = collapse_graph_new(graph2)
-    print(graph2)
     return graph2
 
-def transform_data(graph):
-    #find_chronological_order()
-    #distribute_transcript()
+
+def find_chronological_order(graph_data, transcript):
+    for node in graph_data["nodes"]:
+        node_text = node["text"]
+        part = node["part"]
+
+        adapted_text = node_text.split(":", 1)[1].strip()
+        part_index = 0
+        statement_index = 0
+        index = 0
+        found = False
+        for line in transcript[int(part)]:
+            inner_index = 0
+            for sentence in line[2]:
+                compare_text = sentence
+                if adapted_text in compare_text:
+                    first_char_index = compare_text.find(adapted_text)
+                    last_char_index = first_char_index + len(adapted_text)
+                    if len(line[3][inner_index]) == 0:
+                        line[3][inner_index] = [(adapted_text, first_char_index, last_char_index)]
+                        part_index = index
+                        statement_index = inner_index
+                        found = True
+                        break
+                    else:
+                        distinct = True
+                        for match in line[3][inner_index]:
+                            if match[2] > first_char_index and match[1] < last_char_index:
+                                distinct = False
+                        if distinct:
+                            line[3][inner_index].append((adapted_text, first_char_index, last_char_index))
+                            line[3][inner_index] = sorted(line[3][inner_index], key=lambda x: match[1])
+                            count = 0
+                            for match in line[3][inner_index]:
+                                match = (match[0], match[1], match[2], count)
+                                count += 1
+                            part_index = index
+                            statement_index = inner_index
+                            found = True
+                            break
+                inner_index += 1
+            index += 1
+        if found:
+            node["part_index"] = part_index
+            node["statement_index"] = statement_index
+        else:
+            graph_data["nodes"].remove(node)
+            print("Statement could not be found in the transcript: " + adapted_text)
+    return graph_data
+
+
+
+def distribute_transcript():
     #compute_timestamps
     pass
 
 
-
-def extract_file_simple(graph, json_file_path):
+def extract_file_simple(graph, json_file_path, file_part_mapping):
     with open(json_file_path, "r") as json_file:
         file_data = json.load(json_file)
         for node in file_data["nodes"]:
@@ -81,9 +161,10 @@ def extract_file_simple(graph, json_file_path):
             node_type = node["type"]
             text = node["text"]
             if node_type != "TA" and text != "Analysing":
-                graph.add_node(node_id, text=text, type=node_type)
+                graph.add_node(node_id, text=text, type=node_type, part=file_part_mapping[json_file_path])
         for edge in file_data["edges"]:
             graph.add_edge(edge["fromID"], edge["toID"])
+
 
 def extract_imc_file(graph, imc_file_path):
     with open(imc_file_path, "r") as imc_file:
@@ -105,6 +186,7 @@ def remove_unnecessary_nodes(graph):
             nodes_to_remove.append(node)
     for node in nodes_to_remove:
         graph.remove_node(node)
+    return graph
 
 
 def create_locution_proposition_mapping(graph):
@@ -154,6 +236,7 @@ def collapse_graph_new(graph):
                             (node_id_mapping[i_node], node_id_mapping[t], graph.nodes[s]["text"], conn_type))
     populate_graph(edges_to_add, collapsed_graph)
     return collapsed_graph
+
 
 def delete_unmapped_nodes(new_graph):
     nodes_to_delete = []
@@ -496,7 +579,8 @@ def populate_graph(edges_to_add, new_graph):
         new_graph.add_edge(s, t, text_additional=text, conn_type=conn_type)
 
 
-def extract_speaker_file(speaker_file_path):
+def extract_speaker_file():
+    speaker_file_path = os.getenv("SPEAKER_FILE_PATH")
     personIDMapping = {}
     with open(speaker_file_path, 'r') as file:
         lines = file.readlines()
