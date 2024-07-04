@@ -65,7 +65,7 @@ def build_graph_new():
     print(len(graph_data["nodes"]))
 
     for n in graph_data["nodes"]:
-        print(n)
+        print(n["part"], n["part_index"], n["statement_index"], n["text"])
 
     return graph2
 
@@ -78,7 +78,7 @@ def create_file_part_mapping():
         for line in lines:
             parts = line.strip().split()
             file = parts[0]
-            part = parts[1]
+            part = int(parts[1])
             file_part_mapping[file] = part
     return file_part_mapping
 
@@ -98,6 +98,7 @@ def extract_files(graph2):
 
 
 def find_chronological_order(graph_data, transcript):
+    nodes_to_delete = []
     for node in graph_data["nodes"]:
         node_text = node["text"]
         part = node["part"]
@@ -109,7 +110,11 @@ def find_chronological_order(graph_data, transcript):
             node["part_index"] = part_index
             node["statement_index"] = statement_index
         else:
-            graph_data["nodes"].remove(node)
+            nodes_to_delete.append(node)
+
+    for node in nodes_to_delete:
+        graph_data["nodes"].remove(node)
+    graph_data["nodes"] = sorted(graph_data["nodes"], key=lambda x: (x["part"], x["part_index"], x["statement_index"]))
     return graph_data
 
 
