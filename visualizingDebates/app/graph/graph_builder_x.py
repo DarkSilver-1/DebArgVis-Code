@@ -1,14 +1,11 @@
 import json
 import os
 import re
-from datetime import datetime
 
 import networkx as nx
 from dotenv import load_dotenv
 
 from ..logger import logging
-
-newTopicQuestionTimes = ["2020-05-21 22:52:01", "2020-05-21 23:08:18", "2020-05-21 23:31:20", "2020-05-21 23:43:08"]
 
 load_dotenv()
 datetime_format = os.getenv("DATETIME_FORMAT")
@@ -33,17 +30,15 @@ def build_graph_x():
 
     build_graph_new()
 
-
     extract_imc(graph, imc_file_path)
     logging.info("Extracted the files")
     remove_isolated(graph)
     logging.info("Removed isolated nodes")
     graph = collapse_graph(graph)
     logging.info("Collapsed the corresponding I and L nodes")
-    new_graph = graph #filter_nodes_with_locution(graph)
+    new_graph = graph  # filter_nodes_with_locution(graph)
     logging.info("Mapped back to transcript")
     complete_transcript_mapping(new_graph, transcript)
-    # complete_transcript_mapping2(new_graph, transcript)
     logging.info("Filtered nodes")
     delete_unmapped_nodes(new_graph)
     return new_graph
@@ -51,7 +46,7 @@ def build_graph_x():
 
 def build_graph_new():
     graph2 = nx.MultiDiGraph()
-    # person_id_mapping = extract_speaker_file()
+
     graph2 = extract_files(graph2)
     graph2 = remove_unnecessary_nodes(graph2)
     graph2 = collapse_graph_new(graph2)
@@ -63,9 +58,6 @@ def build_graph_new():
     graph_data = distribute_transcript(graph_data, transcript)
 
     print(len(graph_data["nodes"]))
-
-    for n in graph_data["nodes"]:
-        print(n["part"], n["part_index"], n["statement_index"], n["text"])
 
     return graph2
 
@@ -90,14 +82,14 @@ def extract_files(graph2):
     for filename in os.listdir(json_folder_path):
         if filename.endswith('.json'):
             json_file_path = os.path.join(json_folder_path, filename)
-            if os.path.getsize(json_file_path) != 0 and os.path.getsize(json_file_path) != 68 and os.path.getsize(
-                    json_file_path) != 69:
+            if os.path.getsize(json_file_path) != 0:
                 extract_file_simple(graph2, json_file_path, file_part_mapping)
     extract_imc_file(graph2, imc_file_path)
     return graph2
 
 
 def find_chronological_order(graph_data, transcript):
+    speakers = extract_simple_speaker_file()
     nodes_to_delete = []
     for node in graph_data["nodes"]:
         node_text = node["text"]
@@ -107,14 +99,23 @@ def find_chronological_order(graph_data, transcript):
         part_index, statement_index = find_transcript_position(adapted_text, part, transcript)
 
         if part_index != -1:
-            node["part_index"] = part_index
-            node["statement_index"] = statement_index
+            part_data = transcript[part][part_index]
+            node.update({
+                "part_index": part_index,
+                "statement_index": statement_index,
+                "part_time": part_data[0],
+                "speaker": part_data[1] if part_data[1] in speakers else "Public"
+            })
         else:
             nodes_to_delete.append(node)
 
     for node in nodes_to_delete:
         graph_data["nodes"].remove(node)
     graph_data["nodes"] = sorted(graph_data["nodes"], key=lambda x: (x["part"], x["part_index"], x["statement_index"]))
+
+    for node in graph_data["nodes"]:
+        print(node["speaker"], node)
+
     return graph_data
 
 
@@ -153,8 +154,8 @@ def find_transcript_position(adapted_text, part, transcript):
         index += 1
     return part_index, statement_index
 
-def distribute_transcript(graph_data, transcript):
 
+def distribute_transcript(graph_data, transcript):
     return graph_data
 
 
@@ -170,7 +171,8 @@ def extract_file_simple(graph, json_file_path, file_part_mapping):
             node_type = node["type"]
             text = node["text"]
             if node_type != "TA" and text != "Analysing":
-                graph.add_node(node_id, text=text, type=node_type, part=file_part_mapping[json_file_path])
+                graph.add_node(node_id, text=text, type=node_type,
+                               part=file_part_mapping[json_file_path], speaker=None)
         for edge in file_data["edges"]:
             graph.add_edge(edge["fromID"], edge["toID"])
 
@@ -188,6 +190,16 @@ def extract_imc_file(graph, imc_file_path):
         graph.add_edge(edge["fromID"], edge["toID"])
 
 
+def extract_simple_speaker_file():
+    speaker_file_path = os.getenv("SPEAKER_FILE_PATH_SIMPLE")
+    speakers = []
+    with open(speaker_file_path, 'r') as file:
+        lines = file.readlines()
+        for line in lines:
+            speakers.append(line.strip())
+    return speakers
+
+
 def remove_unnecessary_nodes(graph):
     nodes_to_remove = []
     for node, data in graph.nodes(data=True):
@@ -200,7 +212,8 @@ def remove_unnecessary_nodes(graph):
 
 def create_locution_proposition_mapping(graph):
     node_id_mapping = {}
-    locutions = [n for n in graph.nodes if graph.nodes[n]["type"] == "L"] #and not set(graph.predecessors(n))] #only use l nodes without predecessor (i.e. actual locutions instead of quoted ones)
+    locutions = [n for n in graph.nodes if graph.nodes[n][
+        "type"] == "L"]  # and not set(graph.predecessors(n))] #only use l nodes without predecessor (i.e. actual locutions instead of quoted ones)
     for locution in locutions:
         predecessor = set(graph.predecessors(locution))
         if predecessor and graph.nodes[predecessor.pop()]["text"] == "Asserting":
@@ -321,71 +334,11 @@ def complete_transcript_mapping(graph, transcript):
                 statement_index += 1
                 count = 0
 
-def complete_transcript_mapping2(graph, transcript):
-    graph_data = nx.node_link_data(graph)
-    graph_data["nodes"] = sorted(graph_data["nodes"], key=lambda x: (x["part"], x["part_index"], x["statement_index"]))
-    result = []
-    part = 1
-    part_index = 0
-    statement_index = 0
-    count = 0
-    previous_node = None
-    for node in graph_data["nodes"]:
-        current_text = ""
-        if node["part"] != part or node["part_index"] != part_index:
-            if previous_node and previous_node["statement_index"] < len(transcript[part][part_index][2]) - 1:
-                while statement_index <= len(transcript[part][part_index][2]) - 1:
-                    graph.nodes[previous_node["id"]]["transcript_text"] += transcript[part][part_index][2][statement_index]
-                    statement_index += 1
-                #print(graph.nodes[previous_node["id"]]["transcript_text"])
-            part = node["part"]
-            part_index = node["part_index"]
-            statement_index = 0
-        if node["part"] == part and node["part_index"] == part_index:
-            statement_number = len(transcript[part][part_index][3][node["statement_index"]])
-            last_statement = ""
-            if statement_number > 1:
-                c = 0
-                for statement in transcript[part][part_index][3][node["statement_index"]]:
-                    if statement[0] == node["text"].lower():
-                        if c == 0:
-                            start = 0
-                        else:
-                            start = transcript[part][part_index][3][node["statement_index"]][c - 1][2]
-                        last_statement = transcript[part][part_index][2][node["statement_index"]][start:statement[2]]
-                    c += 1
-            else:
-                last_statement = transcript[part][part_index][2][node["statement_index"]]
-            while statement_index < node["statement_index"]:
-                current_text += transcript[part][part_index][2][statement_index]
-                statement_index += 1
-                count += 1
-
-            if statement_index == node["statement_index"]:
-                current_text += last_statement
-                count += 1
-
-            if count == 0:
-                if not graph.has_node(node["id"]):
-                    graph.add_node(node["id"])
-                current_text = ""
-                #print("Unmapped Statement: " + last_statement)
-
-            previous_node = node
-            if count >= statement_number:
-                statement_index += 1
-                count = 0
-            result.append(current_text)
-    for r in graph_data["nodes"]:
-        print(r["transcript_text"])
-
 
 def extract_transcript():
-    transcript = {
-        1: []
-    }
+    transcript = {1: []}
     new_part_pattern = re.compile(r'^Part \d+$')
-    text_pattern = re.compile(r"\[([\d:]+)\]\s*(.*)")
+    text_pattern = re.compile(r"\[([\d:]+)\s*(.*)")
     speaker_pattern = re.compile(r"^[a-zA-Z]+ [a-zA-Z0-9-]+$")
     current_line = 1
     current_speaker = ""
@@ -599,4 +552,3 @@ def extract_speaker_file():
             speaker = ' '.join(parts[1:])
             personIDMapping[person_id] = speaker
     return personIDMapping
-
