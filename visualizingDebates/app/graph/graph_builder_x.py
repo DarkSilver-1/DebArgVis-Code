@@ -1,6 +1,8 @@
+import datetime
 import json
 import os
 import re
+from datetime import datetime as dt
 
 import networkx as nx
 from dotenv import load_dotenv
@@ -55,8 +57,9 @@ def build_graph_new():
     transcript = extract_transcript()
     graph_data = find_chronological_order(graph_data, transcript)
     graph_data = distribute_transcript(graph_data, transcript)
+    graph_data = compute_timestamps(graph_data)
 
-    return graph2
+    return graph_data
 
 
 def create_file_part_mapping():
@@ -107,8 +110,12 @@ def find_chronological_order(graph_data, transcript):
         else:
             nodes_to_delete.append(node)
 
+    nodes_to_delete_ids = set(node["id"] for node in nodes_to_delete)
+    graph_data["links"] = [link for link in graph_data["links"] if
+                           link["source"] not in nodes_to_delete_ids and link["target"] not in nodes_to_delete_ids]
     for node in nodes_to_delete:
         graph_data["nodes"].remove(node)
+
     graph_data["nodes"] = sorted(graph_data["nodes"],
                                  key=lambda x: (x["part"], x["part_index"], x["statement_index"], x["start_index"]))
 
@@ -150,6 +157,7 @@ def find_transcript_position(adapted_text, part, transcript):
 
 
 def distribute_transcript(graph_data, transcript):
+    speakers = extract_simple_speaker_file()
     nodes = graph_data["nodes"]
     node_index = 0
     new_nodes = []
@@ -176,14 +184,41 @@ def distribute_transcript(graph_data, transcript):
                 else:
                     assigned_sentence += current_sentence
                 if index == len(sub_part[2]) - 1 and assigned_sentence != "" and not assigned:
-                    new_nodes.append({"speaker": sub_part[1],
-                                      "part_time": sub_part[2],
-                                      "text": assigned_sentence})  # create new node at the end of section if text left
+                    new_nodes.append({"speaker": sub_part[1] if sub_part[1] in speakers else "Public",
+                                      "part_time": sub_part[0],
+                                      "text": assigned_sentence,
+                                      "id": 12})  # create new node at the end of section if text left
+    graph_data["nodes"] = new_nodes
     return graph_data
 
 
-def compute_timestamps():
-    pass
+def compute_timestamps(graph_data):
+    time_parts = []
+    datetime_pattern = "%H:%M:%S"
+    prev_time = None
+    time_stamp = None
+    for node in graph_data["nodes"]:
+        time_stamp = dt.strptime(node["part_time"], datetime_pattern)
+
+        if prev_time != time_stamp and prev_time is not None:
+            compute_time_stamps(time_parts, time_stamp)
+            time_parts.clear()
+        time_parts.append(node)
+        prev_time = time_stamp
+
+    compute_time_stamps(time_parts, time_stamp + datetime.timedelta(seconds=30))
+    return graph_data
+
+
+def compute_time_stamps(time_parts, next_time):
+    time = dt.strptime(time_parts[0]["part_time"], "%H:%M:%S")
+    timedelta = next_time - time
+    mean_duration = timedelta.seconds / len(time_parts)
+    start_time = 0
+    for node in time_parts:
+        node["part_time"] = time + datetime.timedelta(seconds=start_time)
+        node["end_part_time"] = node["part_time"] + datetime.timedelta(seconds=mean_duration)
+        start_time += mean_duration
 
 
 def extract_file_simple(graph, json_file_path, file_part_mapping):

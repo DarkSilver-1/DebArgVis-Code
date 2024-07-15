@@ -86,7 +86,7 @@
         .then(response => response.json())
         .then(graphData => {
             const script = document.createElement('script');
-            script.src = 'slider_smooth.js';
+            script.src = 'slider_smooth_x.js';
             script.onload = function () {
                 createSlidingTimeline(graphData)
             };
