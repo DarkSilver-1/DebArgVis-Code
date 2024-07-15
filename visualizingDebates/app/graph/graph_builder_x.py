@@ -109,7 +109,8 @@ def find_chronological_order(graph_data, transcript):
 
     for node in nodes_to_delete:
         graph_data["nodes"].remove(node)
-    graph_data["nodes"] = sorted(graph_data["nodes"], key=lambda x: (x["part"], x["part_index"], x["statement_index"], x["start_index"]))
+    graph_data["nodes"] = sorted(graph_data["nodes"],
+                                 key=lambda x: (x["part"], x["part_index"], x["statement_index"], x["start_index"]))
 
     return graph_data
 
@@ -155,26 +156,18 @@ def distribute_transcript(graph_data, transcript):
     for part in transcript:
         for sub_part in transcript[part]:
             assigned_sentence = ""
-            assigned = False
             for index, sentence in enumerate(sub_part[2]):
+                assigned = False
                 current_sentence = sub_part[2][index]
                 matches = sub_part[3][index]
-                current_node = nodes[node_index]
                 if matches:
-                    if len(matches) > 1:
-                        for i, sentence_part in enumerate(matches):
-                            current_node = nodes[node_index]
-                            start = 0 if i == 0 else matches[i - 1][
-                                2]  # Zero in the first iteration, the ending index of the previous match otherwise
-                            end = sentence_part[2] if i < len(matches) - 1 else len(
-                                current_sentence) - 1  # The last match goes until the end of the sentence
-                            assigned_sentence += current_sentence[start:end]
-                            new_nodes.append({"id": current_node["id"], "speaker": current_node["speaker"],
-                                              "part_time": current_node["part_time"], "text": assigned_sentence})
-                            assigned_sentence = ""
-                            node_index += 1
-                    else:
-                        assigned_sentence += current_sentence
+                    for i, sentence_part in enumerate(matches):
+                        current_node = nodes[node_index]
+                        start = 0 if i == 0 else matches[i - 1][
+                            2]  # Zero in the first iteration, the ending index of the previous match otherwise
+                        end = sentence_part[2] if i < len(matches) - 1 else len(
+                            current_sentence)  # The last match goes until the end of the sentence
+                        assigned_sentence += current_sentence[start:end]
                         new_nodes.append({"id": current_node["id"], "speaker": current_node["speaker"],
                                           "part_time": current_node["part_time"], "text": assigned_sentence})
                         assigned_sentence = ""
@@ -183,14 +176,9 @@ def distribute_transcript(graph_data, transcript):
                 else:
                     assigned_sentence += current_sentence
                 if index == len(sub_part[2]) - 1 and assigned_sentence != "" and not assigned:
-                    pass
-                    # print(assigned_sentence)
-                # create new node at the end of section
-    for a, n in enumerate(new_nodes):
-        pass
-        #print(n["text"], "+++", nodes[a]["text"])
-        print(n["text"])
-    # graph_data["nodes"] = new_nodes
+                    new_nodes.append({"speaker": sub_part[1],
+                                      "part_time": sub_part[2],
+                                      "text": assigned_sentence})  # create new node at the end of section if text left
     return graph_data
 
 
