@@ -50,14 +50,11 @@ def build_graph_new():
     graph2 = extract_files(graph2)
     graph2 = remove_unnecessary_nodes(graph2)
     graph2 = collapse_graph_new(graph2)
-    print(graph2)
 
     graph_data = nx.node_link_data(graph2)
     transcript = extract_transcript()
     graph_data = find_chronological_order(graph_data, transcript)
     graph_data = distribute_transcript(graph_data, transcript)
-
-    print(len(graph_data["nodes"]))
 
     return graph2
 
@@ -96,13 +93,14 @@ def find_chronological_order(graph_data, transcript):
         part = node["part"]
 
         adapted_text = node_text.split(":", 1)[1].strip()
-        part_index, statement_index = find_transcript_position(adapted_text, part, transcript)
+        part_index, statement_index, start_index = find_transcript_position(adapted_text, part, transcript)
 
         if part_index != -1:
             part_data = transcript[part][part_index]
             node.update({
                 "part_index": part_index,
                 "statement_index": statement_index,
+                "start_index": start_index,
                 "part_time": part_data[0],
                 "speaker": part_data[1] if part_data[1] in speakers else "Public"
             })
@@ -111,10 +109,7 @@ def find_chronological_order(graph_data, transcript):
 
     for node in nodes_to_delete:
         graph_data["nodes"].remove(node)
-    graph_data["nodes"] = sorted(graph_data["nodes"], key=lambda x: (x["part"], x["part_index"], x["statement_index"]))
-
-    for node in graph_data["nodes"]:
-        print(node["speaker"], node)
+    graph_data["nodes"] = sorted(graph_data["nodes"], key=lambda x: (x["part"], x["part_index"], x["statement_index"], x["start_index"]))
 
     return graph_data
 
@@ -123,6 +118,7 @@ def find_transcript_position(adapted_text, part, transcript):
     part_index = -1
     statement_index = 0
     index = 0
+    start_index = 0
     for line in transcript[int(part)]:
         inner_index = 0
         for sentence in line[2]:
@@ -130,6 +126,7 @@ def find_transcript_position(adapted_text, part, transcript):
             if adapted_text in compare_text:
                 first_char_index = compare_text.find(adapted_text)
                 last_char_index = first_char_index + len(adapted_text)
+                start_index = first_char_index
                 if len(line[3][inner_index]) == 0:
                     line[3][inner_index] = [(adapted_text, first_char_index, last_char_index)]
                     part_index = index
@@ -142,20 +139,58 @@ def find_transcript_position(adapted_text, part, transcript):
                             distinct = False
                     if distinct:
                         line[3][inner_index].append((adapted_text, first_char_index, last_char_index))
-                        line[3][inner_index] = sorted(line[3][inner_index], key=lambda x: match[1])
-                        count = 0
-                        for match in line[3][inner_index]:
-                            match = (match[0], match[1], match[2], count)
-                            count += 1
+                        line[3][inner_index] = sorted(line[3][inner_index], key=lambda x: x[1])
                         part_index = index
                         statement_index = inner_index
                         break
             inner_index += 1
         index += 1
-    return part_index, statement_index
+    return part_index, statement_index, start_index
 
 
 def distribute_transcript(graph_data, transcript):
+    nodes = graph_data["nodes"]
+    node_index = 0
+    new_nodes = []
+    for part in transcript:
+        for sub_part in transcript[part]:
+            assigned_sentence = ""
+            assigned = False
+            for index, sentence in enumerate(sub_part[2]):
+                current_sentence = sub_part[2][index]
+                matches = sub_part[3][index]
+                current_node = nodes[node_index]
+                if matches:
+                    if len(matches) > 1:
+                        for i, sentence_part in enumerate(matches):
+                            current_node = nodes[node_index]
+                            start = 0 if i == 0 else matches[i - 1][
+                                2]  # Zero in the first iteration, the ending index of the previous match otherwise
+                            end = sentence_part[2] if i < len(matches) - 1 else len(
+                                current_sentence) - 1  # The last match goes until the end of the sentence
+                            assigned_sentence += current_sentence[start:end]
+                            new_nodes.append({"id": current_node["id"], "speaker": current_node["speaker"],
+                                              "part_time": current_node["part_time"], "text": assigned_sentence})
+                            assigned_sentence = ""
+                            node_index += 1
+                    else:
+                        assigned_sentence += current_sentence
+                        new_nodes.append({"id": current_node["id"], "speaker": current_node["speaker"],
+                                          "part_time": current_node["part_time"], "text": assigned_sentence})
+                        assigned_sentence = ""
+                        node_index += 1
+                    assigned = True
+                else:
+                    assigned_sentence += current_sentence
+                if index == len(sub_part[2]) - 1 and assigned_sentence != "" and not assigned:
+                    pass
+                    # print(assigned_sentence)
+                # create new node at the end of section
+    for a, n in enumerate(new_nodes):
+        pass
+        #print(n["text"], "+++", nodes[a]["text"])
+        print(n["text"])
+    # graph_data["nodes"] = new_nodes
     return graph_data
 
 
@@ -213,7 +248,7 @@ def remove_unnecessary_nodes(graph):
 def create_locution_proposition_mapping(graph):
     node_id_mapping = {}
     locutions = [n for n in graph.nodes if graph.nodes[n][
-        "type"] == "L"]  # and not set(graph.predecessors(n))] #only use l nodes without predecessor (i.e. actual locutions instead of quoted ones)
+        "type"] == "L"]
     for locution in locutions:
         predecessor = set(graph.predecessors(locution))
         if predecessor and graph.nodes[predecessor.pop()]["text"] == "Asserting":
