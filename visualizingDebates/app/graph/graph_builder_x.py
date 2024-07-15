@@ -30,8 +30,6 @@ def build_graph_x():
                     json_file_path) != 69:
                 extract_file(graph, json_file_path, transcript, found_files, personIDMapping)
 
-    build_graph_new()
-
     extract_imc(graph, imc_file_path)
     logging.info("Extracted the files")
     remove_isolated(graph)
@@ -396,7 +394,7 @@ def complete_transcript_mapping(graph, transcript):
 def extract_transcript():
     transcript = {1: []}
     new_part_pattern = re.compile(r'^Part \d+$')
-    text_pattern = re.compile(r"\[([\d:]+)\s*(.*)")
+    text_pattern = re.compile(r"\[([\d:]+)]\s*(.*)")
     speaker_pattern = re.compile(r"^[a-zA-Z]+ [a-zA-Z0-9-]+$")
     current_line = 1
     current_speaker = ""
