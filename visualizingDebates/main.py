@@ -1,13 +1,11 @@
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from starlette.responses import HTMLResponse
-from app.graph import graph_data, graph_data_old
+from app.graph import graph_data
 import uvicorn
 
 app = FastAPI()
 app.mount("/static", StaticFiles(directory="static"), name="static")
-
-# /static/slider.html
 
 
 @app.get("/")
