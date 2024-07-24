@@ -284,6 +284,7 @@ def distribute_transcript(graph_data, transcript):
     nodes = graph_data["nodes"]
     node_index = 0
     new_nodes = []
+    id_count = 0
     for part in transcript:
         for sub_part in transcript[part]:
             assigned_sentence = ""
@@ -308,9 +309,10 @@ def distribute_transcript(graph_data, transcript):
                     assigned_sentence += current_sentence
                 if index == len(sub_part[2]) - 1 and assigned_sentence != "" and not assigned:
                     new_nodes.append({"speaker": sub_part[1] if sub_part[1] in speakers else "Public",
-                                      "part_time": sub_part[0],
+                                      "part_time": sub_part[0],  # create new node at the end of section if text left
                                       "text": assigned_sentence,
-                                      "id": 12})  # create new node at the end of section if text left
+                                      "id": "0000" + str(id_count)})  # unique as normal ids never start with a 0
+                    id_count += 1
     graph_data["nodes"] = new_nodes
     return graph_data
 
