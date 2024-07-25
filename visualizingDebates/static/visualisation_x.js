@@ -31,6 +31,7 @@ let topicBubbles
 let timeline
 let slider
 let videoplayer = document.getElementById('videoPlayer')
+let font_size = 16
 
 let timelineMargins = {top: 20, right: 20, bottom: 40, left: 60};
 let timelineWidth = SCREEN_WIDTH - timelineMargins.left - timelineMargins.right;
@@ -188,10 +189,10 @@ function addTimelineInteraction() {
 function createTranscript() {
     transcript = createSVG('#transcript', transcriptWidth, transcriptHeight, transcriptMargins);
     transcript.append("rect", "box")
-        .attr('y', 0)
+        .attr('y', -20)
         .attr('x', 0)
         .attr('width', SCREEN_WIDTH / 2 + 20)
-        .attr('height', 1 / 3 * SCREEN_HEIGHT + 40)
+        .attr('height', 1 / 3 * SCREEN_HEIGHT + 60)
         .style('overflow-y', 'auto')
         .style('fill', '#282c34')
         .style('stroke', 'white')
@@ -601,7 +602,7 @@ function nodeHoverAction(d, event) {
 function hoverAction(event, d) {
     timeline.select('#node-' + d.id).select('.node').attr('stroke', 'black').attr('stroke-width', 2);
     transcript.select('#hovered-text-' + d.id).attr('font-weight', 'bold');
-    nodesInWindow? links.filter(l => nodesInWindow.includes(l.source)).attr('opacity', 0.3) : links.attr("opacity", 0.3)
+    nodesInWindow ? links.filter(l => nodesInWindow.includes(l.source)).attr('opacity', 0.3) : links.attr("opacity", 0.3)
     let outgoingLinks = links.filter(l => l.source.id === d.id)
     outgoingLinks.attr("opacity", 1.0).each(l => {
         let linkType = l.text_additional
@@ -808,7 +809,7 @@ function addTranscriptText() {
             currentX = 10
             prevBoxY = currentY + 1.0
         }
-        let textElement = textBox.append("text").attr('id', `hovered-text-${node.id}`).attr("fill", "white")
+        let textElement = textBox.append("text").attr('id', `hovered-text-${node.id}`).attr("fill", "white").attr("x", currentX).attr("y", currentY + "em").attr("dx", currentX === 10 ? 0 : 5)
             .on("mouseover", event => {
                 hoverAction(event, node)
             })
@@ -853,31 +854,16 @@ function findNodesToShowText() {
     return nodesToShowText;
 }
 
-
-function getCurrentTransform(selection) {
-    const transform = selection.attr("transform");
-    if (transform) {
-        const translateMatch = transform.match(/translate\(([^,]+),([^)]+)\)/);
-        if (translateMatch) {
-            return {
-                x: parseFloat(translateMatch[1]),
-                y: parseFloat(translateMatch[2])
-            };
-        }
-    }
-    return { x: 0, y: 0 };
-}
 function scrollText(event) {
-    console.log("scroll")
     event.preventDefault()
     const allTexts = textBox.selectAll('text');
     const allRects = textBox.selectAll('rect');
+    const allTSpans = textBox.selectAll('tspan');
     const scroll = event.deltaY > 0 ? -1 : 1;
-    const lastText = allTexts.filter(':last-child');
-    const lastTextY = parseFloat(lastText.attr('y'));
-    const firstText = d3.select(allTexts.nodes()[0]);
-    const firstTextY = parseFloat(firstText.attr('y'));
-    if ((lastTextY > 23 || scroll === 1) && (firstTextY < 1 || scroll === -1)) {//TODO hardcoded
+    const firstTextY = parseFloat(d3.select(allTexts.nodes()[0]).attr("y"));
+    const lastTextY = parseFloat(allTexts.filter(':last-child').attr("y"));
+    const max_y = (1 / 3 * SCREEN_HEIGHT)/font_size
+    if ((lastTextY >  max_y || scroll === 1) && (firstTextY < 1 || scroll === -1)) {
         function updateElementY(selection) {
             selection.each(function () {
                 if (d3.select(this).attr('id') !== 'hover-box') {
@@ -887,8 +873,9 @@ function scrollText(event) {
                 }
             });
         }
-        updateElementY(allTexts);
-        updateElementY(allRects);
+        updateElementY(allTexts)
+        updateElementY(allRects)
+        updateElementY(allTSpans)
     }
 }
 
