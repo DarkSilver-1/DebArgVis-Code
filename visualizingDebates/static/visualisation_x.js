@@ -24,6 +24,7 @@ let linkData
 let nodes
 let nodes_slider
 let links
+let textBox
 
 let transcript
 let topicBubbles
@@ -73,9 +74,6 @@ function createSlidingTimeline(graphData) {
     createTimeline(speakers)
     createTranscript()
     createTopicBubbles(topicData)
-    console.log(nodes)
-    console.log(links)
-
 }
 
 
@@ -177,12 +175,9 @@ function createTimeline(speakers) {
 function addTimelineInteraction() {
     nodes.on('mouseover', (event, d) => {
         hoverAction(event, d)
-        //nodeHoverAction(d, event);
-    }).on('mouseout', function () {
-        nodeUnhoverAction();
-    })
-
-    nodes.on('click', (event, d) => {
+    }).on('mouseout', (event, d) => {
+        unHoverAction(event, d);
+    }).on('click', (event, d) => {
         let videoplayer = document.getElementById('videoPlayer')
         groupNodes(d.start_time)
         currentTime = (d.start_time.getTime() - nodeData[0].start_time.getTime()) / 1000
@@ -192,11 +187,20 @@ function addTimelineInteraction() {
 
 function createTranscript() {
     transcript = createSVG('#transcript', transcriptWidth, transcriptHeight, transcriptMargins);
-    addTextBox();
+    transcript.append("rect", "box")
+        .attr('y', 0)
+        .attr('x', 0)
+        .attr('width', SCREEN_WIDTH / 2 + 20)
+        .attr('height', 1 / 3 * SCREEN_HEIGHT + 40)
+        .style('overflow-y', 'auto')
+        .style('fill', '#282c34')
+        .style('stroke', 'white')
+        .style('cursor', 'pointer')
+        .on("wheel", scrollText)
+    addTranscriptText()
 }
 
-
-function nodeUnhoverAction() {
+function nodeUnhoverAction() { //TODO remove
     if (nodesInWindow && nodesInWindow.length > 0) {
         links.filter(l => nodesInWindow.includes(l.source)).attr('opacity', 1.0)
         links.filter(l => nodesRightOfWindow.includes(l.source) || nodesLeftOfWindow.includes(l.source)).attr('opacity', 0.3)
@@ -209,7 +213,7 @@ function nodeUnhoverAction() {
     timeline.selectAll('.node-text').remove()
 
     topicBubbles.selectAll(".bubble").transition().attr("fill", "transparent").attr('r', radius)
-}//Interaction
+}
 
 function groupNodes(mouseX) {
     nodesInWindow = []
@@ -382,21 +386,6 @@ function getLinkColor(textAdditional) {
     }
 }
 
-function getWrongLinkColor(textAdditional) {
-    switch (textAdditional) {
-        case 'Default Transition':
-            return 'blue';
-        case 'Default Inference':
-            return 'blue';
-        case 'Default Rephrase':
-            return 'black';
-        case 'Default Conflict':
-            return 'orange';
-        default:
-            return 'white';
-    }
-}
-
 function getArrowHeadColor(textAdditional) {
     if (textAdditional === 'Default Transition') {
         return 'url(#arrowhead-blue)'
@@ -536,21 +525,16 @@ function updateDiagram(mouseX, curve) {
                 return 0
             }
         })
-    timeline.selectAll('.hover-box').remove()
-    transcript.selectAll('.hover-box').remove()
-
-    addTextBox();
-
-    timeline.selectAll('.node').attr('stroke', 'none');
+    textBox.remove()
+    addTranscriptText()
 
     if (nodesInWindow.length === 0) {
         nodes_slider.attr('opacity', 1.0)
         nodes.attr('opacity', 1.0)
         links.attr('opacity', 1.0)
         links.attr('visibility', 'visible')
-        timeline.selectAll('.hover-box').remove()
-        transcript.selectAll('.hover-box').remove()
-        addTextBox()
+        textBox.remove()
+        addTranscriptText()
     }
 }
 
@@ -612,12 +596,12 @@ function nodeHoverAction(d, event) {
             }
         })
     })
-}
+}//TODO remove
 
 function hoverAction(event, d) {
-    timeline.select('#node-' + d.id).select('.node').attr('stroke', 'black');
+    timeline.select('#node-' + d.id).select('.node').attr('stroke', 'black').attr('stroke-width', 2);
     transcript.select('#hovered-text-' + d.id).attr('font-weight', 'bold');
-    links.attr("opacity", 0.3)
+    nodesInWindow? links.filter(l => nodesInWindow.includes(l.source)).attr('opacity', 0.3) : links.attr("opacity", 0.3)
     let outgoingLinks = links.filter(l => l.source.id === d.id)
     outgoingLinks.attr("opacity", 1.0).each(l => {
         let linkType = l.text_additional
@@ -631,19 +615,41 @@ function hoverAction(event, d) {
         const bubble = d3.select(this);
         const bubbleTexts = bubble.selectAll(".word")
         bubbleTexts.each(function () {
-            const text = d3.select(this)
-            if (d.text.includes(text.text())) {
+            const text = d3.select(this).text()
+            if (d.text.includes(text)) {
                 bubble.selectAll(".bubble").transition().attr("fill", "#b794f4").attr('r', radius * 1.2)
             }
         })
     })
 }
 
-function unHoverAction(event, d){
-
+function unHoverAction(event, d) {
+    timeline.select('#node-' + d.id).select('.node').attr('stroke', 'none');
+    transcript.select('#hovered-text-' + d.id).attr('font-weight', 'normal');
+    if (nodesInWindow && nodesInWindow.length > 0) {
+        links.each(function (d) {
+            if (nodesInWindow.includes(d.source)) {
+                d3.select(this).attr('opacity', 1.0);
+            } else if (nodesRightOfWindow.includes(d.source) || nodesLeftOfWindow.includes(d.source)) {
+                d3.select(this).attr('opacity', 0.3);
+            } else if (nodesFarRightOfWindow.includes(d.source) || nodesFarLeftOfWindow.includes(d.source)) {
+                d3.select(this).attr('opacity', 0.15);
+            } else {
+                d3.select(this).attr('opacity', 0);
+            }
+        })
+        timeline.selectAll('.node-group').filter(n => !nodesInWindow.includes(n)).attr('opacity', 0.2);
+    } else {
+        links.attr('opacity', 1.0)
+    }
+    links.filter(l => l.source.id === d.id).each(l => {
+        transcript.select('#hovered-text-' + l.target.id).attr('fill', "white")
+    })
+    timeline.selectAll('.node-text').remove()
+    topicBubbles.selectAll(".bubble").transition().attr("fill", "transparent").attr('r', radius)
 }
 
-function textHoverAction(text, textArray, newText) {
+function textHoverAction(text, textArray, newText) {//TODO remove
     let associatedLinks = linkData.filter(link => link.source.text === text);
     associatedLinks = associatedLinks.filter(d => ['Default Inference', 'Default Rephrase', 'Default Conflict'].includes(d.text_additional))
     nodesInWindow && nodesInWindow.length > 0 ? links.filter(l => nodesInWindow.includes(l.source)).attr('opacity', 0.3) : links.attr('opacity', 0.3)
@@ -688,12 +694,6 @@ function textHoverAction(text, textArray, newText) {
 
 function addTextBox() {
     let hoverBox = transcript.append('g').attr('class', 'hover-box');
-    let textArray;
-    /*if (nodesInWindow && nodesInWindow.length > 0) {
-        textArray = nodesInWindow.map(d => d.text)
-    } else {
-        textArray = nodeData.map(d => d.text)
-    }*/
     let defaultX = 25
     let maxNumOfLetters = 125
     let previousX = defaultX;
@@ -703,12 +703,10 @@ function addTextBox() {
     let background = null
     let prevBoxy = 0
     let small_margin = 5
-    //textArray.filter(x => x !== "").forEach(function (text, index) {
     let nodesInTextbox = nodesInWindow && nodesInWindow.length > 0 ? nodesInWindow : nodeData
-    nodesInTextbox.forEach(function (node) {//(text, index) {//TODO
+    nodesInTextbox.forEach(function (node) {
         let prevCutIndex = 0
         let finished = false
-        //let node = nodeData.find(node => node.text === text)
         let text = node.text
         let speaker = node.speaker
         if (speaker !== previousSpeaker) {
@@ -773,23 +771,9 @@ function addTextBox() {
         }
         newText.on("mouseover", event => {
             hoverAction(event, node)
-            //nodeHoverAction(d, event);
-        })//, function () {
-
-            //textHoverAction(text, textArray, newText);
-            //})
-            .on('mouseout', function () {
-                textArray.forEach((t, i) => {
-                    transcript.select(`#hovered-text-${i}`)
-                        .style('fill', 'white');
-                });
-                newText.style('font-weight', 'normal');
-                timeline.selectAll('.node').attr('stroke', 'none');
-                nodesInWindow && nodesInWindow.length > 0 ? timeline.selectAll('.node-group').filter(n => !nodesInWindow.includes(n)).attr('opacity', 0.2) : null;
-                nodesInWindow && nodesInWindow.length > 0 ? links.filter(l => nodesInWindow.includes(l.source)).attr('opacity', 1.0) : links.attr('opacity', 1.0)
-                d3.selectAll('.node-text').remove()
-                topicBubbles.selectAll(".bubble").transition().attr("fill", "transparent").attr('r', radius)
-            }).on("wheel", scrollText)
+        }).on('mouseout', (event) => {
+            unHoverAction(event, node);
+        }).on("wheel", scrollText)
     })
     if (background !== null) {
         background.attr('height', (yValue - prevBoxy + 1.2) + "em")
@@ -809,6 +793,49 @@ function addTextBox() {
         .on("wheel", scrollText)
 }
 
+function addTranscriptText() {
+    textBox = transcript.append('g').attr('class', ".hover-box").attr('id', "hover-box").on("wheel", scrollText)
+    let currentX = 10, currentY = 1, prevBoxY = 0, previousSpeaker = null, background = null
+    let nodesInTextbox = nodesInWindow && nodesInWindow.length > 0 ? nodesInWindow : nodeData
+    nodesInTextbox.forEach(function (node) {
+        let text = node.text, words = text.split(/\s/), line = [], speaker = node.speaker, previousX = 0
+        if (speaker !== previousSpeaker) {
+            previousSpeaker !== null ? currentY += 2.4 : currentY += 0
+            textBox.append('text').text(speaker).attr('y', currentY + "em").attr('fill', "white").attr('x', 10).style('font-weight', 'bold')
+            background?.attr('height', currentY - prevBoxY + "em")
+            background = textBox.append('rect').attr('x', 5).attr('y', (currentY + 0.25) + "em").attr('width', TEXT_BOX_WIDTH).style('fill', colorScale(speaker)).attr('opacity', 0.2)
+            currentY += 1.2
+            currentX = 10
+            prevBoxY = currentY + 1.0
+        }
+        let textElement = textBox.append("text").attr('id', `hovered-text-${node.id}`).attr("fill", "white")
+            .on("mouseover", event => {
+                hoverAction(event, node)
+            })
+            .on('mouseout', (event) => {
+                unHoverAction(event, node)
+            })
+        let tspan = textElement.append("tspan").attr("x", currentX).attr("y", currentY + "em").attr("dx", currentX === 10 ? 0 : 5)
+        previousSpeaker = speaker
+        previousX = currentX
+        words.forEach(word => {
+            line.push(word)
+            tspan.text(line.join(" "))
+            if (previousX + tspan.node().getComputedTextLength() > TEXT_BOX_WIDTH - 5) {
+                line.pop()
+                tspan.text(line.join(" "))
+                line = [word]
+                currentX = 10
+                currentY += 1.2
+                previousX = 10
+                tspan = textElement.append("tspan").attr("x", currentX).attr("y", currentY + "em").text(word)
+            }
+            currentX = previousX + tspan.node().getComputedTextLength()
+        })
+    })
+    background?.attr('height', (currentY - prevBoxY + 2.4) + "em")
+}
+
 function findNodesToShowText() {
     const nodesToShowText = [];
     let lastNodeX = 0;
@@ -826,11 +853,25 @@ function findNodesToShowText() {
     return nodesToShowText;
 }
 
+
+function getCurrentTransform(selection) {
+    const transform = selection.attr("transform");
+    if (transform) {
+        const translateMatch = transform.match(/translate\(([^,]+),([^)]+)\)/);
+        if (translateMatch) {
+            return {
+                x: parseFloat(translateMatch[1]),
+                y: parseFloat(translateMatch[2])
+            };
+        }
+    }
+    return { x: 0, y: 0 };
+}
 function scrollText(event) {
+    console.log("scroll")
     event.preventDefault()
-    const hoverBox = d3.select(".hover-box");
-    const allTexts = hoverBox.selectAll('text');
-    const allRects = hoverBox.selectAll('rect');
+    const allTexts = textBox.selectAll('text');
+    const allRects = textBox.selectAll('rect');
     const scroll = event.deltaY > 0 ? -1 : 1;
     const lastText = allTexts.filter(':last-child');
     const lastTextY = parseFloat(lastText.attr('y'));
@@ -846,7 +887,6 @@ function scrollText(event) {
                 }
             });
         }
-
         updateElementY(allTexts);
         updateElementY(allRects);
     }
