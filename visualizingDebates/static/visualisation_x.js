@@ -167,8 +167,9 @@ function addVideoPlayerInteraction() {
  */
 function moveSlider(xValue) {
     let mouseRectangle = slider.select(".mouse-rectangle");
+    xValue = Math.min(xValue, TIMELINE_WIDTH-HALF_WINDOW_SIZE)
     mouseRectangle
-        .attr('x', Math.max(xValue - HALF_WINDOW_SIZE, -2 * HALF_WINDOW_SIZE))
+        .attr('x', Math.min(Math.max(xValue - HALF_WINDOW_SIZE, -2 * HALF_WINDOW_SIZE), TIMELINE_WIDTH - HALF_WINDOW_SIZE))
         .attr('opacity', 0.5);
     groupNodes(xValue);
     if (!(prevNodesInWindow && (nodesInWindow[0] === prevNodesInWindow[0] &&
