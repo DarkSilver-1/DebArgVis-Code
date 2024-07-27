@@ -25,6 +25,7 @@ let nodes
 let nodes_slider
 let links
 let textBox
+let ticks
 
 let transcript
 let topicBubbles
@@ -122,6 +123,10 @@ function addSliderInteraction() {
             const mouseX = d3.pointer(event)[0];
             moveSlider(mouseX)
         }
+    }).on("click", function (event) {
+        videoplayer.pause()
+        const mouseX = d3.pointer(event)[0];
+        moveSlider(mouseX)
     })
 }
 
@@ -168,8 +173,10 @@ function createTimeline(speakers) {
     let curve = d3.line()
         .curve(d3.curveBasis);
     createArrowheadMarker();
-    nodes = createNodeGroup(colorScale, timelineHeight);
+    nodes = createNodeGroup(colorScale);
     links = createLinks(curve);
+    ticks = createTicks()
+
     addTimelineInteraction()
 }
 
@@ -201,20 +208,6 @@ function createTranscript() {
     addTranscriptText()
 }
 
-function nodeUnhoverAction() { //TODO remove
-    if (nodesInWindow && nodesInWindow.length > 0) {
-        links.filter(l => nodesInWindow.includes(l.source)).attr('opacity', 1.0)
-        links.filter(l => nodesRightOfWindow.includes(l.source) || nodesLeftOfWindow.includes(l.source)).attr('opacity', 0.3)
-        links.filter(l => nodesFarRightOfWindow.includes(l.source) || nodesFarLeftOfWindow.includes(l.source)).attr('opacity', 0.15)
-        timeline.selectAll('.node-group').filter(n => !nodesInWindow.includes(n)).attr('opacity', 0.2);
-        d3.selectAll('.node-text').remove()
-    } else {
-        links.attr('opacity', 1.0)
-    }
-    timeline.selectAll('.node-text').remove()
-
-    topicBubbles.selectAll(".bubble").transition().attr("fill", "transparent").attr('r', radius)
-}
 
 function groupNodes(mouseX) {
     nodesInWindow = []
@@ -239,31 +232,67 @@ function groupNodes(mouseX) {
     })
 }
 
-function appendNodeText(outsideNodes) {
-    outsideNodes.attr('opacity', 1.0)
-    outsideNodes.append("text")
-        .attr("class", 'node-text')
-        .text(node => node.text)
-        .style("fill", "white")
-        .attr("text-anchor", "middle")
-        .attr('dy', yScale.bandwidth() + 15)
+function appendNodeText(outsideNodes, above) {
+    outsideNodes.each(node => {
+        let n = timeline.select("#node-" + node.id)
+        let x = parseFloat(n.attr("x")) + parseFloat(n.attr("width")) / 2
+        let y = above ? yScale(node.speaker) - 5 : yScale(node.speaker) + yScale.bandwidth() + 20
+        timeline.append("text")
+            .attr("class", 'node-text')
+            .attr("x", x)
+            .attr("y", y)
+            .attr("fill", "white")
+            .attr("text-anchor", "middle")
+            .text(node.text)
+    })
+}
+
+function appendLinkText(links, sourceNode) {
+    links.each(link => {
+        let targetNode = timeline.select('#node-' + link.target.id)
+        let sourceNodeMidX = parseFloat(sourceNode.attr("x")) + 0.5 * parseFloat(sourceNode.attr("width"))
+        let targetNodeMidX = parseFloat(targetNode.attr("x")) + 0.5 * parseFloat(targetNode.attr("width"))
+        let midX = sourceNodeMidX + (targetNodeMidX - sourceNodeMidX) / 2
+        let sourceNodeY = yScale(sourceNode.data()[0].speaker)
+        let targetNodeY = yScale(targetNode.data()[0].speaker)
+        let adaptY = link.text_additional === "Default Conflict" ? yScale.bandwidth() + 20 : -15
+        let midY = sourceNodeY + (targetNodeY - sourceNodeY) / 2 + adaptY
+        //let midY = (yScale(sourceNode.speaker) + yScale(targetNode.speaker)) / 2
+        timeline.append("text")
+            .attr("class", "link-text")
+            .attr("x", midX)
+            .attr("y", midY)
+            .attr("text-anchor", "middle")
+            .attr("font-size", "small")
+            .text(link.conn_type)
+            .attr("fill", getLinkColor(link.text_additional))
+    })
 }
 
 function createNodeGroup(colorScale) {
-    let nodesToShowText = findNodesToShowText()
-    let nodes = timeline.selectAll('.node-group')
+    return timeline.selectAll('.node-group')
         .data(nodeData)
         .enter()
-        .append("g")
-        .attr("class", "node-group")
-        .attr('transform', d => `translate(${xScale(d.start_time)}, ${yScale(d.speaker)})`)
-        .attr('id', d => 'node-' + d.id);
-    nodes.append('rect')
+        .append('rect')
         .attr('class', 'node')
         .attr('width', d => xScale(d.end_time) - xScale(d.start_time))
         .attr('height', yScale.bandwidth())
-        .style('fill', d => colorScale(d.speaker));
-    nodes.append('line')
+        .attr("x", d => xScale(d.start_time))
+        .attr("y", d => yScale(d.speaker))
+        .style('fill', d => colorScale(d.speaker))
+        .attr("class", "node-group")
+        .attr('id', d => 'node-' + d.id);
+}
+
+function createTicks() {
+    let nodesToShowText = findNodesToShowText()
+    let ticks = timeline.selectAll('.ticks')
+        .data(nodeData.filter((d, i) => nodesToShowText[i]))
+        .enter()
+        .append("g")
+        .attr("class", "ticks")
+        .attr('transform', d => `translate(${xScale(d.start_time)}, ${yScale(d.speaker)})`)
+    ticks.append('line')
         .attr('class', 'additional-line')
         .attr('x1', 0)
         .attr('y1', yScale.bandwidth())
@@ -271,17 +300,15 @@ function createNodeGroup(colorScale) {
         .attr('y2', d => timelineHeight - yScale(d.speaker) + 5)
         .attr('stroke', 'gray')
         .attr('stroke-dasharray', '5,5')
-        .attr('visibility', (d, i) => nodesToShowText[i] ? 'visible' : 'hidden');
-    nodes.append('text')
+    ticks.append('text')
         .attr('class', 'bar-text')
         .attr('x', 0)
         .attr('y', d => timelineHeight - yScale(d.speaker) + 10)
         .text(d => d3.timeFormat(TIME_FORMAT)(d.start_time))
         .attr('text-anchor', 'middle')
         .attr('font-size', '10px')
-        .attr('visibility', (d, i) => nodesToShowText[i] ? 'visible' : 'hidden')
         .attr('fill', 'white');
-    return nodes;
+    return ticks
 }
 
 function createLinks(curve) {
@@ -452,8 +479,7 @@ function computeBarWidth2(d, defaultXValues) {
     }
 }
 
-function updateDiagram(mouseX, curve) {
-
+function updatePositions(mouseX, curve) {
     const firstScaledNodeX = nodesInWindow.length !== 0 ? xScale(nodesInWindow[0].start_time) : 0;
     const firstScaledNodeXLeft = nodesLeftOfWindow.length !== 0 ? xScale(nodesLeftOfWindow[0].start_time) : 0;
     const firstScaledNodeXFarLeft = nodesFarLeftOfWindow.length !== 0 ? xScale(nodesFarLeftOfWindow[0].start_time) : 0;
@@ -485,16 +511,15 @@ function updateDiagram(mouseX, curve) {
         const barX = xScale(d.start_time);
         return barX < firstScaledNodeXRight && barX >= firstScaledNodeX ? 1.0 : 0.2
     });
-
-    nodes
+    ticks
         .attr('transform', d => `translate(${determineXValue2(d, mouseX, defaultXValues, adaptedXValues)}, ${yScale(d.speaker)})`)
+    nodes
+        .attr("x", d => determineXValue2(d, mouseX, defaultXValues, adaptedXValues))
+        .attr('width', d => computeBarWidth2(d, defaultXValues))
         .attr('opacity', function (d) {
             const barX = xScale(d.start_time);
             return barX < firstScaledNodeXRight && barX >= firstScaledNodeX ? 1.0 : 0.2
         });
-    nodes.select('.node')
-        .attr('width', d => computeBarWidth2(d, defaultXValues))
-
     links
         .attr('d', d => {
             let pathData
@@ -526,88 +551,54 @@ function updateDiagram(mouseX, curve) {
                 return 0
             }
         })
-    textBox.remove()
-    addTranscriptText()
-
-    if (nodesInWindow.length === 0) {
-        nodes_slider.attr('opacity', 1.0)
-        nodes.attr('opacity', 1.0)
-        links.attr('opacity', 1.0)
-        links.attr('visibility', 'visible')
-        textBox.remove()
-        addTranscriptText()
-    }
 }
 
-function nodeHoverAction(d, event) {
-    timeline.selectAll('.node').attr('stroke', 'none');
-    nodesInWindow && nodesInWindow.length > 0 ? links.filter(l => nodesInWindow.includes(l.source)).attr('opacity', 0.4) : links.attr('opacity', 0.4)
-    transcript.selectAll('.hover-box text').style('font-weight', 'normal')
-    let textArray
-    if (nodesInWindow && nodesInWindow.length > 0) {
-        textArray = nodesInWindow.map(d => d.text)
+function computePath(curve, d) {
+    let adapt_y = d.text_additional === "Default Conflict" ? yScale.bandwidth() + 15 : -10
+    let adapt_start_y = d.text_additional === "Default Conflict" ? yScale.bandwidth() : 0
+    let sourceBarWidth = xScale(d.source.end_time) - xScale(d.source.start_time)
+    let targetBarWidth = xScale(d.target.end_time) - xScale(d.target.start_time)
+    let xMid1 = xScale(d.source.start_time) + sourceBarWidth / 2;
+    let xMid2 = xScale(d.target.start_time) + targetBarWidth / 2;
+    let yMid1 = yScale(d.source.speaker) + adapt_y;
+    let yMid2 = yScale(d.target.speaker) + adapt_y;
+    let pathData = [
+        [xMid1, yScale(d.source.speaker) + adapt_start_y],
+        [xMid1, yMid1],
+        [xMid2, yMid2],
+        [xMid2, yScale(d.target.speaker) + adapt_start_y]
+    ]
+    return curve(pathData);
+}
+
+function updateDiagram(mouseX, curve) {
+    if (nodesInWindow.length > 0) {
+        updatePositions(mouseX, curve);
+        textBox.remove()
+        addTranscriptText()
     } else {
-        textArray = nodeData.map(d => d.text)
+        nodes_slider.attr('opacity', 1.0)
+        nodes.attr('opacity', 1.0).attr('x', d => xScale(d.start_time)).attr('width', d => xScale(d.end_time) - xScale(d.start_time))
+        links.attr('opacity', 1.0).attr('d', d => computePath(curve, d))
+        ticks.attr('transform', d => `translate(${xScale(d.start_time)}, ${yScale(d.speaker)})`)
     }
-
-    let associatedLinks = linkData.filter(link => link.source === d);
-
-    textArray.forEach((t) => {
-        const isConnected = associatedLinks.some(link => link.target.text === t);
-        const linkColor = associatedLinks.find(link => link.target.text === t)?.text_additional;
-        const color = isConnected ? getLinkColor(linkColor) : 'white';
-        const hoveredTextElement = transcript.selectAll('.hover-box text').filter(function () {
-            return this.textContent === t;
-        });
-        hoveredTextElement
-            .style('fill', color)
-            .style('font-weight', 'normal');
-    });
-    const hoveredTextElement = transcript.selectAll('.hover-box text').filter(function () {
-        return this.textContent === d.text;
-    });
-
-    hoveredTextElement.style('font-weight', 'bold');
-
-    d3.select(event.currentTarget)
-        .selectAll('.node')
-        .attr('stroke', 'black')
-        .attr('stroke-width', 2);
-    let target_links = links.filter(l => l.source === d)
-    target_links
-        .attr('stroke', d => {
-            return getLinkColor(d.text_additional)
-        })
-        .attr('marker-end', d => {
-            return getArrowHeadColor(d.text_additional)
-        }).attr('opacity', 1.0);
-
-    let outside_links_start_values = target_links.filter(l => nodesInWindow && nodesInWindow.includes(l.source) && !nodesInWindow.includes(l.target)).data().map(l => l.target.start_time)
-    let outside_nodes = timeline.selectAll('.node-group').filter(n => outside_links_start_values.includes(n.start_time));
-    appendNodeText(outside_nodes)
-
-    const textBubbles = topicBubbles.selectAll(".topic-bubble")
-    textBubbles.each(function () {
-        const bubble = d3.select(this);
-        const bubbleTexts = bubble.selectAll(".word")
-        bubbleTexts.each(function () {
-            const text = d3.select(this)
-            if (hoveredTextElement.text().includes(text.text())) {
-                bubble.selectAll(".bubble").transition().attr("fill", "#b794f4").attr('r', radius * 1.2)
-            }
-        })
-    })
-}//TODO remove
+    textBox.remove()
+    addTranscriptText()
+}
 
 function hoverAction(event, d) {
-    timeline.select('#node-' + d.id).select('.node').attr('stroke', 'black').attr('stroke-width', 2);
+    timeline.select('#node-' + d.id).attr('stroke', 'black').attr('stroke-width', 2);
     transcript.select('#hovered-text-' + d.id).attr('font-weight', 'bold');
     nodesInWindow ? links.filter(l => nodesInWindow.includes(l.source)).attr('opacity', 0.3) : links.attr("opacity", 0.3)
     let outgoingLinks = links.filter(l => l.source.id === d.id)
+    appendLinkText(outgoingLinks, timeline.select('#node-' + d.id))
+    if (nodesInWindow && !nodesInWindow.map(n => n.id).includes(d.id)) {
+        appendNodeText(timeline.select('#node-' + d.id), true)
+    }
     outgoingLinks.attr("opacity", 1.0).each(l => {
         let linkType = l.text_additional
         if (nodesInWindow && !nodesInWindow.map(n => n.id).includes(l.target.id)) {
-            appendNodeText(timeline.select('#node-' + l.target.id))
+            appendNodeText(timeline.select('#node-' + l.target.id), false)
         }
         transcript.select('#hovered-text-' + l.target.id).attr('fill', getLinkColor(linkType))
     })
@@ -625,7 +616,7 @@ function hoverAction(event, d) {
 }
 
 function unHoverAction(event, d) {
-    timeline.select('#node-' + d.id).select('.node').attr('stroke', 'none');
+    timeline.select('#node-' + d.id).attr('stroke', 'none');
     transcript.select('#hovered-text-' + d.id).attr('font-weight', 'normal');
     if (nodesInWindow && nodesInWindow.length > 0) {
         links.each(function (d) {
@@ -647,151 +638,8 @@ function unHoverAction(event, d) {
         transcript.select('#hovered-text-' + l.target.id).attr('fill', "white")
     })
     timeline.selectAll('.node-text').remove()
+    timeline.selectAll('.link-text').remove()
     topicBubbles.selectAll(".bubble").transition().attr("fill", "transparent").attr('r', radius)
-}
-
-function textHoverAction(text, textArray, newText) {//TODO remove
-    let associatedLinks = linkData.filter(link => link.source.text === text);
-    associatedLinks = associatedLinks.filter(d => ['Default Inference', 'Default Rephrase', 'Default Conflict'].includes(d.text_additional))
-    nodesInWindow && nodesInWindow.length > 0 ? links.filter(l => nodesInWindow.includes(l.source)).attr('opacity', 0.3) : links.attr('opacity', 0.3)
-    timeline.selectAll('.node').attr('stroke', 'none');
-    textArray.forEach((t, i) => {
-        const linkColor = associatedLinks.find(link => link.target.text === t)?.text_additional;
-        const color = getLinkColor(linkColor)
-        if (color !== "white") {
-            transcript.select(`#hovered-text-${i}`).style('fill', color);
-        }
-    });
-    links.filter(l => l.source.text === text)
-        .attr('stroke', d => getLinkColor(d.text_additional))
-        .attr('marker-start', d => {
-            return getArrowHeadColor(d.text_additional)
-        }).attr('opacity', 1.0);
-    const hoveredNode = timeline.selectAll('.node').filter(node => node.text === text);
-    hoveredNode.attr('stroke', 'black')
-        .attr('stroke-width', 2);
-    textArray.forEach((t, i) => {
-        if (t !== text) {
-            transcript.select(`#hovered-text-${i}`).style('font-weight', 'normal');
-        }
-    });
-    newText.style('font-weight', 'bold');
-    let outside_links_start_values = links.filter(l => l.source.text === text).filter(l => nodesInWindow && nodesInWindow.includes(l.source) && !nodesInWindow.includes(l.target)).data().map(l => l.target.start_time)
-    let outside_nodes = timeline.selectAll('.node-group').filter(n => outside_links_start_values.includes(n.start_time));
-    appendNodeText(outside_nodes)
-
-    const textBubbles = topicBubbles.selectAll(".topic-bubble")
-    textBubbles.each(function () {
-        const bubble = d3.select(this);
-        const bubbleTexts = bubble.selectAll(".word")
-        bubbleTexts.each(function () {
-            const text = d3.select(this)
-            if (newText.text().includes(text.text())) {
-                bubble.selectAll(".bubble").transition().attr("fill", "#b794f4").attr('r', radius * 1.2)
-            }
-        })
-    })
-}
-
-function addTextBox() {
-    let hoverBox = transcript.append('g').attr('class', 'hover-box');
-    let defaultX = 25
-    let maxNumOfLetters = 125
-    let previousX = defaultX;
-    let yValue = 1.2
-    let numberOfCharsInLine = 0;
-    let previousSpeaker = null
-    let background = null
-    let prevBoxy = 0
-    let small_margin = 5
-    let nodesInTextbox = nodesInWindow && nodesInWindow.length > 0 ? nodesInWindow : nodeData
-    nodesInTextbox.forEach(function (node) {
-        let prevCutIndex = 0
-        let finished = false
-        let text = node.text
-        let speaker = node.speaker
-        if (speaker !== previousSpeaker) {
-            if (previousSpeaker !== null) {
-                yValue += 2.4
-            }
-            hoverBox.append('text').text(speaker).attr('y', yValue + "em").attr('fill', "white").attr('x', defaultX - 10).style('font-weight', 'bold').on("wheel", scrollText)
-            if (background !== null) {
-                let backgroundHeight = yValue - prevBoxy;
-                background.attr('height', (backgroundHeight - 1.5) + "em")
-            }
-            background = hoverBox.insert('rect').attr('x', defaultX - 5).attr('y', (yValue + 0.5) + "em").attr('width', TEXT_BOX_WIDTH - 20).style('fill', colorScale(speaker)).attr('opacity', 0.2).on("wheel", scrollText);
-            prevBoxy = yValue + 1.0
-            previousX = defaultX
-            yValue += 1.4
-            numberOfCharsInLine = 0
-            previousSpeaker = speaker
-        }
-
-        let newText = hoverBox.append('text');
-
-        if (numberOfCharsInLine + text.length > maxNumOfLetters) {
-            newText.attr('y', yValue + "em").attr('id', `hovered-text-${node.id}`).attr('fill', "white").attr('x', previousX)
-            prevCutIndex = 0
-            let firstCut = true
-            while (!finished) {
-                let lastCutIndex = Math.min(prevCutIndex + maxNumOfLetters - numberOfCharsInLine, text.length)
-                let tspanTextPart = text.substring(prevCutIndex, lastCutIndex)
-                if (text.length - prevCutIndex > maxNumOfLetters - numberOfCharsInLine) {
-                    let lastWhitespace = tspanTextPart.lastIndexOf(' ');
-                    if (lastWhitespace !== -1) {
-                        tspanTextPart = tspanTextPart.substring(0, lastWhitespace)
-                        prevCutIndex += lastWhitespace
-                        numberOfCharsInLine = maxNumOfLetters
-                    } else {
-                        tspanTextPart = ""
-                        numberOfCharsInLine = maxNumOfLetters
-                    }
-                } else {
-                    prevCutIndex = lastCutIndex
-                    numberOfCharsInLine += tspanTextPart.length
-                }
-                let tspanPart = newText.append('tspan').text(tspanTextPart)
-                if (!firstCut && tspanTextPart !== "") {
-                    previousX = defaultX
-                    tspanPart.attr('dy', "1.2em")
-                    yValue += 1.2
-                }
-                if (numberOfCharsInLine >= maxNumOfLetters) {
-                    numberOfCharsInLine -= maxNumOfLetters
-                }
-                tspanPart.attr('x', previousX);
-                previousX += tspanPart.node().getComputedTextLength() + small_margin
-                finished = prevCutIndex === text.length
-                firstCut = false
-            }
-        } else {
-            newText.attr('y', yValue + "em").attr('x', previousX).attr('id', `hovered-text-${node.id}`).attr('fill', "white").text(text)
-            numberOfCharsInLine += text.length
-            previousX += newText.node().getComputedTextLength() + small_margin
-
-        }
-        newText.on("mouseover", event => {
-            hoverAction(event, node)
-        }).on('mouseout', (event) => {
-            unHoverAction(event, node);
-        }).on("wheel", scrollText)
-    })
-    if (background !== null) {
-        background.attr('height', (yValue - prevBoxy + 1.2) + "em")
-    }
-
-    hoverBox.insert('rect', 'text')
-        .attr('class', ".hover-box")
-        .attr('y', -20)
-        .attr('id', "hover-box")
-        .attr('x', 0)
-        .attr('width', SCREEN_WIDTH / 2 + 20)
-        .attr('height', 1 / 3 * SCREEN_HEIGHT + 60)
-        .style('overflow-y', 'auto')
-        .style('fill', '#282c34')
-        .style('stroke', 'white')
-        .style('cursor', 'pointer')
-        .on("wheel", scrollText)
 }
 
 function addTranscriptText() {
@@ -862,8 +710,8 @@ function scrollText(event) {
     const scroll = event.deltaY > 0 ? -1 : 1;
     const firstTextY = parseFloat(d3.select(allTexts.nodes()[0]).attr("y"));
     const lastTextY = parseFloat(allTexts.filter(':last-child').attr("y"));
-    const max_y = (1 / 3 * SCREEN_HEIGHT)/font_size
-    if ((lastTextY >  max_y || scroll === 1) && (firstTextY < 1 || scroll === -1)) {
+    const max_y = (1 / 3 * SCREEN_HEIGHT) / font_size
+    if ((lastTextY > max_y || scroll === 1) && (firstTextY < 1 || scroll === -1)) {
         function updateElementY(selection) {
             selection.each(function () {
                 if (d3.select(this).attr('id') !== 'hover-box') {
@@ -873,6 +721,7 @@ function scrollText(event) {
                 }
             });
         }
+
         updateElementY(allTexts)
         updateElementY(allRects)
         updateElementY(allTSpans)
@@ -968,10 +817,9 @@ function highlightTopics(topicList, radius, hoveredElement) {
         return topicList.some(topic => node.text.includes(topic));
     });
     filteredNodes.each(function () {
-        let node = d3.select(this);
-        node.selectAll(".node").attr("stroke", "#b794f4").attr("stroke-width", "2px")
+        d3.select(this).attr("stroke", "#b794f4").attr("stroke-width", "2px");
     });
-    let textElements = transcript.selectAll('.hover-box text').filter(function () {
+    let textElements = transcript.selectAll('text').filter(function () {
         return topicList.some(topic => this.textContent.includes(topic));
     });
     textElements.each(function () {
@@ -988,10 +836,9 @@ function unHighlightTopics(topicList, radius, hoveredElement) {
         return topicList.some(topic => node.text.includes(topic));
     });
     filteredNodes.each(function () {
-        let node = d3.select(this);
-        node.selectAll(".node").attr("stroke", "none")
+        d3.select(this).attr("stroke", "none");
     });
-    let textElements = transcript.selectAll('.hover-box text').filter(function () {
+    let textElements = transcript.selectAll('text').filter(function () {
         return topicList.some(topic => this.textContent.includes(topic));
     });
     textElements.each(function () {
@@ -1006,10 +853,9 @@ function unHighlightTopics(topicList, radius, hoveredElement) {
 function highlightTopic(radius, hoveredElement) {
     const filteredNodes = nodes.filter(node => node.text.includes(hoveredElement.text()));
     filteredNodes.each(function () {
-        let node = d3.select(this);
-        node.selectAll(".node").attr("stroke", "#b794f4").attr("stroke-width", "2px")
+        d3.select(this).attr("stroke", "#b794f4").attr("stroke-width", "2px");
     });
-    let textElements = transcript.selectAll('.hover-box text').filter(function () {
+    let textElements = transcript.selectAll('text').filter(function () {
         return this.textContent.includes(hoveredElement.text())
     });
     textElements.each(function () {
@@ -1022,10 +868,9 @@ function highlightTopic(radius, hoveredElement) {
 function unHighlightTopic(radius, hoveredElement) {
     const filteredNodes = nodes.filter(node => node.text.includes(hoveredElement.text()));
     filteredNodes.each(function () {
-        let node = d3.select(this);
-        node.selectAll(".node").attr("stroke", "none")
+        d3.select(this).attr("stroke", "none");
     });
-    let textElements = transcript.selectAll('.hover-box text').filter(function () {
+    let textElements = transcript.selectAll('text').filter(function () {
         return this.textContent.includes(hoveredElement.text())
     });
     textElements.each(function () {
