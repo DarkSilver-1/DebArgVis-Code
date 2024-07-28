@@ -343,7 +343,7 @@ function createNodeGroup() {
         .attr('height', yScale.bandwidth())
         .attr("x", d => xScale(d.start_time))
         .attr("y", d => yScale(d.speaker))
-        .style('fill', d => colorScale(d.speaker))
+        .attr('fill', d => colorScale(d.speaker))
         .attr("class", "node-group")
         .attr('id', d => 'node-' + d.id);
 }
@@ -560,7 +560,7 @@ function createSliderNodes(yScaleSlider) {
         .attr('y', d => yScaleSlider(d.speaker))
         .attr('width', d => xScale(d.end_time) - xScale(d.start_time))
         .attr('height', yScaleSlider.bandwidth())
-        .style('fill', d => colorScale(d.speaker));
+        .attr('fill', d => colorScale(d.speaker));
 }
 
 /**
@@ -1042,7 +1042,7 @@ function highlightTopics(topicList, radius, hoveredElement) {
     let textElements = transcript.selectAll('text').filter(function () {
         return topicList.some(topic => this.textContent.includes(topic));
     });
-    textElements.style("fill", '#b794f4');
+    textElements.attr("fill", '#b794f4');
     hoveredElement
         .transition()
         .attr('r', radius * 1.2)
@@ -1058,7 +1058,7 @@ function highlightTopics(topicList, radius, hoveredElement) {
  */
 function unHighlightTopics(radius, hoveredElement) {
     nodes.attr("stroke", "none");
-    transcript.selectAll('text').style("fill", "white");
+    transcript.selectAll('text').attr("fill", "white");
     hoveredElement
         .transition()
         .attr('r', radius)
@@ -1078,7 +1078,7 @@ function highlightTopic(hoveredElement) {
     let textElements = transcript.selectAll('text').filter(function () {
         return this.textContent.includes(hoveredElement.text());
     });
-    textElements.style("fill", '#b794f4');
+    textElements.attr("fill", '#b794f4');
     hoveredElement
         .attr('fill', '#b794f4');
 }
@@ -1091,7 +1091,7 @@ function highlightTopic(hoveredElement) {
  */
 function unHighlightTopic(hoveredElement) {
     nodes.attr("stroke", "none");
-    transcript.selectAll('text').style("fill", "white");
+    transcript.selectAll('text').attr("fill", "white");
     hoveredElement
         .attr('fill', 'white');
 }
