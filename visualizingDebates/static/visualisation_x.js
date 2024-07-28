@@ -113,11 +113,11 @@ function createSlider(speakers) {
         .attr('class', 'mouse-rectangle')
         .attr('width', 2 * HALF_WINDOW_SIZE)
         .attr('height', SLIDER_HEIGHT)
-        .attr('fill', 'transparent')
-        .attr('opacity', 1)
+        //.attr('fill', 'transparent')
+        //.attr('opacity', 1)
         .attr('x', -2 * HALF_WINDOW_SIZE)
-        .attr('stroke', 'white')
-        .attr('stroke-width', 2);
+    //.attr('stroke', 'white')
+    //.attr('stroke-width', 2);
     addSliderInteraction(); // Adds the slider functionality.
 }
 
@@ -167,7 +167,7 @@ function addVideoPlayerInteraction() {
  */
 function moveSlider(xValue) {
     let mouseRectangle = slider.select(".mouse-rectangle");
-    xValue = Math.min(xValue, TIMELINE_WIDTH-HALF_WINDOW_SIZE)
+    xValue = Math.min(xValue, TIMELINE_WIDTH - HALF_WINDOW_SIZE)
     mouseRectangle
         .attr('x', Math.min(Math.max(xValue - HALF_WINDOW_SIZE, -2 * HALF_WINDOW_SIZE), TIMELINE_WIDTH - HALF_WINDOW_SIZE))
         .attr('opacity', 0.5);
@@ -245,14 +245,11 @@ function addTimelineInteraction() {
 function createTranscript() {
     transcript = createSVG('#transcript', TRANSCRIPT_WIDTH, TRANSCRIPT_HEIGHT, TRANSCRIPT_MARGINS);
     transcript.append("rect", "box")
+        .attr("class", "background-rectangle")
         .attr('y', -20)
         .attr('x', 0)
         .attr('width', SCREEN_WIDTH / 2 + 20)
         .attr('height', 1 / 3 * SCREEN_HEIGHT + 60)
-        .style('overflow-y', 'auto')
-        .style('fill', '#282c34')
-        .style('stroke', 'white')
-        .style('cursor', 'pointer')
         .on("wheel", scrollText);
     addTranscriptText();
 }
@@ -302,8 +299,6 @@ function appendNodeText(outsideNodes, above) {
             .attr("class", 'node-text')
             .attr("x", x)
             .attr("y", y)
-            .attr("fill", "white")
-            .attr("text-anchor", "middle")
             .text(node.text);
     });
 }
@@ -328,8 +323,6 @@ function appendLinkText(links, sourceNode) {
             .attr("class", "link-text")
             .attr("x", midX)
             .attr("y", midY)
-            .attr("text-anchor", "middle")
-            .attr("font-size", "small")
             .text(link.conn_type)
             .attr("fill", getLinkColor(link.text_additional));
     });
@@ -376,16 +369,11 @@ function createTicks() {
         .attr('y1', yScale.bandwidth())
         .attr('x2', 0)
         .attr('y2', d => TIMELINE_HEIGHT - yScale(d.speaker) + 5)
-        .attr('stroke', 'gray')
-        .attr('stroke-dasharray', '5,5');
     ticks.append('text')
         .attr('class', 'bar-text')
         .attr('x', 0)
         .attr('y', d => TIMELINE_HEIGHT - yScale(d.speaker) + 10)
         .text(d => d3.timeFormat(TIME_FORMAT)(d.start_time))
-        .attr('text-anchor', 'middle')
-        .attr('font-size', '10px')
-        .attr('fill', 'white');
     return ticks;
 }
 
@@ -396,13 +384,11 @@ function createTicks() {
  */
 function createLinks() {
     return timeline.selectAll('.link')
-        .data(linkData.filter(d => ['Default Inference', 'Default Rephrase', 'Default Conflict'].includes(d.text_additional)))
+        .data(linkData)
         .enter().append('path')
         .attr('class', 'link')
-        .attr('fill', 'none')
         .attr('marker-end', d => getArrowHeadColor(d.text_additional))
         .attr('stroke', d => getLinkColor(d.text_additional))
-        .attr('stroke-width', 2)
         .attr('d', d => computePath(d));
 }
 
@@ -761,7 +747,7 @@ function updateDiagram(mouseX) {
  * text element in the transcript can be associated.
  */
 function hoverAction(event, d) {
-    timeline.select('#node-' + d.id).attr('stroke', 'black').attr('stroke-width', 2);
+    timeline.select('#node-' + d.id).attr('stroke', 'black');
     transcript.select('#hovered-text-' + d.id).attr('font-weight', 'bold');
     nodesInWindow ? links.filter(l => nodesInWindow.includes(l.source)).attr('opacity', 0.3) : links.attr("opacity", 0.3);
     let outgoingLinks = links.filter(l => l.source.id === d.id);
@@ -848,16 +834,16 @@ function addTranscriptText() {
         let text = node.text, words = text.split(/\s/), line = [], speaker = node.speaker, previousX = 0;
         if (speaker !== previousSpeaker) {
             previousSpeaker !== null ? currentY += 2.4 : currentY += 0; // Add space before writing the next speaker name.
-            textBox.append('text').text(speaker).attr('y', currentY + "em").attr('fill', "white").attr('x', 10).style('font-weight', 'bold');
+            textBox.append('text').attr("class", "speaker-name").text(speaker).attr('y', currentY + "em").attr('x', 10);
             background?.attr('height', currentY - prevBoxY + "em"); // Finish the previous background after the height is known.
-            background = textBox.append('rect').attr('x', 5).attr('y', (currentY + 0.25) + "em")
-                .attr('width', TEXT_BOX_WIDTH).style('fill', colorScale(speaker)).attr('opacity', 0.2);
+            background = textBox.append('rect').attr("class", "text-background").attr('x', 5).attr('y', (currentY + 0.25) + "em")
+                .attr('width', TEXT_BOX_WIDTH).style('fill', colorScale(speaker));
             currentY += 1.2; // Add space below a speaker name.
             currentX = 10; // Default value of a new line.
             prevBoxY = currentY + 1.0;
         }
         let textElement = textBox.append("text").attr('id', `hovered-text-${node.id}`).attr("fill", "white")
-            .attr("x", currentX).attr("y", currentY + "em").attr("dx", currentX === 10 ? 0 : 5)
+            .attr("x", currentX).attr("y", currentY + "em").attr("dx", currentX === 10 ? 0 : 5).attr("class", "hover-text")
             .on("mouseover", event => {
                 hoverAction(event, node)
             })
@@ -996,7 +982,6 @@ const generateBubble = (words, position) => {
         .attr('class', 'bubble')
         .attr('r', position.r)
         .attr('fill', 'transparent')
-        .attr('stroke', '#b794f4')
         .on('mouseover', function () {
             highlightTopics(words, position.r, d3.select(this));
         })
@@ -1007,11 +992,9 @@ const generateBubble = (words, position) => {
     bubble.selectAll('.word')
         .data(words)
         .enter().append('text')
-        .attr('class', 'word')
+        .attr('class', 'topic')
         .attr('x', (d, i) => Math.cos(i / words.length * 2 * Math.PI) * (position.r - 10))
         .attr('y', (d, i) => Math.sin(i / words.length * 2 * Math.PI) * (position.r - 10))
-        .attr('text-anchor', 'middle')
-        .attr('alignment-baseline', 'middle')
         .attr("fill", "white")
         .text(d => d)
         .on('mouseover', function () {
@@ -1053,7 +1036,7 @@ function createTopicBubbles(topicData) {
  */
 function highlightTopics(topicList, radius, hoveredElement) {
     const filteredNodes = nodes.filter(node => {
-        return topicList.some(topic => node.text.includes(topic));
+        return topicList.some(topic => node.text.toLowerCase().includes(topic.toLowerCase()));
     });
     filteredNodes.attr("stroke", "#b794f4").attr("stroke-width", "2px");
     let textElements = transcript.selectAll('text').filter(function () {
@@ -1090,7 +1073,7 @@ function unHighlightTopics(radius, hoveredElement) {
  * @param hoveredElement A selection of the text element that is hovered on.
  */
 function highlightTopic(hoveredElement) {
-    const filteredNodes = nodes.filter(node => node.text.includes(hoveredElement.text()));
+    const filteredNodes = nodes.filter(node => node.text.toLowerCase().includes(hoveredElement.text().toLowerCase()));
     filteredNodes.attr("stroke", "#b794f4").attr("stroke-width", "2px");
     let textElements = transcript.selectAll('text').filter(function () {
         return this.textContent.includes(hoveredElement.text());
