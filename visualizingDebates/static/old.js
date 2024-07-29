@@ -39,6 +39,7 @@ function nodeUnhoverAction(link, svg3) {
 }//Interaction
 
 function createSlidingTimeline(graphData) {
+    console.log("Old version")
 
     const topicData = Object.values(graphData["topics"]);
     const nodes = graphData.nodes;

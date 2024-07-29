@@ -833,21 +833,21 @@ function unHoverAction(event, d) {
  */
 function addTranscriptText() {
     textBox = transcript.append('g').attr('class', ".hover-box").attr('id', "hover-box").on("wheel", scrollText);
-    let currentX = 10, currentY = 0.5, prevBoxY = 0, previousSpeaker = null, background = null;
+    let currentX = 10, currentY = 0.5, prevBoxY = 0, previousSpeaker = null, background = null, defaultX = 15;
     let nodesInTextbox = nodesInWindow && nodesInWindow.length > 0 ? nodesInWindow : nodeData;
     nodesInTextbox.forEach(function (node) {
         let text = node.text, words = text.split(/\s/), line = [], speaker = node.speaker, previousX = 0;
         if (speaker !== previousSpeaker) {
             previousSpeaker !== null ? currentY += 2.4 : currentY += 0; // Add space before writing the next speaker name.
-            textBox.append('text').attr("class", "speaker-name").text(speaker).attr('y', currentY + "em").attr('x', 10);
+            textBox.append('text').attr("class", "speaker-name").text(speaker).attr('y', currentY + "em").attr('x', 5);
             background?.attr('height', currentY - prevBoxY + "em"); // Finish the previous background after the height is known.
-            background = textBox.append('rect').attr("class", "text-background").attr('x', 5).attr('y', (currentY + 0.25) + "em")
+            background = textBox.append('rect').attr("class", "text-background").attr('x', 10).attr('y', (currentY + 0.25) + "em")
                 .attr('width', TEXT_BOX_WIDTH).style('fill', colorScale(speaker));
             currentY += 1.2; // Add space below a speaker name.
-            currentX = 10; // Default value of a new line.
+            currentX = defaultX; // Default value of a new line.
             prevBoxY = currentY + 1.0;
         }
-        currentX = currentX === 10 || text[0] === "," ? currentX : currentX + 5 // Add a little space to the previous text if it isn't the beginning of a new line or starts with a comma.
+        currentX = currentX === defaultX || text[0] === "," ? currentX : currentX + 5 // Add a little space to the previous text if it isn't the beginning of a new line or starts with a comma.
         let textElement = textBox.append("text").attr('id', `hovered-text-${node.id}`).attr("fill", "white")
             .attr("x", currentX).attr("y", currentY + "em").attr("class", "hover-text")
             .on("mouseover", event => {
@@ -867,9 +867,9 @@ function addTranscriptText() {
                 line.pop();
                 tspan.text(line.join(" "));
                 line = [word];
-                currentX = 10;
+                currentX = defaultX;
                 currentY += 1.2;
-                previousX = 10;
+                previousX = defaultX;
                 tspan = textElement.append("tspan").attr("x", currentX).attr("y", currentY + "em").text(word);
             }
             currentX = previousX + tspan.node().getComputedTextLength(); // Track the total line length at that point.
