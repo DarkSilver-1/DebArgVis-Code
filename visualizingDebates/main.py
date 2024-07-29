@@ -14,7 +14,11 @@ def get_welcome_page():
 
 
 @app.get("/visualisation")
-def get_graph_slider():
+def get_visualization():
+    return graph_data
+
+@app.get("/old")
+def get_old():
     return graph_data
 
 

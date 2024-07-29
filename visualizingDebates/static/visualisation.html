@@ -37,7 +37,7 @@
         .then(response => response.json())
         .then(graphData => {
             const script = document.createElement('script');
-            script.src = 'visualisation_x.js';
+            script.src = 'visualisation.js';
             script.onload = function () {
                 createSlidingTimeline(graphData)
             };

@@ -54,7 +54,6 @@ def extract_files(graph):
             if os.path.getsize(json_file_path) != 0:
                 extract_file(graph, json_file_path, file_part_mapping)
     extract_file(graph, imc_file_path, file_part_mapping)
-    print(graph)
     return graph
 
 
