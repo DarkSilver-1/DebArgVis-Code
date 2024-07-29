@@ -107,17 +107,28 @@ function createSlider(speakers) {
 
     let yScaleSlider = d3.scaleBand().domain(speakers).range([SLIDER_HEIGHT, 0]).padding(0.1); // Creates a y-scale for the slider .
     createSliderAxis(yScaleSlider); // Creates x and y axis.
+    slider.append('rect') // Adds an "invisible" background rectangle to the slider svg to allow setting the slider position on click
+        .attr("class", "slider-background")
+        .attr("x", 0)
+        .attr("y", 0)
+        .attr("height", SLIDER_HEIGHT)
+        .attr("width", SLIDER_WIDTH)
+        .on("click", sliderClickAction())
     nodes_slider = createSliderNodes(yScaleSlider); // Creates the rectangles representing the nodes.
     slider.append('rect') // Adds the slider rectangle and puts it left of the diagram.
         .attr('class', 'mouse-rectangle')
         .attr('width', 2 * HALF_WINDOW_SIZE)
         .attr('height', SLIDER_HEIGHT)
-        //.attr('fill', 'transparent')
-        //.attr('opacity', 1)
         .attr('x', -2 * HALF_WINDOW_SIZE)
-    //.attr('stroke', 'white')
-    //.attr('stroke-width', 2);
     addSliderInteraction(); // Adds the slider functionality.
+}
+
+function sliderClickAction() {
+    return function (event) {
+        videoplayer.pause();
+        const mouseX = d3.pointer(event)[0];
+        moveSlider(mouseX);
+    };
 }
 
 /**
@@ -141,11 +152,7 @@ function addSliderInteraction() {
             const mouseX = d3.pointer(event)[0];
             moveSlider(mouseX);
         }
-    }).on("click", function (event) {
-        videoplayer.pause();
-        const mouseX = d3.pointer(event)[0];
-        moveSlider(mouseX);
-    });
+    }).on("click", sliderClickAction());
 }
 
 /**
@@ -841,7 +848,7 @@ function addTranscriptText() {
             currentX = 10; // Default value of a new line.
             prevBoxY = currentY + 1.0;
         }
-        currentX = currentX===10 ? currentX : currentX + 5 // Add a little space to the previous text if it isn't the beginning of a new line.
+        currentX = currentX === 10 || text[0] === "," ? currentX : currentX + 5 // Add a little space to the previous text if it isn't the beginning of a new line or starts with a comma.
         let textElement = textBox.append("text").attr('id', `hovered-text-${node.id}`).attr("fill", "white")
             .attr("x", currentX).attr("y", currentY + "em").attr("class", "hover-text")
             .on("mouseover", event => {
@@ -949,7 +956,7 @@ const calculateBubblePositions = (numBubbles, rectWidth, rectHeight) => {
     const rowHeight = rectHeight / rows;
     const minDimension = Math.min(colWidth, rowHeight);
     const shiftAmount = minDimension / 2;
-    radius = minDimension / 2;
+    radius = minDimension / 2 - 3;
 
     for (let i = 0; i < rows; i++) {
         for (let j = 0; j < cols && bubblePositions.length < numBubbles; j++) {
