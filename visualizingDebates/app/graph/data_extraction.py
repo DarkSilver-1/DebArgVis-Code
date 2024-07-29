@@ -75,7 +75,7 @@ def create_file_part_mapping():
 #  Extracts a single file by taking the valuable information, including the already existing node ID and creates a new
 #  node in the graph, given the data is valuable for the visualization. Then adds the edges. This may produce new nodes
 #  without data for the already deleted nodes but is easy to filter afterward. Nodes that are already in the graph are
-#  not added (hence updated) again, as this only happens only for the IMC file which cannot be associated with a part
+#  not added (hence updated) again, as this only happens for the IMC file which cannot be associated with a part
 #  number
 def extract_file(graph, json_file_path, file_part_mapping):
     with open(json_file_path, "r") as json_file:

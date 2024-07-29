@@ -9,7 +9,6 @@ const SCREEN_WIDTH = window.screen.width;
 const SCREEN_HEIGHT = window.screen.height;
 const TEXT_BOX_WIDTH = SCREEN_WIDTH / 2; // Width of the area reserved for the transcript.
 const TIME_FORMAT = d3.timeFormat('%H:%M:%S');
-const Font_SIZE = 16;
 const curve = d3.line().curve(d3.curveBasis); // Used to create path elements for the links and adapt their path.
 
 // Some constants regarding margins, heights and widths of the tool's parts.
@@ -828,7 +827,7 @@ function unHoverAction(event, d) {
  */
 function addTranscriptText() {
     textBox = transcript.append('g').attr('class', ".hover-box").attr('id', "hover-box").on("wheel", scrollText);
-    let currentX = 10, currentY = 1, prevBoxY = 0, previousSpeaker = null, background = null;
+    let currentX = 10, currentY = 0.5, prevBoxY = 0, previousSpeaker = null, background = null;
     let nodesInTextbox = nodesInWindow && nodesInWindow.length > 0 ? nodesInWindow : nodeData;
     nodesInTextbox.forEach(function (node) {
         let text = node.text, words = text.split(/\s/), line = [], speaker = node.speaker, previousX = 0;
@@ -842,8 +841,9 @@ function addTranscriptText() {
             currentX = 10; // Default value of a new line.
             prevBoxY = currentY + 1.0;
         }
+        currentX = currentX===10 ? currentX : currentX + 5 // Add a little space to the previous text if it isn't the beginning of a new line.
         let textElement = textBox.append("text").attr('id', `hovered-text-${node.id}`).attr("fill", "white")
-            .attr("x", currentX).attr("y", currentY + "em").attr("dx", currentX === 10 ? 0 : 5).attr("class", "hover-text")
+            .attr("x", currentX).attr("y", currentY + "em").attr("class", "hover-text")
             .on("mouseover", event => {
                 hoverAction(event, node)
             })
@@ -851,7 +851,6 @@ function addTranscriptText() {
                 unHoverAction(event, node)
             });
         let tspan = textElement.append("tspan").attr("x", currentX).attr("y", currentY + "em")
-            .attr("dx", currentX === 10 ? 0 : 5); // Add a little space to the previous text if it isn't the beginning of a new line.
         previousSpeaker = speaker;
         previousX = currentX; // previousX is set to the line length the previous text (i.e. iteration) ended with.
         words.forEach(word => {
@@ -912,8 +911,9 @@ function scrollText(event) {
     const scroll = event.deltaY > 0 ? -1 : 1;
     const firstTextY = parseFloat(d3.select(allTexts.nodes()[0]).attr("y"));
     const lastTextY = parseFloat(allTexts.filter(':last-child').attr("y"));
-    const max_y = TRANSCRIPT_HEIGHT / Font_SIZE;
-    if ((lastTextY > max_y || scroll === 1) && (firstTextY < 1 || scroll === -1)) {
+    const fontSize = parseInt(window.getComputedStyle(document.querySelector("body")).fontSize)
+    const max_y = TRANSCRIPT_HEIGHT / fontSize;
+    if ((lastTextY > max_y || scroll === 1) && (firstTextY < 0.5 || scroll === -1)) {
         function updateElementY(selection) {
             selection.each(function () {
                 if (d3.select(this).attr('id') !== 'hover-box') {
