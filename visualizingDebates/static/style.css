@@ -77,9 +77,13 @@ body {
 }
 
 .node-text {
-    text-anchor: middle;
     fill: white;
+    font-size: small;
 }
+
+.node-text-box {
+}
+
 
 .link-text {
     text-anchor: middle;

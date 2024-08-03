@@ -9,6 +9,8 @@ load_dotenv()
 transcript_path = os.getenv("TRANSCRIPT_PATH")
 
 
+# Iterates through the transcript file and returns a list of documents, each document consisting of the spoken text in
+# one of the respective lines in the transcript.
 def extract_documents():
     documents = []
     text_pattern = re.compile(r"\[([\d:]+)]\s*(.*)")
@@ -22,6 +24,7 @@ def extract_documents():
     return documents
 
 
+# Vectorized the documents and applies LDA on the transcript text. Returns a list of topic lists.
 def extract_topics():
     documents = extract_documents()
     custom_stop_words = ["blah", "go", "do", "don", "going"]

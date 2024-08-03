@@ -159,9 +159,12 @@ function addSliderInteraction() {
  * the slider rectangle to the respective position.
  */
 function addVideoPlayerInteraction() {
-    videoplayer.addEventListener('timeupdate', function () {
+    videoplayer.addEventListener('timeupdate', function () { //TODO gets triggered when setting time
         const currentTimeVid = xScale(new Date(nodeData[0].start_time.getTime() + videoplayer.currentTime * 1000));
         moveSlider(currentTimeVid);
+        let time = xScale.invert(currentTimeVid)
+        console.log(time.getHours() + ":" + time.getMinutes() + ":" + time.getSeconds())
+
     });
 }
 
@@ -182,7 +185,11 @@ function moveSlider(xValue) {
         updateDiagram(xValue);
         prevNodesInWindow = nodesInWindow;
     }
-    currentTime = xScale(new Date(nodeData[0].start_time.getTime() + videoplayer.currentTime * 1000)); // Update current time with the current time of the video. //TODO wtf?
+    let time = xScale.invert(xValue)
+    currentTime = time.getHours() * 3600 + time.getMinutes() * 60 + time.getSeconds();
+    console.log(time.getHours() + ":" + time.getMinutes() + ":" + time.getSeconds())
+    //videoplayer.currentTime = currentTime
+    //currentTime = xScale(new Date(nodeData[0].start_time.getTime() + videoplayer.currentTime * 1000)); // Update current time with the current time of the video. //TODO wtf?
 }
 
 /**
@@ -236,10 +243,9 @@ function addTimelineInteraction() {
     }).on('mouseout', (event, d) => {
         unHoverAction(event, d);
     }).on('click', (event, d) => {
-        let videoplayer = document.getElementById('videoPlayer');
-        groupNodes(d.start_time);
-        currentTime = (d.start_time.getTime() - nodeData[0].start_time.getTime()) / 1000;
-        videoplayer.currentTime = currentTime;
+        const mouseX = xScale(d.start_time);
+        moveSlider(mouseX)
+        //videoplayer.currentTime = currentTime; //TODO
     });
 }
 
@@ -290,22 +296,69 @@ function groupNodes(mouseX) {
 }
 
 /**
- * Adds the centered text of nodes in the timeline above or below the node.
+ * Adds a textbox in the color of a speaker at a specific position and fits the text into it.
+ *
+ * @param y The y value of the node to which the textbox should be appended.
+ * @param x The x value of the node to which the textbox should be appended.
+ * @param speaker The speaker.
+ * @param text The text to be wrapped and displayed.
+ */
+function addNodeTextbox(y, x, speaker, text) {
+    let height = TIMELINE_HEIGHT / 3;
+    let width = TIMELINE_WIDTH / 8;
+    let above = y + yScale.bandwidth() + height > TIMELINE_HEIGHT
+    let rectY = above ? y - height - 5 : y + yScale.bandwidth() + 5;
+    let rectX = Math.max(Math.min(x - 0.5 * width, TIMELINE_WIDTH - width), 1);
+    let triangleY = above ? y - 5 : y + yScale.bandwidth() + 5;
+    let trianglePeakY = above ? y : y + yScale.bandwidth();
+    timeline.append("rect")
+        .attr("class", 'node-text-box')
+        .attr("x", rectX)
+        .attr("y", rectY)
+        .attr("height", height)
+        .attr("width", width)
+        .attr("fill", colorScale(speaker));
+    let textElement = timeline.append("text").attr("class", 'node-text');
+    let words = text.split(" ");
+    let defaultX = 5
+    let currentY = 1.2
+    let line = []
+    let tspan = textElement.append("tspan").attr("x", rectX + defaultX).attr("y", rectY).attr("dy", currentY + "em");
+    words.forEach(word => {
+        line.push(word);
+        tspan.text(line.join(" "));
+        if (tspan.node().getComputedTextLength() > width - 5) {
+            line.pop();
+            tspan.text(line.join(" "));
+            line = [word];
+            currentY += 1.2;
+            tspan = textElement.append("tspan").attr("x", rectX + defaultX).attr("y", rectY).attr("dy", currentY + "em").text(word);
+        }
+    });
+    timeline.append("polygon")
+        .attr("class", 'node-text-box')
+        .attr("points", [
+            `${Math.min(x + 5, rectX + width)},${triangleY}`,
+            `${Math.max(x - 5, rectX)},${triangleY}`,
+            `${x},${trianglePeakY}`
+        ].join(" "))
+        .attr("fill", colorScale(speaker))
+}
+
+/**
+ * Adds a textbox with the text of a node beneath the respective node..
  *
  * @param outsideNodes A selection of nodes where text should be appended.
- * @param above A boolean value that describes if the text should be placed above or below the node.
  */
-function appendNodeText(outsideNodes, above) {
+function appendNodeText(outsideNodes) {
     outsideNodes.each(node => {
         let n = timeline.select("#node-" + node.id);
         let x = parseFloat(n.attr("x")) + parseFloat(n.attr("width")) / 2;
-        let y = above ? yScale(node.speaker) - 5 : yScale(node.speaker) + yScale.bandwidth() + 20;
-        timeline.append("text")
-            .attr("class", 'node-text')
-            .attr("x", x)
-            .attr("y", y)
-            .text(node.text);
-    });
+        let y = yScale(node.speaker);
+        let text = node.text
+        let speaker = node.speaker
+        addNodeTextbox(y, x, speaker, text);
+    })
 }
 
 /**
@@ -753,20 +806,23 @@ function updateDiagram(mouseX) {
  */
 function hoverAction(event, d) {
     timeline.select('#node-' + d.id).attr('stroke', 'black');
-    transcript.select('#hovered-text-' + d.id).attr('font-weight', 'bold');
-    nodesInWindow ? links.filter(l => nodesInWindow.includes(l.source)).attr('opacity', 0.3) : links.attr("opacity", 0.3);
-    let outgoingLinks = links.filter(l => l.source.id === d.id);
-    appendLinkText(outgoingLinks, timeline.select('#node-' + d.id));
-    if (nodesInWindow && !nodesInWindow.map(n => n.id).includes(d.id)) {
+
+    if (nodesInWindow?.length > 0 && !nodesInWindow.map(n => n.id).includes(d.id)) {
         appendNodeText(timeline.select('#node-' + d.id), true);
+        timeline.select('#node-' + d.id).attr('opacity', 1);
+    } else {
+        transcript.select('#hovered-text-' + d.id).attr("font-style", "italic").attr("text-decoration", "underline");
+        nodesInWindow ? links.filter(l => nodesInWindow.includes(l.source)).attr('opacity', 0.3) : links.attr("opacity", 0.3);
+        let outgoingLinks = links.filter(l => l.source.id === d.id);
+        appendLinkText(outgoingLinks, timeline.select('#node-' + d.id));
+        outgoingLinks.attr("opacity", 1.0).each(l => {
+            let linkType = l.text_additional;
+            if (nodesInWindow?.length > 0 && !nodesInWindow.map(n => n.id).includes(l.target.id)) {
+                appendNodeText(timeline.select('#node-' + l.target.id), false);
+            }
+            transcript.select('#hovered-text-' + l.target.id).attr('fill', getLinkColor(linkType));
+        })
     }
-    outgoingLinks.attr("opacity", 1.0).each(l => {
-        let linkType = l.text_additional;
-        if (nodesInWindow && !nodesInWindow.map(n => n.id).includes(l.target.id)) {
-            appendNodeText(timeline.select('#node-' + l.target.id), false);
-        }
-        transcript.select('#hovered-text-' + l.target.id).attr('fill', getLinkColor(linkType));
-    })
     const textBubbles = topicBubbles.selectAll(".topic-bubble");
     textBubbles.each(function () {
         const bubble = d3.select(this);
@@ -791,7 +847,7 @@ function hoverAction(event, d) {
  */
 function unHoverAction(event, d) {
     timeline.select('#node-' + d.id).attr('stroke', 'none');
-    transcript.select('#hovered-text-' + d.id).attr('font-weight', 'normal');
+    transcript.select('#hovered-text-' + d.id).attr("font-style", "normal").attr("text-decoration", "none")
     if (nodesInWindow && nodesInWindow.length > 0) {
         links.each(function (d) {
             if (nodesInWindow.includes(d.source)) {
@@ -812,6 +868,7 @@ function unHoverAction(event, d) {
         transcript.select('#hovered-text-' + l.target.id).attr('fill', "white");
     })
     timeline.selectAll('.node-text').remove();
+    timeline.selectAll('.node-text-box').remove();
     timeline.selectAll('.link-text').remove();
     topicBubbles.selectAll(".bubble").transition().attr("fill", "transparent").attr('r', radius);
 }
