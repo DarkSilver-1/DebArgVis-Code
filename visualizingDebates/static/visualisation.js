@@ -25,7 +25,6 @@ const TOPIC_BUBBLE_MARGINS = {top: 20, right: 20, bottom: 40, left: 60};
 const TOPIC_BUBBLE_WIDTH = SCREEN_WIDTH / 3;
 const TOPIC_BUBBLE_HEIGHT = SCREEN_HEIGHT / 3;
 
-let currentTime = 0; // tracks the current time of the video in order to sync video time and sliding window position.
 let colorScale = null; // Determines which speaker is assigned which color.
 let nodesInWindow = null; // A list of the nodes that are currently inside the sliding window (first area).
 let prevNodesInWindow = null; // Used to check if nodes came into or out of the sliding window to prevent unnecessary position updates.
@@ -49,6 +48,7 @@ let topicBubbles; // The topic bubble svg.
 let timeline; // The timeline svg.
 let slider; // The slider svg.
 let videoplayer = document.getElementById('videoPlayer'); // The videoplayer html element.
+let userIsInteracting = true
 
 /**
  * Uses the data from the backend to create all elements of the visualization.
@@ -159,12 +159,10 @@ function addSliderInteraction() {
  * the slider rectangle to the respective position.
  */
 function addVideoPlayerInteraction() {
-    videoplayer.addEventListener('timeupdate', function () { //TODO gets triggered when setting time
-        const currentTimeVid = xScale(new Date(nodeData[0].start_time.getTime() + videoplayer.currentTime * 1000));
-        moveSlider(currentTimeVid);
-        let time = xScale.invert(currentTimeVid)
-        console.log(time.getHours() + ":" + time.getMinutes() + ":" + time.getSeconds())
-
+    videoplayer.addEventListener('timeupdate', function () {
+        const currentTimeVidX = xScale(new Date(nodeData[0].start_time.getTime() + videoplayer.currentTime * 1000)); // starts centered around the first node
+        userIsInteracting = false
+        moveSlider(currentTimeVidX);
     });
 }
 
@@ -185,11 +183,14 @@ function moveSlider(xValue) {
         updateDiagram(xValue);
         prevNodesInWindow = nodesInWindow;
     }
-    let time = xScale.invert(xValue)
-    currentTime = time.getHours() * 3600 + time.getMinutes() * 60 + time.getSeconds();
-    console.log(time.getHours() + ":" + time.getMinutes() + ":" + time.getSeconds())
-    //videoplayer.currentTime = currentTime
-    //currentTime = xScale(new Date(nodeData[0].start_time.getTime() + videoplayer.currentTime * 1000)); // Update current time with the current time of the video. //TODO wtf?
+
+    let currentSeconds = xScale.invert(xValue).getSeconds() + xScale.invert(xValue).getMinutes()*60 + xScale.invert(xValue).getHours()*3600
+    let secondsStart = nodeData[0].start_time.getSeconds() + nodeData[0].start_time.getMinutes()*60 + nodeData[0].start_time.getHours()*3600
+    let secondsFromStart = currentSeconds - secondsStart
+    if (userIsInteracting){
+        //videoplayer.currentTime = secondsFromStart //TODO this works perfectly fine in firefox but refuses to work in any other browser for no reason. Therefore the feature stays disabled for the moment
+    }
+    userIsInteracting = true
 }
 
 /**
@@ -245,7 +246,6 @@ function addTimelineInteraction() {
     }).on('click', (event, d) => {
         const mouseX = xScale(d.start_time);
         moveSlider(mouseX)
-        //videoplayer.currentTime = currentTime; //TODO
     });
 }
 
