@@ -103,9 +103,6 @@ function createSliderAxis(yScaleSlider) {
  */
 function createSlider(speakers) {
     slider = createSVG('#slider', SLIDER_WIDTH, SLIDER_HEIGHT, SLIDER_MARGINS);
-
-    let yScaleSlider = d3.scaleBand().domain(speakers).range([SLIDER_HEIGHT, 0]).padding(0.1); // Creates a y-scale for the slider .
-    createSliderAxis(yScaleSlider); // Creates x and y axis.
     slider.append('rect') // Adds an "invisible" background rectangle to the slider svg to allow setting the slider position on click
         .attr("class", "slider-background")
         .attr("x", 0)
@@ -113,6 +110,9 @@ function createSlider(speakers) {
         .attr("height", SLIDER_HEIGHT)
         .attr("width", SLIDER_WIDTH)
         .on("click", sliderClickAction())
+    let yScaleSlider = d3.scaleBand().domain(speakers).range([SLIDER_HEIGHT, 0]).padding(0.1); // Creates a y-scale for the slider .
+    createSliderAxis(yScaleSlider); // Creates x and y axis.
+
     nodes_slider = createSliderNodes(yScaleSlider); // Creates the rectangles representing the nodes.
     slider.append('rect') // Adds the slider rectangle and puts it left of the diagram.
         .attr('class', 'mouse-rectangle')
@@ -188,7 +188,7 @@ function moveSlider(xValue) {
     let secondsStart = nodeData[0].start_time.getSeconds() + nodeData[0].start_time.getMinutes()*60 + nodeData[0].start_time.getHours()*3600
     let secondsFromStart = currentSeconds - secondsStart
     if (userIsInteracting){
-        //videoplayer.currentTime = secondsFromStart //TODO this works perfectly fine in firefox but refuses to work in any other browser for no reason. Therefore the feature stays disabled for the moment
+        videoplayer.currentTime = secondsFromStart
     }
     userIsInteracting = true
 }
