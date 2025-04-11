@@ -382,7 +382,7 @@ function appendLinkText(links, sourceNode) {
             .attr("x", midX)
             .attr("y", midY)
             .text(link.conn_type)
-            .attr("fill", getLinkColor(link.text_additional));
+            .attr("fill", getLinkColor(link.text_additional, link.conn_type));
     });
 }
 
@@ -445,8 +445,8 @@ function createLinks() {
         .data(linkData)
         .enter().append('path')
         .attr('class', 'link')
-        .attr('marker-end', d => getArrowHeadColor(d.text_additional))
-        .attr('stroke', d => getLinkColor(d.text_additional))
+        .attr('marker-end', d => getArrowHeadColor(d.text_additional, d.conn_type))
+        .attr('stroke', d => getLinkColor(d.text_additional, d.conn_type))
         .attr('d', d => computePath(d));
 }
 
@@ -493,6 +493,19 @@ function createArrowheadMarker() {
         .append('svg:path')
         .attr('d', 'M0,-5L10,0L0,5')
         .attr('fill', 'green');
+    timeline.append('defs').append('marker')
+        .attr('class', 'arrowhead')
+        .attr('id', 'arrowhead-green')
+        .attr('viewBox', '-0 -5 10 10')
+        .attr('refX', 9)
+        .attr('refY', 0)
+        .attr('orient', 'auto')
+        .attr('markerWidth', 3)
+        .attr('markerHeight', 4)
+        .attr('xoverflow', 'visible')
+        .append('svg:path')
+        .attr('d', 'M0,-5L10,0L0,5')
+        .attr('fill', 'orange');
 }
 
 /**
@@ -528,37 +541,42 @@ function determineXValue(d, mouseX, defaultXValues, adaptedXValues) {
 
 /**
  * Returns a color based on the input string. This method is used to color the links depending on their additional
- * information. There are three types of links, Default Inference, Default Rephrase and Default Conflict.
+ * information and their type. There are three types of links, Default Inference, Default Rephrase and Default Conflict.
  *
  * @param textAdditional The additional information of a link.
+ * @param connType The type of the node, e.g. Agreeing or Restating
  * @returns The respective color.
  */
-function getLinkColor(textAdditional) {
-    switch (textAdditional) {
-        case 'Default Inference':
-            return 'violet';
-        case 'Default Rephrase':
-            return 'green';
-        case 'Default Conflict':
-            return 'red';
-        default:
-            return 'white';
+function getLinkColor(textAdditional, connType) {
+    if (textAdditional === 'Default Inference' || connType === 'Agreeing') {
+        return 'green';
+    } else if (connType === 'Answering') {
+        return 'orange';
+    } else if (textAdditional === 'Default Rephrase') {
+        return 'violet';
+    } else if (textAdditional === 'Default Conflict') {
+        return 'red'
+    } else {
+        return 'white'
     }
 }
 
 /**
  * Returns a string to address an arrowhead type based on the input string. This method is used to find the correct
- * colored arrowhead for the links depending on their additional information. There are three types of links,
- * Default Inference, Default Rephrase and Default Conflict.
+ * colored arrowhead for the links depending on their additional information and the connection type. There are three
+ * types of links, Default Inference, Default Rephrase and Default Conflict.
  *
  * @param textAdditional The additional information of a link.
+ * @param connType The connection type.
  * @returns The respective string to address the arrow head.
  */
-function getArrowHeadColor(textAdditional) {
-    if (textAdditional === 'Default Inference') {
-        return 'url(#arrowhead-violet)';
-    } else if (textAdditional === 'Default Rephrase') {
+function getArrowHeadColor(textAdditional, connType) {
+    if (textAdditional === 'Default Inference' || connType === 'Agreeing') {
         return 'url(#arrowhead-green)';
+    } else if (connType === 'Answering') {
+        return 'url(#arrowhead-orange)';
+    } else if (textAdditional === 'Default Rephrase') {
+        return 'url(#arrowhead-violet)';
     } else if (textAdditional === 'Default Conflict') {
         return 'url(#arrowhead-red)';
     } else {
@@ -780,6 +798,7 @@ function updateDiagram(mouseX) {
     if (nodesInWindow.length > 0) {
         updatePositions(mouseX);
     } else {
+        userIsInteracting = true
         nodes_slider.attr('opacity', 1.0);
         nodes.attr('opacity', 1.0).attr('x', d => xScale(d.start_time)).attr('width', d => xScale(d.end_time) - xScale(d.start_time));
         links.attr('opacity', 1.0).attr('d', d => computePath(d));
@@ -816,11 +835,10 @@ function hoverAction(event, d) {
         let outgoingLinks = links.filter(l => l.source.id === d.id);
         appendLinkText(outgoingLinks, timeline.select('#node-' + d.id));
         outgoingLinks.attr("opacity", 1.0).each(l => {
-            let linkType = l.text_additional;
             if (nodesInWindow?.length > 0 && !nodesInWindow.map(n => n.id).includes(l.target.id)) {
                 appendNodeText(timeline.select('#node-' + l.target.id), false);
             }
-            transcript.select('#hovered-text-' + l.target.id).attr('fill', getLinkColor(linkType));
+            transcript.select('#hovered-text-' + l.target.id).attr('fill', getLinkColor(l.text_additional, l.conn_type));
         })
     }
     const textBubbles = topicBubbles.selectAll(".topic-bubble");

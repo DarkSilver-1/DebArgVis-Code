@@ -133,6 +133,7 @@ def collapse_graph(graph):
                             (node_id_mapping[i_node], node_id_mapping[t], graph.nodes[s]["text"], conn_type))
     for edge in edges_to_add:  # Add the new edges to the new graph
         s, t, text, conn_type = edge
+        conn_type = "Answering" if conn_type == "Default Illocuting" else conn_type
         collapsed_graph.add_edge(s, t, text_additional=text, conn_type=conn_type)
     return collapsed_graph
 
