@@ -2,14 +2,10 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Welcome Page</title>
+    <title>Episode Overview</title>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(45deg, #10122f, #0822f3);
-            background-size: 200% 200%;
-            animation: gradientAnimation 8s ease infinite;
-            color: #fff;
             text-align: center;
             display: flex;
             flex-direction: column;
@@ -17,18 +13,7 @@
             justify-content: center;
             height: 100vh;
             margin: 0;
-        }
-
-        @keyframes gradientAnimation {
-            0% {
-                background-position: 0% 50%;
-            }
-            50% {
-                background-position: 100% 50%;
-            }
-            100% {
-                background-position: 0% 50%;
-            }
+            background-color: #282c34;
         }
 
         h1 {
@@ -59,7 +44,6 @@
     </style>
 </head>
 <body>
-<button onclick="window.location.href='static/visualisation.html'">Go to the Visualisation Tool</button>
-<button onclick="window.location.href='static/old.html'">Old version</button>
+<button onclick="window.location.href='static/visualisation.html'">Question Time episode</button>
 </body>
 </html>
