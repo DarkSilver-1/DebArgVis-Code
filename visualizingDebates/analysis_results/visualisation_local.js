@@ -1,3 +1,7 @@
+const VIDEO_OFFSET = 77 //This value is used to tailor the video to the timestamps given in the analysis. The
+// Intro of the specific video used for demonstration has an introduction of about 77s which is not captured by the data.
+// In a later version,this value could be provided along with the data and read from there instead of manually setting it
+
 const SCALE_FACTOR = 8; // factor to scale the length of nodes inside the sliding window.
 const SMALLER_SCALE_FACTOR = SCALE_FACTOR / 2; // factor to scale the length of nodes beneath of the sliding window.
 const SMALLEST_SCALE_FACTOR = SCALE_FACTOR / 4; // factor tp scale the nodes in the third area even more left/right.
@@ -160,7 +164,7 @@ function addSliderInteraction() {
  */
 function addVideoPlayerInteraction() {
     videoplayer.addEventListener('timeupdate', function () {
-        const currentTimeVidX = xScale(new Date(nodeData[0].start_time.getTime() + videoplayer.currentTime * 1000)); // starts centered around the first node
+        const currentTimeVidX = xScale(new Date(nodeData[0].start_time.getTime() -VIDEO_OFFSET*1000 + videoplayer.currentTime * 1000)); // starts centered around the first node
         userIsInteracting = false
         moveSlider(currentTimeVidX);
     });
@@ -188,7 +192,7 @@ function moveSlider(xValue) {
     let secondsStart = nodeData[0].start_time.getSeconds() + nodeData[0].start_time.getMinutes()*60 + nodeData[0].start_time.getHours()*3600
     let secondsFromStart = currentSeconds - secondsStart
     if (userIsInteracting){
-        videoplayer.currentTime = secondsFromStart
+        videoplayer.currentTime = secondsFromStart + VIDEO_OFFSET
     }
     userIsInteracting = true
 }
